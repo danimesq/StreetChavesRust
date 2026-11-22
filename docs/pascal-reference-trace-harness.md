@@ -35,7 +35,7 @@ ChavesRoteiro.pas centralizes script Random requests in SortearValor(N, Largo):
 
 The width bit matters: LongInt and Int64 requests are different even when their numeric range is equal. On the pinned FPC 3.2.2 runtime, their raw MT-word costs differ (one versus two).
 
-This recorder already supports deterministic comparison of random-dependent paths. It stores records in memory and currently has no public JSONL export.
+This recorder already supports deterministic comparison of random-dependent paths. The experimental exporter described below observes the same shared wrapper; it does not replace the in-memory record/replay mechanism.
 
 ## 🌈 Existing old-code versus script differential harness: ChavesConferencia
 
@@ -54,38 +54,62 @@ This is an excellent oracle for the **Pascal migration**: it tests the old Pasca
 
 It is not an original-executable oracle. The comparison is between two implementations inside the Pascal project, not between Pascal and the original Chaves.exe.
 
-## 🌈 Proposed dynamic trace extension
+## 🌈 Experimental JSONL exporter (upstream branch)
 
-The next implementation step should add an opt-in trace export at the shared RNG boundary without changing the generator or call order.
+A first opt-in exporter has been implemented on the experimental
+[OpenStreetChaves branch](https://github.com/danimesq/OpenStreetChaves/tree/research/sortearvalor-jsonl-v1),
+based on the exact Pascal source revision pinned above:
+`e1b025c35ecbc2b14d8635564aafd23c2107d3d1`. It is not merged into upstream `main`,
+and this Rust research branch does not change the normative source pin yet.
 
-A JSONL record should contain:
+Run the existing deterministic harness with the added option:
+
+```sh
+StreetChaves.exe --gravar saida 3000 50 --rng-jsonl saida/rng.jsonl
+```
+
+Tracing is disabled unless `--rng-jsonl` is supplied. The new code is attached to
+`SortearValor`, writes a session header followed by one JSON object per wrapper request,
+and records:
 
 | Field | Meaning |
 |---|---|
-| session_id | Deterministic capture/session identifier |
-| api_call_index | Monotonic System.Random request index |
-| first_mt_word_index | First underlying MT word consumed by this request |
-| raw_mt_words | 1 for LongInt, 2 for Int64 |
-| width | LongInt or Int64 |
-| range | Exact signed argument passed to System.Random |
-| result | Returned random value |
-| rand_seed | RandSeed snapshot or explicitly null when not captured |
-| phase | Current game phase/system (stage, frame, defense, effects, melee, presentation, etc.) |
-| fighter_id | Fighter 1/2 or null for global systems |
-| section | Acao, Quadro, IA, Acerto, or a non-script source label |
-| source_file / source_line | Caller source location when available |
-| action / action_timer | Current fighter action and timer when available |
-| loop_context | Active loop indices/labels when available |
+| `session_id` | Deterministic capture/session identifier |
+| `api_call_index` | Sequential request index within this trace |
+| `first_mt_word_index` | First word index counted within the `SortearValor` wrapper scope |
+| `raw_mt_words` | 1 for LongInt, 2 for Int64; 0 for an in-memory replay result |
+| `width` | LongInt or Int64 overload selected by the interpreter |
+| `range` / `result` | Exact request argument and returned value |
+| `recorder_mode` | `normal`, `record`, `replay`, or replay-mismatch fallback |
+| `draw_source` | `System.Random` or `recorder_replay` |
+| `rand_seed_before` / `rand_seed_after` | RandSeed snapshots around the request |
 
-The source instrumentation must be observational only:
-- Do not draw an extra random value to label or seed an event.
-- Do not split the one shared Pascal RNG into cosmetic/gameplay streams.
-- Do not log arguments after reordering them; preserve the FPC 3.2.2 right-to-left argument evaluation measured by the CI probe.
-- Export LongInt and Int64 API calls separately and include raw MT-word consumption.
-- Write trace records after obtaining the result, without changing the order of state mutations around the call.
-- Keep tracing disabled by default.
+A successful `msRepetir` result is logged as `recorder_replay`, with
+`first_mt_word_index: null` and `raw_mt_words: 0`; replay does not consume the
+generator. A replay mismatch retains the existing fallback to `System.Random`.
 
-For .rot calls, the interpreter already knows the active TRoteiro, source line, fighter, and AST call node in Chamar/Avaliar. Attach that context to SortearValor through an explicit scoped trace context. For direct Sortear calls in game .pas/.inc code, add named scope labels at the system call sites or at phase boundaries. Do not infer a fighter/action context when the caller is global.
+**Scope limitation:** the word index is local to calls through `SortearValor`.
+The Pascal program also has direct `System.Random` call sites outside this wrapper,
+so the v1 index is not a global MTwist stream position. The trace also does not yet
+attach fighter, phase, source line, action/timer, branch guards or loop values.
+The header says so explicitly rather than inventing those values.
+
+The exporter writes after the random result is obtained and leaves the existing
+LongInt/Int64 overload choice intact. It does not draw extra random values, reset the
+RNG, split streams, or change record/replay order. File I/O errors disable the trace
+and are reported through a `.error.txt` sidecar; they are not allowed to replace a
+game result.
+
+The schema validator and regression tests live in this Rust branch:
+
+```sh
+python3 tools/validate-pascal-rng-jsonl.py saida/rng.jsonl
+python3 -m unittest discover -s tools -p 'test_*.py' -v
+```
+
+Do not promote a trace to a reference fixture until the Pascal branch builds with
+Lazarus 4.8/FPC 3.2.2 and two identical fixed-seed runs produce byte-identical
+JSONL plus matching `logica.txt` checkpoints.
 
 ## 🌈 Joining symbolic and dynamic traces
 
