@@ -314,6 +314,8 @@ The expanded 3,000-tick capture now contains:
 - **18,812 raw MT words**: 4,726 LongInt calls and 7,043 Int64 calls.
 - 1,069,474 control records, including 675,222 boolean-subexpression operand records, and 20,437 script invocations.
 - **309,092 short-circuit skips**: 308,942 `and_false` and 150 `or_true` right operands.
+- Runtime coverage: 2 fighter indices, 24 action IDs, 5,229 nested script invocations, 67 loop starts, 201 loop iterations, and 67 loop ends.
+- RNG widths: 4,726 `LongInt` draws and 7,043 `Int64` draws. The static symbolic index contains timelines for all 15 fighters.
 - Two byte-identical RNG traces and identical `logica.txt` output, including
   the trace-off comparison.
 
