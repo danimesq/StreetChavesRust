@@ -123,6 +123,17 @@ jobs:
           summary = json.loads(report.open().readline())
           assert summary["record_type"] == "reconciliation_summary"
           assert summary["runtime_draws"] == 8841, summary
+          assert summary["unique"] == 8415, summary
+          assert summary["ambiguous"] == 0, summary
+          assert summary["unmatched"] == 0, summary
+          assert summary["non_rot_source"] == 426, summary
+          assert summary["source_kind_counts"] == {
+              "rot_expression": 8415,
+              "pascal_helper": 4,
+              "pascal_direct": 422,
+          }, summary
+          assert summary["symbolic_rng_timeline_occurrences"] == 465, summary
+          assert summary["unique_symbolic_rng_sites"] == 255, summary
           assert (
               summary["unique"] + summary["ambiguous"] +
               summary["unmatched"] + summary["non_rot_source"]
