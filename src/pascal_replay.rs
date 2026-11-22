@@ -167,6 +167,39 @@ impl PascalDrawReplay {
     }
 }
 
+/// Shared overload-aware RNG interface for the action simulator.
+/// Both the independent FPC generator and recorded Pascal replay implement it.
+pub trait PascalRandomSource {
+    type Error;
+
+    fn draw_longint(&mut self, range: i32) -> Result<i32, Self::Error>;
+    fn draw_int64(&mut self, range: i64) -> Result<i64, Self::Error>;
+}
+
+impl PascalRandomSource for PascalDrawReplay {
+    type Error = PascalReplayError;
+
+    fn draw_longint(&mut self, range: i32) -> Result<i32, Self::Error> {
+        self.random_longint(range)
+    }
+
+    fn draw_int64(&mut self, range: i64) -> Result<i64, Self::Error> {
+        self.random_int64(range)
+    }
+}
+
+impl PascalRandomSource for crate::Fpc322Rng {
+    type Error = std::convert::Infallible;
+
+    fn draw_longint(&mut self, range: i32) -> Result<i32, Self::Error> {
+        Ok(self.random_longint(range).value as i32)
+    }
+
+    fn draw_int64(&mut self, range: i64) -> Result<i64, Self::Error> {
+        Ok(self.random_int64(range).value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
