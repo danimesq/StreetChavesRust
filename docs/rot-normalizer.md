@@ -38,7 +38,7 @@ Each extracted event retains its branch guards, enclosing loop regions, source l
 
 A `Random(...)` call is represented as a static RNG site. Each event records the Pascal integer width and expected raw MT word cost: LongInt consumes one FPC 3.2.2 MT word; Int64 consumes two and reduces the assembled 63-bit value modulo the range. The output deliberately leaves runtime tick and dynamic raw-word index unset. Those values cannot be known without an execution with concrete fighter state and branch outcomes.
 
-Boolean `and/or` follows the Pascal interpreter rule: if the left operand is Boolean it can short-circuit; if it is integer bitwise logic, both operands are evaluated. The normalizer records that distinction rather than assuming every textual `and/or` short-circuits.
+Boolean `and/or` follows the Pascal interpreter rule: if the left operand is Boolean it can short-circuit; if it is integer bitwise logic, both operands are evaluated. The normalizer records the actual RHS execution condition. `case` arms retain ordered reachability guards: an arm is reached only if no earlier arm matched, and `else` requires that none of the listed arms matched.
 
 Function arguments with more than one argument preserve an explicit argument-evaluation profile. The Pascal interpreter determines `OrdemArgsInversa` with a runtime compiler probe, so the default is `unknown`. Do not set a direction until the relevant interpreter build has been measured.
 
@@ -75,7 +75,7 @@ Generated files:
 
 ## 🌈 CI
 
-The `Pascal .rot normalization` workflow runs grammar unit tests, checks the pinned Pascal source, normalizes the full 15-fighter roster, verifies the output boundaries and uploads the bundle as the `pascal-rot-symbolic-timelines` artifact. The completed full run produced 5,091 symbolic events, 255 unique `.rot` RNG sites represented 465 times across the composed fighter timelines, and 71 RNG-related `.pas/.inc` references. The 255 unique sites split into 160 LongInt (one raw MT word) and 95 Int64 (two raw MT words); composed occurrences split into 244 and 221 respectively.
+The `Pascal .rot normalization` workflow runs grammar unit tests, checks the pinned Pascal source, normalizes the full 15-fighter roster, verifies the output boundaries and uploads the bundle as the `pascal-rot-symbolic-timelines` artifact. The completed full run #30 (7 parser tests passed) produced 5,091 symbolic events grouped into 1,749 symbolic action/timer lanes, 255 unique `.rot` RNG sites represented 465 times across the composed fighter timelines, and 71 RNG-related `.pas/.inc` references. The 255 unique sites split into 160 LongInt (one raw MT word) and 95 Int64 (two raw MT words); composed occurrences split into 244 and 221 respectively.
 
 ## 🌈 Deliberate non-goals
 
