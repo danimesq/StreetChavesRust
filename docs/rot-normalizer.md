@@ -34,7 +34,7 @@ For each fighter it combines the common section before the fighter-specific sect
 - `[IA]`: AI branch conditions and decisions
 - `[Acerto]`: hit-response logic when present
 
-Each extracted event retains its branch guards, enclosing loop regions, source location, symbolic action predicates, and symbolic `P.QuadroAcao` predicates.
+Each extracted event retains its branch guards, enclosing loop regions, source location, symbolic action predicates, and symbolic `P.QuadroAcao` predicates. A second output groups the events into symbolic action/timer guard lanes, so a reader can navigate events gated by `P.Acao = acEspecial2` and `P.QuadroAcao = 10` without evaluating those conditions.
 
 A `Random(...)` call is represented as a static RNG site. Each event records the Pascal integer width and expected raw MT word cost: LongInt consumes one FPC 3.2.2 MT word; Int64 consumes two and reduces the assembled 63-bit value modulo the range. The output deliberately leaves runtime tick and dynamic raw-word index unset. Those values cannot be known without an execution with concrete fighter state and branch outcomes.
 
@@ -67,6 +67,7 @@ python3 tools/rot-normalize.py \
 Generated files:
 
 - `normalized-timelines.json`: full ASTs and symbolic events for all 15 fighters
+- `symbolic-action-tick-index.json`: compact groups keyed by symbolic `P.Acao` and `P.QuadroAcao` guard contexts, with full guards/loop/source order retained
 - `timeline-summary.md`: roster/section/event counts and interpretation notes
 - `pascal-rng-call-sites.json`: Pascal `.pas/.inc` RNG call-site inventory
 - `rot-rng-call-sites.json`: unique `.rot` RNG sites, including width and raw MT word cost
@@ -74,11 +75,11 @@ Generated files:
 
 ## 🌈 CI
 
-The `Pascal .rot normalization` workflow runs grammar unit tests, checks the pinned Pascal source, normalizes the full 15-fighter roster, verifies the output boundaries and uploads the bundle as the `pascal-rot-symbolic-timelines` artifact. The first full run produced 5,091 symbolic events, 255 unique `.rot` RNG sites represented 465 times across the composed fighter timelines, and 71 RNG-related `.pas/.inc` references.
+The `Pascal .rot normalization` workflow runs grammar unit tests, checks the pinned Pascal source, normalizes the full 15-fighter roster, verifies the output boundaries and uploads the bundle as the `pascal-rot-symbolic-timelines` artifact. The completed full run produced 5,091 symbolic events, 255 unique `.rot` RNG sites represented 465 times across the composed fighter timelines, and 71 RNG-related `.pas/.inc` references. The 255 unique sites split into 160 LongInt (one raw MT word) and 95 Int64 (two raw MT words); composed occurrences split into 244 and 221 respectively.
 
 ## 🌈 Deliberate non-goals
 
-- No concrete tick execution or guessed fighter starting state.
+- No concrete tick execution or guessed fighter starting state. The action/timer index is a symbolic guard index, not a dynamic tick log.
 - No flattening of nested guards, loops, repeat-until conditions or case dispatch.
 - No fabricated global RNG draw indices.
 - No assumption that source-order AST order alone determines runtime FPC argument evaluation order.
