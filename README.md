@@ -5,7 +5,7 @@
 An independent Rust reimplementation project inspired by **Street Chaves — O Lutador da Vila**. The goal is to understand the game’s behavior, compare existing reconstructions, and build a clean Rust implementation with a testable game core and a separate SDL3 presentation layer.
 
 > **Project status: research plus foundational Rust contracts.**
-> The repository now contains a dependency-free Rust library for ordered combat timelines, ordered combat timelines, Delphi 5 RNG compatibility with an injected seed, and source-specific hitbox/hurtbox lifecycle contracts. It is not yet a playable game. The crate can be tested with `cargo test`; gameplay behavior and original-executable parity remain incomplete.
+> The repository now contains a dependency-free Rust library for ordered combat timelines, Delphi 5 RNG compatibility with an injected seed, and source-specific hitbox/hurtbox lifecycle contracts. It is not yet a playable game. The crate can be tested with `cargo test`; gameplay behavior and original-executable parity remain incomplete.
 
 ## Project goals
 
@@ -66,7 +66,7 @@ Start with the [documentation index](docs/README.md) for the full research map.
 
 ## Current focus
 
-The project has started its first implementation slice: a dependency-free Rust contract crate and contract-level tests. It is not yet a playable game. The current phase combines source research with foundational simulation contracts. The current research pass indexes all 15 Pascal frame scripts and AI blocks, compares all 379 hitbox geometry and metadata rows plus all 305 hurtboxes with the C tables, records exceptional move IDs, and publishes source-ordered frame-event ledgers. The first playable Rust baseline comes before the final original-executable compatibility stage:
+The project has started its first implementation slice: a dependency-free Rust contract crate with ordered tick events, Delphi 5 RNG compatibility for an injected seed, strict AABB geometry, and source-specific C/Pascal box-lifecycle adapters. The Rust format check and 15 contract tests pass in GitHub Actions. It is not yet a playable game. The current phase combines source research with foundational simulation contracts. The current research pass indexes all 15 Pascal frame scripts and AI blocks, compares all 379 hitbox geometry and metadata rows plus all 305 hurtboxes with the C tables, records exceptional move IDs, and publishes source-ordered frame-event ledgers. The first playable Rust baseline comes before the final original-executable compatibility stage:
 
 
 - Compare the two SDL implementations at the source level.
