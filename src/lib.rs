@@ -547,7 +547,7 @@ impl Fpc322Rng {
                 self.state[i + Self::M] ^ Self::twist_word(self.state[i], self.state[i + 1]);
         }
         for i in (Self::N - Self::M)..(Self::N - 1) {
-            self.state[i] = self.state[i + (Self::M - Self::N)]
+            self.state[i] = self.state[i - (Self::N - Self::M)]
                 ^ Self::twist_word(self.state[i], self.state[i + 1]);
         }
         self.state[Self::N - 1] =
