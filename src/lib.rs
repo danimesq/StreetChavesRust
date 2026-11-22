@@ -28,10 +28,22 @@ pub struct RawBounds {
     pub y2: i16,
 }
 
+impl RawBounds {
+    /// Mirror the horizontal axis using the endpoint swap used by both ports.
+    pub fn mirrored_horizontally(self) -> Self {
+        Self {
+            x1: -self.x2,
+            y1: self.y1,
+            x2: -self.x1,
+            y2: self.y2,
+        }
+    }
+}
+
 /// Attack-box row, retaining every field proven to match between Pascal and C.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HitboxRecord {
-    pub frame: u16,
+    pub selector: u16,
     pub timer: u16,
     pub bounds: RawBounds,
     pub active: bool,
@@ -99,6 +111,99 @@ impl<T: Clone> BoxState<T> {
             BoxUpdate::Clear => self.rows.clear(),
             BoxUpdate::Retain => {}
         }
+    }
+
+    /// Reproduce a source lookup that scans all matching rows and writes one
+    /// field set for each match: the last match wins; no match leaves old data.
+    ///
+    /// This matches the observed C selector's table scan. Callers must pass
+    /// rows in their original table order and must not pre-sort them.
+    pub fn apply_last_match_or_retain(
+        &mut self,
+        matching_rows: impl IntoIterator<Item = T>,
+    ) -> bool {
+        let mut last = None;
+        for row in matching_rows {
+            last = Some(row);
+        }
+
+        match last {
+            Some(row) => {
+                self.rows.clear();
+                self.rows.push(row);
+                true
+            }
+            None => false,
+        }
+    }
+}
+
+
+/// One Pascal [Ataque] row, retaining its two distinct strength concepts:
+/// the optional strength selector condition and the row's optional force assignment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PascalAttackDefinition {
+    pub action: ActionId,
+    pub action_timer: u16,
+    /// None represents a generic row with no strength condition.
+    pub strength_condition: Option<u8>,
+    pub bounds: RawBounds,
+    pub active: bool,
+    /// Zero means "leave the fighter's current force unchanged".
+    pub assigned_strength: u8,
+    pub damage: u16,
+    pub guard_damage: u16,
+}
+
+/// The mutable fields touched by Pascal's ordered DefineCaixaAtaque calls.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct PascalAttackState {
+    pub current_force: u8,
+    pub current_box: Option<HitboxRecord>,
+}
+
+impl PascalAttackState {
+    /// Apply matching rows in INI order, exactly as AplicarCaixas does.
+    ///
+    /// The strength condition is checked against the current force at that
+    /// point in the loop. A previous generic row can therefore change which
+    /// later strength-specific row matches. No matching row means no write.
+    pub fn apply_ordered_rows(
+        &mut self,
+        action: ActionId,
+        action_timer: u16,
+        rows: &[PascalAttackDefinition],
+    ) -> usize {
+        let mut applied = 0;
+
+        for row in rows {
+            if row.action != action || row.action_timer != action_timer {
+                continue;
+            }
+            if row
+                .strength_condition
+                .is_some_and(|required| required != self.current_force)
+            {
+                continue;
+            }
+
+            self.current_box = Some(HitboxRecord {
+                selector: row.action.0,
+                timer: row.action_timer,
+                bounds: row.bounds,
+                active: row.active,
+                strength: row.assigned_strength,
+                damage: row.damage,
+                guard_damage: row.guard_damage,
+            });
+
+            if row.assigned_strength != 0 {
+                self.current_force = row.assigned_strength;
+            }
+            applied += 1;
+        }
+
+        applied
     }
 }
 
@@ -276,9 +381,167 @@ impl RandomSource for FixtureRng {
     }
 }
 
+
+/// Delphi 5's 32-bit System.Random range generator.
+///
+/// The state transition is modulo 2^32:
+/// RandSeed := RandSeed * $08088405 + 1
+/// and Random(N) returns the high 32 bits of next_seed * N.
+/// Seed initialization is deliberately separate: Randomize's time-derived
+/// seed is not equivalent to supplying a reproducible captured RandSeed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DelphiRng {
+    rand_seed: u32,
+    draws: u64,
+}
+
+impl DelphiRng {
+    pub const MULTIPLIER: u32 = 0x0808_8405;
+
+    pub fn new(rand_seed: u32) -> Self {
+        Self { rand_seed, draws: 0 }
+    }
+
+    pub fn rand_seed(&self) -> u32 {
+        self.rand_seed
+    }
+
+    pub fn draws_consumed(&self) -> u64 {
+        self.draws
+    }
+
+    /// Advance the 32-bit Delphi LCG once and return the new seed bits.
+    pub fn next_u32(&mut self) -> u32 {
+        self.rand_seed = self
+            .rand_seed
+            .wrapping_mul(Self::MULTIPLIER)
+            .wrapping_add(1);
+        self.draws = self.draws.saturating_add(1);
+        self.rand_seed
+    }
+
+    /// Delphi's Random(N) for a non-negative 32-bit range.
+    ///
+    /// A zero range still advances RandSeed, matching the Delphi 5 assembly:
+    /// the seed update occurs before the multiply-high result is produced.
+    pub fn random_range(&mut self, upper_exclusive: u32) -> u32 {
+        let next = self.next_u32() as u64;
+        ((next * upper_exclusive as u64) >> 32) as u32
+    }
+}
+
+impl RandomSource for DelphiRng {
+    type Error = std::convert::Infallible;
+
+    fn draw(&mut self, upper_exclusive: u32) -> Result<RandomSample, Self::Error> {
+        let draw_index = u32::try_from(self.draws).unwrap_or(u32::MAX);
+        let value = self.random_range(upper_exclusive);
+        Ok(RandomSample {
+            draw_index,
+            upper_exclusive,
+            value,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn delphi_rng_matches_delphi_5_range_vectors() {
+        let mut rng = DelphiRng::new(0);
+        assert_eq!(rng.draw(10).unwrap().value, 0);
+        assert_eq!(rng.rand_seed(), 0x0000_0001);
+        assert_eq!(rng.draw(100).unwrap().value, 3);
+        assert_eq!(rng.rand_seed(), 0x0808_8406);
+        assert_eq!(rng.draw(2).unwrap().value, 1);
+        assert_eq!(rng.rand_seed(), 0xDC6D_AC1F);
+        assert_eq!(rng.draw(120).unwrap().value, 24);
+        assert_eq!(rng.rand_seed(), 0x33DC_589C);
+        assert_eq!(rng.draws_consumed(), 4);
+    }
+
+    #[test]
+    fn delphi_rng_zero_range_still_advances_the_seed() {
+        let mut rng = DelphiRng::new(0);
+        assert_eq!(rng.random_range(0), 0);
+        assert_eq!(rng.rand_seed(), 1);
+        assert_eq!(rng.draws_consumed(), 1);
+    }
+
+    #[test]
+    fn last_matching_box_row_wins_and_no_match_retains_previous_value() {
+        let first = HitboxRecord {
+            selector: 27,
+            timer: 1,
+            bounds: RawBounds { x1: 10, y1: 130, x2: 82, y2: 158 },
+            active: true,
+            strength: 0,
+            damage: 18,
+            guard_damage: 3,
+        };
+        let second = HitboxRecord {
+            bounds: RawBounds { x1: 10, y1: 25, x2: 70, y2: 55 },
+            ..first
+        };
+        let mut state = BoxState::default();
+
+        assert!(state.apply_last_match_or_retain([first, second]));
+        assert_eq!(state.rows(), &[second]);
+        assert!(!state.apply_last_match_or_retain(Vec::<HitboxRecord>::new()));
+        assert_eq!(state.rows(), &[second]);
+    }
+
+    #[test]
+    fn pascal_strength_variants_are_filtered_in_ini_order() {
+        let bounds_weak = RawBounds { x1: 10, y1: 130, x2: 82, y2: 158 };
+        let bounds_strong = RawBounds { x1: 10, y1: 25, x2: 70, y2: 55 };
+        let rows = [
+            PascalAttackDefinition {
+                action: ActionId(27), action_timer: 1, strength_condition: Some(1),
+                bounds: bounds_weak, active: true, assigned_strength: 0,
+                damage: 18, guard_damage: 3,
+            },
+            PascalAttackDefinition {
+                action: ActionId(27), action_timer: 1, strength_condition: Some(2),
+                bounds: bounds_strong, active: true, assigned_strength: 0,
+                damage: 18, guard_damage: 3,
+            },
+        ];
+
+        let mut weak = PascalAttackState { current_force: 1, current_box: None };
+        assert_eq!(weak.apply_ordered_rows(ActionId(27), 1, &rows), 1);
+        assert_eq!(weak.current_box.as_ref().unwrap().bounds, bounds_weak);
+
+        let mut strong = PascalAttackState { current_force: 2, current_box: None };
+        assert_eq!(strong.apply_ordered_rows(ActionId(27), 1, &rows), 1);
+        assert_eq!(strong.current_box.as_ref().unwrap().bounds, bounds_strong);
+    }
+
+    #[test]
+    fn pascal_no_matching_attack_row_retains_the_previous_hitbox() {
+        let previous = HitboxRecord {
+            selector: 27, timer: 1,
+            bounds: RawBounds { x1: 10, y1: 130, x2: 82, y2: 158 },
+            active: true, strength: 0, damage: 18, guard_damage: 3,
+        };
+        let mut state = PascalAttackState {
+            current_force: 1,
+            current_box: Some(previous),
+        };
+        assert_eq!(state.apply_ordered_rows(ActionId(4), 2, &[]), 0);
+        assert_eq!(state.current_box, Some(previous));
+    }
+
+    #[test]
+    fn raw_bounds_mirror_by_swapping_and_negating_horizontal_endpoints() {
+        let bounds = RawBounds { x1: 10, y1: 25, x2: 70, y2: 55 };
+        assert_eq!(
+            bounds.mirrored_horizontally(),
+            RawBounds { x1: -70, y1: 25, x2: -10, y2: 55 }
+        );
+    }
 
     #[test]
     fn tick_events_preserve_insertion_order() {
@@ -343,7 +606,7 @@ mod tests {
     #[test]
     fn box_state_changes_only_when_an_explicit_update_is_supplied() {
         let first = HitboxRecord {
-            frame: 10,
+            selector: 10,
             timer: 3,
             bounds: RawBounds { x1: 1, y1: 2, x2: 3, y2: 4 },
             active: true,
