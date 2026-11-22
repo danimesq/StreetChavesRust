@@ -318,16 +318,35 @@ mod tests {
             let sample = match draw.width.as_str() {
                 "LongInt" => rng.random_longint(i32::try_from(draw.range).unwrap()),
                 "Int64" => rng.random_int64(draw.range),
-                width => panic!("unexpected width {width} at API call {}", draw.api_call_index),
+                width => panic!(
+                    "unexpected width {width} at API call {}",
+                    draw.api_call_index
+                ),
             };
 
             assert_eq!(sample.call_index, draw.api_call_index, "API call index");
-            assert_eq!(Some(sample.first_word_index), draw.first_mt_word_index,
-                "first MT word at API call {}", draw.api_call_index);
-            assert_eq!(u64::from(sample.words_consumed), draw.raw_mt_words,
-                "raw MT word count at API call {}", draw.api_call_index);
-            assert_eq!(sample.range, draw.range, "range at API call {}", draw.api_call_index);
-            assert_eq!(sample.value, draw.result, "result at API call {}", draw.api_call_index);
+            assert_eq!(
+                Some(sample.first_word_index),
+                draw.first_mt_word_index,
+                "first MT word at API call {}",
+                draw.api_call_index
+            );
+            assert_eq!(
+                u64::from(sample.words_consumed),
+                draw.raw_mt_words,
+                "raw MT word count at API call {}",
+                draw.api_call_index
+            );
+            assert_eq!(
+                sample.range, draw.range,
+                "range at API call {}",
+                draw.api_call_index
+            );
+            assert_eq!(
+                sample.value, draw.result,
+                "result at API call {}",
+                draw.api_call_index
+            );
         }
 
         assert_eq!(rng.calls_consumed(), 8_841);
