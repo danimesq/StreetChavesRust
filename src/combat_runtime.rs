@@ -310,10 +310,18 @@ impl CombatState {
         match fighter.character_id {
             // C01: independent frame-boundary writes, including the frame-28 reset.
             1 => {
-                if frame == 0 { fighter.sprite_frame = offset + 33; }
-                if frame == 7 { fighter.sprite_frame = offset + 34; }
-                if frame == 14 { fighter.sprite_frame = offset + 35; }
-                if frame == 21 { fighter.sprite_frame = offset + 34; }
+                if frame == 0 {
+                    fighter.sprite_frame = offset + 33;
+                }
+                if frame == 7 {
+                    fighter.sprite_frame = offset + 34;
+                }
+                if frame == 14 {
+                    fighter.sprite_frame = offset + 35;
+                }
+                if frame == 21 {
+                    fighter.sprite_frame = offset + 34;
+                }
                 if frame == 28 {
                     fighter.sprite_frame = offset + 33;
                     fighter.action_frame = 0;
@@ -327,28 +335,52 @@ impl CombatState {
                 }
             }
             3 => {
-                if frame == 0 { fighter.sprite_frame = offset + 33; }
-                if frame == 5 { fighter.sprite_frame = offset + 34; }
-                if frame == 10 { fighter.sprite_frame = offset + 35; }
-                if frame == 15 { fighter.sprite_frame = offset + 34; }
-                if frame == 20 { fighter.sprite_frame = offset + 33; }
-                if frame == 25 { fighter.sprite_frame = offset + 34; }
-                if frame == 30 { fighter.sprite_frame = offset + 35; }
-                if frame == 35 { fighter.sprite_frame = offset + 34; }
+                if frame == 0 {
+                    fighter.sprite_frame = offset + 33;
+                }
+                if frame == 5 {
+                    fighter.sprite_frame = offset + 34;
+                }
+                if frame == 10 {
+                    fighter.sprite_frame = offset + 35;
+                }
+                if frame == 15 {
+                    fighter.sprite_frame = offset + 34;
+                }
+                if frame == 20 {
+                    fighter.sprite_frame = offset + 33;
+                }
+                if frame == 25 {
+                    fighter.sprite_frame = offset + 34;
+                }
+                if frame == 30 {
+                    fighter.sprite_frame = offset + 35;
+                }
+                if frame == 35 {
+                    fighter.sprite_frame = offset + 34;
+                }
             }
             4 => {
-                if frame < 13 { fighter.sprite_frame = offset + 33; }
-                if frame == 13 { fighter.sprite_frame = offset + 34; }
+                if frame < 13 {
+                    fighter.sprite_frame = offset + 33;
+                }
+                if frame == 13 {
+                    fighter.sprite_frame = offset + 34;
+                }
             }
             5 => {
-                if frame < 5 { fighter.sprite_frame = offset + 33; }
+                if frame < 5 {
+                    fighter.sprite_frame = offset + 33;
+                }
                 if frame == 9 || frame == 17 || frame == 25 || frame == 33 {
                     fighter.sprite_frame = offset + 34;
                 }
                 if frame == 13 || frame == 21 || frame == 29 || frame == 37 {
                     fighter.sprite_frame = offset + 33;
                 }
-                if frame == 41 { fighter.sprite_frame = offset + 35; }
+                if frame == 41 {
+                    fighter.sprite_frame = offset + 35;
+                }
             }
             6 => {
                 if frame % 4 == 0 {
@@ -364,9 +396,15 @@ impl CombatState {
             }
             8 => {
                 fighter.sprite_frame = offset + 33;
-                if frame % 2 == 0 { fighter.y -= 4.0; }
-                if frame % 2 != 0 { fighter.y += 4.0; }
-                if context.ground_y < fighter.y { fighter.y = context.ground_y; }
+                if frame % 2 == 0 {
+                    fighter.y -= 4.0;
+                }
+                if frame % 2 != 0 {
+                    fighter.y += 4.0;
+                }
+                if context.ground_y < fighter.y {
+                    fighter.y = context.ground_y;
+                }
             }
             9 => {
                 if frame % 3 == 0 {
@@ -378,18 +416,30 @@ impl CombatState {
                 }
             }
             10 => {
-                if frame < 12 { fighter.sprite_frame = offset + 33; }
-                if frame == 12 { fighter.sprite_frame = offset + 34; }
+                if frame < 12 {
+                    fighter.sprite_frame = offset + 33;
+                }
+                if frame == 12 {
+                    fighter.sprite_frame = offset + 34;
+                }
             }
             11 => {
                 fighter.sprite_frame = offset + 33;
             }
             12 => {
-                if frame % 2 == 0 { fighter.sprite_frame = offset + 33; }
-                else { fighter.sprite_frame = offset + 34; }
+                if frame % 2 == 0 {
+                    fighter.sprite_frame = offset + 33;
+                }
+                } else { fighter.sprite_frame = offset + 34; }
 
-                if fighter.facing == SIDE_RIGHT { fighter.x += 12.0; }
-                if fighter.facing == SIDE_LEFT { fighter.x -= 12.0; }
+                if fighter.facing == SIDE_RIGHT {
+
+                    fighter.x += 12.0;
+
+                }
+                if fighter.facing == SIDE_LEFT {
+                    fighter.x -= 12.0;
+                }
 
                 let camera_relative_x = fighter.x - context.camera_x;
                 if camera_relative_x <= context.camera_left_limit {
@@ -400,8 +450,10 @@ impl CombatState {
                 }
 
                 if frame % 8 == 0 && rng.draw_longint(2).map_err(RuntimeError::Rng)? == 0 {
-                    if fighter.facing == SIDE_RIGHT { fighter.facing = SIDE_LEFT; }
-                    else if fighter.facing == SIDE_LEFT { fighter.facing = SIDE_RIGHT; }
+                    if fighter.facing == SIDE_RIGHT {
+                        fighter.facing = SIDE_LEFT;
+                    }
+                    } else if fighter.facing == SIDE_LEFT { fighter.facing = SIDE_RIGHT; }
                 }
 
                 // Pascal evaluates the two Random expressions for each effect in order.
@@ -432,9 +484,15 @@ impl CombatState {
                 }
             }
             15 => {
-                if frame <= 10 { fighter.sprite_frame = offset + 33; }
-                if frame == 10 { fighter.sprite_frame = offset + 34; }
-                if frame == 14 { fighter.sprite_frame = offset + 35; }
+                if frame <= 10 {
+                    fighter.sprite_frame = offset + 33;
+                }
+                if frame == 10 {
+                    fighter.sprite_frame = offset + 34;
+                }
+                if frame == 14 {
+                    fighter.sprite_frame = offset + 35;
+                }
             }
             _ => {
                 return Err(RuntimeError::UnsupportedBranch(
