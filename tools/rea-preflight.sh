@@ -7,7 +7,6 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 umask 077
 
-SCRIPT_NAME=${0##*/}
 INPUT=${1:-}
 REQUESTED_OUT=${2:-}
 
@@ -182,16 +181,6 @@ else
   printf '[SKIP] rabin2: not installed\n'
 fi
 
-# 🌈 A machine-readable hash list for every generated artifact (excluding itself).
-(
-  cd -- "$OUT"
-  find input reports logs manifest -type f ! -name 'artifact-sha256.tsv' -print0 |
-    sort -z |
-    while IFS= read -r -d '' path; do
-      printf '%s\t%s\n' "$(sha256_file "$path")" "$path"
-    done
-) > "$OUT/manifest/artifact-sha256.tsv"
-
 cat > "$OUT/README.txt" <<'BUNDLE'
 REA preflight evidence bundle
 
@@ -211,6 +200,17 @@ Next REA workflow:
 3. Cross-reference the documented anchors and export address-linked findings.
 4. Keep static/decompiler observations separate from controlled runtime observations.
 BUNDLE
+
+# 🌈 A machine-readable hash list for every generated artifact (excluding itself).
+(
+  cd -- "$OUT"
+  find input reports logs manifest -type f ! -name 'artifact-sha256.tsv' -print0; printf '%s\\0' README.txt |
+    sort -z |
+    while IFS= read -r -d '' path; do
+      printf '%s\t%s\n' "$(sha256_file "$path")" "$path"
+    done
+) > "$OUT/manifest/artifact-sha256.tsv"
+
 
 printf '\n[DONE] Evidence bundle: %s\n' "$OUT"
 printf '[DONE] Input SHA-256: %s\n' "$INPUT_SHA"
