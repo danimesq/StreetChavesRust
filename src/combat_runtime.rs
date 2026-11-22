@@ -516,6 +516,33 @@ impl CombatState {
         })
     }
 
+    /// Execute the source-backed C01-C12 pose [Quadro] frame writes.
+    ///
+    /// All twelve pinned ROT files write Desloc + 12 at action frame 0 and
+    /// Desloc + 30 at action frame 2. Other frames retain the previous sprite.
+    /// C13-C15 do not define the pose command and are rejected.
+    pub fn update_pose_animation(
+        &mut self,
+        fighter_index: usize,
+        sprite_offset: i32,
+    ) -> bool {
+        let Some(fighter) = self.fighters.get_mut(fighter_index) else {
+            return false;
+        };
+
+        if !(1..=12).contains(&fighter.character_id) || fighter.action_id != ACTION_POSE {
+            return false;
+        }
+
+        if fighter.action_frame == 0 {
+            fighter.sprite_frame = sprite_offset + 12;
+        }
+        if fighter.action_frame == 2 {
+            fighter.sprite_frame = sprite_offset + 30;
+        }
+        true
+    }
+
     /// Apply Pascal `cmPose` for C01-C12.
     ///
     /// The pinned C01-C12 [Acao] scripts all accept only idle/walking and write
