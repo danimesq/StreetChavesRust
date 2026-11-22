@@ -32,6 +32,7 @@ A fact may carry more than one label. Record the exact file, section, commit, bi
 | Hurtboxes | 305/305 Pascal `[Corpo]` and C `hurt frame` rows match after coordinate reordering; both implementations retain old values when no row matches | [cross-project] for rows; [original-decomp] for the reviewed Pascal updater path and [port-specific] for the INI/C adapter details | Preserve per-frame values and explicit retain/deactivate/clear operations; verify the original executable later |
 | RNG | OpenStreetChaves README pins Lazarus 4.8/FPC 3.2.2. `ChavesRoteiro.SortearValor` dispatches LongInt vs Int64 to FPC `System.Random`; the pinned FPC RTL is MTwist. LongInt consumes 1 MT word; Int64 consumes 2 then modulo. `ModoDeSorteio` records/replays range, width and result. The C port uses a separate Delphi-style LCG. | [normative-project-source] for Pascal runtime semantics; [port-specific] for the C LCG; [unknown] for exact original executable RNG until REA/Ghidra/runtime capture | Use Fpc322Rng as the Rust default; preserve width and raw-word consumption; keep the Delphi LCG adapter experimental; capture Pascal and original dynamic traces |
 | Logic comparison | Pascal project has `--gravar` and legacy-vs-script comparison support | [port-specific], OpenStreetChaves README and migration notes | Adopt deterministic trace comparison as a development practice |
+| Pascal dynamic trace | Experimental schema-v2 branch instruments logical ticks, nested `.rot` invocations, branch/loop control records and `SortearValor` draws; it is not yet compiled or run | [port-specific], experimental OpenStreetChaves research branch; not yet [runtime-observed] | Compile and reproduce captures before accepting JSONL as fixtures; preserve wrapper-only RNG scope and source-line ambiguity |
 | Golden screenshots | C17 project documents fixed-seed headless scenarios and SHA-256 screenshot checks | [port-specific], open-street-chaves README | Keep logical-state hashes and render hashes separate |
 | Asset licensing | C17 project explicitly excludes original game assets from its source license | Project README | Keep original game data external; audit every asset source |
 | SDL2 platform validation | Pascal README reports Windows 64-bit testing and lists Linux/macOS/Android as pending | Project README | Do not assume SDL abstraction equals cross-platform validation |
@@ -92,7 +93,11 @@ The SMS project is based on a Master System fighting-game hack and imports Chave
 - [ ] Inventory all Pascal application RNG calls and normalize them into tick order.
 - [x] Pin the Pascal build requirement to FPC 3.2.2 and implement its MTwist Random(LongInt)/Random(Int64) consumption rules in Rust.
 - [x] Generate symbolic timelines for all 15 .rot scripts and inventory Pascal RNG sites.
-- [ ] Use the Pascal `--gravar` harness to capture runtime call traces and compare Rust state transitions.
+- [ ] Compile the experimental Pascal schema-v2 trace branch with Lazarus 4.8/FPC 3.2.2; the instrumentation is code, not yet a verified runtime capture.
+- [ ] Run the fixed-seed `--gravar` scenario twice and require byte-identical JSONL plus matching `logica.txt` checkpoints.
+- [ ] Reconcile runtime draws/control records against static `symbolic-action-tick-index.json`; retain ambiguous same-line source matches as ambiguous.
+- [ ] Convert only real, reproducible Pascal captures into Rust test fixtures and verify tick, script nesting, branch/loop decisions, RNG width/range/result and state checkpoints.
+- [ ] Decide whether to extend runtime attribution with source columns, direct `System.Random` call sites and fuller game-state snapshots; these remain outside schema v2.
 - [ ] Capture the original executable's initial RNG state and algorithm in the later compatibility phase; the C LCG remains comparative only.
 - [x] Trace retain-on-miss behavior in Pascal AplicarCaixas and C sel_boxes.
 - [x] Trace explicit attack-flag deactivation in both ports separately from lookup misses and full record clearing.
