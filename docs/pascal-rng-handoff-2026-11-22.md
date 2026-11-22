@@ -102,14 +102,23 @@ Artifact anterior validado: [run 45049647139](https://github.com/danimesq/Street
 - Se passar, registrar o run/artifact no PR #9 e neste handoff.
 - Conferir que o workflow usou o HEAD atual do branch Pascal `research/sortearvalor-jsonl-v1`.
 
-### 2. Ligar replay ao fluxo real de ações Rust
+### 2. Criar o primeiro runtime executável antes de integrar o replay
 
-- Localizar o ponto central de execução de ações/scripts e a API atual de RNG no simulador.
-- Introduzir uma abstração de RNG que permita escolher entre o gerador nativo e `PascalDrawReplay` sem espalhar condicionais pelo código de combate.
-- Passar o mesmo replay sequencial por todo o tick, incluindo scripts aninhados; não reiniciar o cursor ao entrar em helper ou ação filha.
-- Consumir draws no ponto exato da execução, preservando ordem, overload e range.
-- Ao terminar cenário/tick, verificar draws restantes e reportar o primeiro mismatch com tick, fighter, action/script, API call index, width e range.
-- Não fabricar estado ou ação para consumir draws que o Rust ainda não executa. Falha explícita é evidência melhor que alinhamento artificial.
+**Reconhecimento do branch em 2026-11-22:** ainda não existe um loop de combate executável ao qual conectar o replay. A árvore atual contém um crate de contratos/evidências: `src/lib.rs` define tipos como `ActionTimeline`, `TickEvents` e eventos ordenados; `tests/combat_contracts.rs` usa fixtures sintéticas. Não há `GameState`, `CombatSimulator`, executor de ações/scripts ou produtor de checkpoints de estado de combate em `src/`. Portanto, não há um call site real de RNG de gameplay Rust para substituir neste momento.
+
+**Não tratar os contratos de timeline como simulador.** Conectar `PascalDrawReplay` a um teste sintético ou consumir draws artificialmente não demonstraria execução real nem equivalência de comportamento.
+
+Ordem necessária:
+
+1. Fazer o mapeamento de uma ação real no código Pascal, desde a seleção/entrada da ação até o avanço de um tick, incluindo guards, chamadas helper, efeitos e RNG que realmente ocorram nesse caminho.
+2. Escolher um recorte pequeno e totalmente rastreável, sem inventar campos ou transições que não estejam apoiados no código-fonte/trace.
+3. Implementar no Rust um primeiro estado de combate mínimo e um executor real para esse recorte. O runtime deve possuir o estado que evolui; não deve apenas reproduzir uma lista de eventos já gravada.
+4. Injetar uma única instância de `PascalRandomSource` no executor e compartilhá-la por todo o tick e por chamadas aninhadas. Não reiniciar o cursor ao entrar em helper ou ação filha.
+5. Consumir draws no ponto exato da execução, preservando ordem, overload e range. Em caso de mismatch, reportar tick, fighter, action/script, API call index, width e range.
+6. Emitir checkpoints Rust a partir do estado efetivamente calculado e só então comparar com Pascal usando `pascal-diff`.
+7. Expandir o recorte apenas depois que o primeiro caminho vertical estiver validado.
+
+**Critério de saída:** pelo menos uma ação/script real executada pelo runtime Rust, com RNG compartilhado, checkpoints próprios e comparação diferencial reproduzível. Não fabricar estado ou ação para consumir draws que o Rust ainda não executa. Falha explícita é evidência melhor que alinhamento artificial.
 
 ### 3. Produzir checkpoints Rust reais
 
