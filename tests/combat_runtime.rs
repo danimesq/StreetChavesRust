@@ -5,7 +5,8 @@ use std::io::Cursor;
 use serde_json::Value;
 use street_chaves::combat_runtime::{
     AiCommand, AiTickInputs, BodyBox, CharacterActionScript, CombatState, FighterState,
-    RuntimeDrawWidth, RuntimeError, ACTION_CROUCHING, ACTION_IDLE, ACTION_VICTORY, ACTION_WALKING, SIDE_LEFT, SIDE_RIGHT,
+    RuntimeDrawWidth, RuntimeError, ACTION_CROUCHING, ACTION_IDLE, ACTION_VICTORY, ACTION_WALKING,
+    SIDE_LEFT, SIDE_RIGHT,
 };
 use street_chaves::pascal_differential::{first_divergence, load_tick_checkpoints};
 use street_chaves::pascal_replay::{PascalDrawReplay, PascalRandomSource};
