@@ -314,6 +314,9 @@ mod tests {
         let capture = load_runtime_capture(BufReader::new(file)).unwrap();
         let mut rng = crate::Fpc322Rng::new(20_261_026);
 
+        let expected_calls = capture.draws.len() as u64;
+        let expected_words: u64 = capture.draws.iter().map(|draw| draw.raw_mt_words).sum();
+
         for draw in capture.draws {
             let sample = match draw.width.as_str() {
                 "LongInt" => rng.random_longint(i32::try_from(draw.range).unwrap()),
@@ -349,7 +352,7 @@ mod tests {
             );
         }
 
-        assert_eq!(rng.calls_consumed(), 8_841);
-        assert_eq!(rng.words_consumed(), 14_895);
+        assert_eq!(rng.calls_consumed(), expected_calls);
+        assert_eq!(rng.words_consumed(), expected_words);
     }
 }
