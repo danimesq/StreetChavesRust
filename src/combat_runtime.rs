@@ -156,16 +156,21 @@ impl CombatState {
         fighter_index: usize,
         direction: f64,
     ) -> Result<(), RuntimeError<E>> {
-        let fighter = &mut self.fighters[fighter_index];
-
         // Common.rot [Acao] begins with P.Defendendo := False.
-        fighter.defending = false;
-        if !matches!(fighter.action_id, ACTION_IDLE | ACTION_WALKING) {
+        let (can_walk, speed) = {
+            let fighter = &mut self.fighters[fighter_index];
+            fighter.defending = false;
+            (
+                matches!(fighter.action_id, ACTION_IDLE | ACTION_WALKING),
+                fighter.speed,
+            )
+        };
+        if !can_walk {
             return Ok(());
         }
 
         // Empurra(Jog, direction * P.Velocidade), preserving the source ordering.
-        self.push_fighter(fighter_index, direction * fighter.speed);
+        self.push_fighter(fighter_index, direction * speed);
         let fighter = &mut self.fighters[fighter_index];
         fighter.action_id = ACTION_WALKING;
         fighter.action_duration = 99;
@@ -184,7 +189,6 @@ impl CombatState {
 
     /// Pascal ChavesGolpes.Empurra, including body separation and screen clamps.
     fn push_fighter(&mut self, fighter_index: usize, dx: f64) {
-        let opponent_index = 1 - fighter_index;
         let (fighters_left, fighters_right) = self.fighters.split_at_mut(1);
         let (fighter, opponent) = if fighter_index == 0 {
             (&mut fighters_left[0], &mut fighters_right[0])
