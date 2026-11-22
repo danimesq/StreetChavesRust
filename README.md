@@ -5,7 +5,7 @@
 An independent Rust reimplementation project inspired by **Street Chaves — O Lutador da Vila**. The goal is to understand the game’s behavior, compare existing reconstructions, and build a clean Rust implementation with a testable game core and a separate SDL3 presentation layer.
 
 > **Project status: research plus foundational Rust contracts.**
-> The repository now contains a dependency-free Rust library for ordered combat timelines, sequential deterministic fixture RNG, and explicit hitbox/hurtbox update operations. It is not yet a playable game. The crate can be tested with `cargo test`; gameplay behavior and original-executable parity remain incomplete.
+> The repository now contains a dependency-free Rust library for ordered combat timelines, ordered combat timelines, Delphi 5 RNG compatibility with an injected seed, and source-specific hitbox/hurtbox lifecycle contracts. It is not yet a playable game. The crate can be tested with `cargo test`; gameplay behavior and original-executable parity remain incomplete.
 
 ## Project goals
 
@@ -36,7 +36,9 @@ The research and design notes live in [the documentation directory](docs/README.
 - [Fighter roster matrix](docs/fighter-roster-matrix.md) — original 15-character roster, Pascal C16 Chapolin extension, and script-section coverage.
 - [Frame, AI and hitbox comparison](docs/frame-ai-hitbox-comparison.md) — all 15 Pascal frame/AI indexes, 379/379 exact hitbox geometry+metadata matches, and 305/305 hurtbox matches.
 - [Ordered frame event ledger](docs/ordered-frame-event-ledger.md) — source-ordered frame, timer, effect, sound, RNG, and simulation-mutation statements for all 15 Pascal [Quadro] blocks.
-- [Combat tick contracts](docs/combat-tick-contract.md) — Rust event ordering, deterministic RNG injection, hitbox/hurtbox records, and explicitly unresolved box-lifecycle semantics.
+- [Combat tick contracts](docs/combat-tick-contract.md) — Rust event ordering, Delphi 5 RNG, hitbox/hurtbox records, and strict collision geometry.
+- [Box lifecycle deep dive](docs/box-lifecycle-deep-dive.md) — C selector and Pascal AplicarCaixas update order, stale-box retention, strength variants, and the fighter 11 discrepancy.
+- [RNG compatibility](docs/rng-compatibility.md) — Delphi 5 LCG, Free Pascal Mersenne Twister distinction, seed initialization, and call-order requirements.
 - [Original executable reverse engineering](docs/original-executable-reverse-engineering.md) — PE/resource/asset investigation and gameplay cross-reference plan.
 - [REA tooling](tools/README.md) — reproducible preflight evidence collection and REA/Ghidra handoff.
 - [Original executable reverse engineering](docs/original-executable-reverse-engineering.md) — preliminary PE inspection, DelphiX/DirectX clues, resource and asset inventory plan, gameplay cross-reference targets, and the later golden-fixture strategy.
