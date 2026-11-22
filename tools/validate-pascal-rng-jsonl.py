@@ -230,6 +230,34 @@ def validate_trace(path: Path) -> dict[str, Any]:
                     raise TraceValidationError(f"line {line_number}: control_type must be text")
                 if record.get("script_execution_id") != script_stack[-1]:
                     raise TraceValidationError(f"line {line_number}: control event script context mismatch")
+                if record.get("control_type") == "boolean_subexpression":
+                    _integer(record, "source_column", line_number)
+                    _integer(record, "expression_node", line_number)
+                    _integer(record, "operand_node", line_number)
+                    _integer(record, "operand_source_line", line_number)
+                    _integer(record, "operand_source_column", line_number)
+                    if record.get("operator") not in ("and", "or", "xor"):
+                        raise TraceValidationError(f"line {line_number}: invalid boolean operator")
+                    if record.get("operand") not in ("left", "right"):
+                        raise TraceValidationError(f"line {line_number}: invalid boolean operand side")
+                    evaluated = record.get("evaluated")
+                    boolean_value = record.get("boolean_value")
+                    short_circuit = record.get("short_circuit")
+                    expression_result = record.get("expression_result")
+                    reason = record.get("short_circuit_reason")
+                    if not isinstance(evaluated, bool) or not isinstance(short_circuit, bool):
+                        raise TraceValidationError(f"line {line_number}: boolean evaluation flags must be boolean")
+                    if evaluated != isinstance(boolean_value, bool):
+                        raise TraceValidationError(f"line {line_number}: boolean_value must match evaluated")
+                    if expression_result is not None and not isinstance(expression_result, bool):
+                        raise TraceValidationError(f"line {line_number}: expression_result must be boolean or null")
+                    if short_circuit:
+                        if record.get("operand") != "right" or evaluated or expression_result is None:
+                            raise TraceValidationError(f"line {line_number}: invalid short-circuit record")
+                        if reason not in ("and_false", "or_true"):
+                            raise TraceValidationError(f"line {line_number}: short-circuit reason is missing")
+                    elif reason is not None:
+                        raise TraceValidationError(f"line {line_number}: unexpected short-circuit reason")
                 control_records += 1
                 continue
 
