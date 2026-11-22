@@ -134,6 +134,7 @@ jobs:
           assert kinds["rot_expression"] == 8415, kinds
           assert kinds["pascal_helper"] >= 4, kinds
           assert kinds["pascal_direct"] >= 422, kinds
+          # Direct Pascal .inc and ROT AST RNG calls now carry source columns.
           assert summary["source_column_draws"] == 11343, summary
           assert summary["source_column_available_for_pascal_direct"] is True, summary
           assert summary["rot_expression_source_column_available"] is True, summary
