@@ -33,7 +33,9 @@ The research and design notes live in [the documentation directory](docs/README.
 - [Comparative analysis](docs/comparative-analysis.md) — architecture, strengths, differences, and limitations of the SDL implementations.
 - [Source and data inventory](docs/source-inventory.md) — pinned source revisions, code/data layout, entry points, and subsystem ownership.
 - [Fighter data deep dive](docs/fighter-data-deep-dive.md) — INI/ROT semantics, generated C tables, command recognition, and character-specific behavior.
-- [Fighter roster matrix](docs/fighter-roster-matrix.md) — original 15-character roster, Pascal C16 Chapolin extension, and script-section coverage.\n- [Move matrix for the 15 fighters](docs/move-matrix-15-fighters.md) — move-by-move research; first detailed entry is Chaves, with evidence and original-executable validation gaps.
+- [Fighter roster matrix](docs/fighter-roster-matrix.md) — original 15-character roster, Pascal C16 Chapolin extension, and script-section coverage.
+- [Frame, AI and hitbox comparison](docs/frame-ai-hitbox-comparison.md) — all 15 Pascal frame/AI script indexes and the 379-row Pascal/C hitbox coordinate comparison.
+- [Move matrix for the 15 fighters](docs/move-matrix-15-fighters.md) — move-by-move research; first detailed entry is Chaves, with evidence and original-executable validation gaps.
 - [Chapolin bonus plan](docs/chapolin-bonus-2026.md) — preservation/recovery plan for Chapolin as a future optional bonus.
 - [Data formats and resource pipelines](docs/data-formats.md) — fighter scripts, INI resources, generated C tables, and unresolved format semantics.
 - [Provenance and licensing review](docs/provenance-and-licenses.md) — code licenses, asset origins, redistribution risks, and reuse decisions.
