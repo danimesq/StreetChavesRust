@@ -5,7 +5,7 @@ use std::io::Cursor;
 use serde_json::Value;
 use street_chaves::combat_runtime::{
     AiCommand, AiTickInputs, BodyBox, CharacterActionScript, CombatState, FighterState,
-    RuntimeDrawWidth, RuntimeError, ACTION_CROUCHING, ACTION_IDLE, ACTION_VICTORY, ACTION_WALKING,
+    RuntimeDrawWidth, RuntimeError, ACTION_CROUCHING, ACTION_IDLE, ACTION_POSE, ACTION_VICTORY, ACTION_WALKING,
     SIDE_LEFT, SIDE_RIGHT,
 };
 use street_chaves::pascal_differential::{first_divergence, load_tick_checkpoints};
@@ -371,5 +371,69 @@ fn victory_command_rejects_an_invalid_fighter_index_without_mutation() {
     let before = state.clone();
 
     assert!(!state.apply_character_victory(2));
+    assert_eq!(state, before);
+}
+
+
+#[test]
+fn pose_command_matches_pascal_contract_for_fighters_that_define_it() {
+    // C01-C12 all accept idle/walking and write acPose, frame 0, duration 20.
+    for character_id in 1..=12 {
+        for action_id in [ACTION_IDLE, ACTION_WALKING] {
+            let (mut state, _) = ai_scenario(PASCAL_TICK_316, 316);
+            let fighter = &mut state.fighters[1];
+            fighter.character_id = character_id;
+            fighter.action_id = action_id;
+            fighter.action_frame = 9;
+            fighter.action_duration = 17;
+
+            assert!(state.apply_character_pose(1), "C{character_id:02} should accept pose");
+            assert_eq!(state.fighters[1].action_id, ACTION_POSE);
+            assert_eq!(state.fighters[1].action_frame, 0);
+            assert_eq!(state.fighters[1].action_duration, 20);
+        }
+    }
+}
+
+#[test]
+fn pose_command_rejects_fighters_without_cm_pose_and_ineligible_actions() {
+    for character_id in 13..=15 {
+        let (mut state, _) = ai_scenario(PASCAL_TICK_316, 316);
+        state.fighters[1].character_id = character_id;
+        state.fighters[1].action_id = ACTION_IDLE;
+        let before = state.fighters[1].clone();
+
+        assert!(!state.apply_character_pose(1));
+        assert_eq!(state.fighters[1], before);
+    }
+
+    for action_id in [
+        ACTION_CROUCHING,
+        ACTION_VICTORY,
+        3,
+        4,
+        5,
+        6,
+        8,
+        12,
+        21,
+        22,
+    ] {
+        let (mut state, _) = ai_scenario(PASCAL_TICK_316, 316);
+        state.fighters[1].character_id = 1;
+        state.fighters[1].action_id = action_id;
+        let before = state.fighters[1].clone();
+
+        assert!(!state.apply_character_pose(1));
+        assert_eq!(state.fighters[1], before);
+    }
+}
+
+#[test]
+fn pose_command_rejects_an_invalid_fighter_index_without_mutation() {
+    let (mut state, _) = ai_scenario(PASCAL_TICK_316, 316);
+    let before = state.clone();
+
+    assert!(!state.apply_character_pose(2));
     assert_eq!(state, before);
 }
