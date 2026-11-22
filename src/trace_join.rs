@@ -2,8 +2,8 @@
 //! normalizer's static symbolic RNG/action-tick index.
 //!
 //! Direct Pascal .inc call sites and ROT expression draws expose source columns.
-//! This module preserves ambiguity instead of choosing a static AST site based
-//! on event order or a guessed column.
+//! The current symbolic index remains line-based, so this module preserves
+//! ambiguity instead of choosing a static AST site by guessed column.
 
 use serde_json::Value;
 use std::collections::HashMap;
