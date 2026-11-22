@@ -456,8 +456,44 @@ fn c12_victory_preserves_movement_clamps_rng_and_particle_order() {
         vec![2, 40, 10, 40, 10, 40, 10, 40, 10, 40, 10]
     );
     assert_eq!(result.particles.len(), 5);
+    assert!(result.particles.iter().all(|particle| {
+        particle.effect_type == 2 && particle.variant.is_empty() && particle.owner == 0
+    }));
     assert_eq!(result.particles[0].x, 271.0);
     assert_eq!(result.particles[0].y, 299.0);
+}
+
+
+#[test]
+fn c12_non_eighth_frames_skip_the_direction_draw_but_keep_particle_draws() {
+    let mut state = victory_state(12, 9, 0);
+    let mut values = Vec::new();
+    for pair in 0..5 {
+        values.push(pair);
+        values.push(pair);
+    }
+    let mut rng = ScriptedRng::with_values(&values);
+    let result = state.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+    assert_eq!(rng.cursor, 10);
+    assert_eq!(
+        result.draws.iter().map(|draw| draw.range).collect::<Vec<_>>(),
+        vec![40, 10, 40, 10, 40, 10, 40, 10, 40, 10]
+    );
+}
+
+#[test]
+fn c12_random_zero_reverses_the_post_clamp_facing() {
+    let mut state = victory_state(12, 8, 0);
+    state.fighters[1].x = 289.0;
+    let mut values = vec![0];
+    for _ in 0..5 {
+        values.extend([0, 0]);
+    }
+    let mut rng = ScriptedRng::with_values(&values);
+    state.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+    // Movement crosses the right threshold (sets LEFT), then Random(2)=0 flips it.
+    assert_eq!(state.fighters[1].facing, SIDE_RIGHT);
+    assert_eq!(rng.cursor, 11);
 }
 
 #[test]
