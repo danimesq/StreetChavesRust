@@ -38,7 +38,8 @@ The research and design notes live in [the documentation directory](docs/README.
 - [Ordered frame event ledger](docs/ordered-frame-event-ledger.md) — source-ordered frame, timer, effect, sound, RNG, and simulation-mutation statements for all 15 Pascal [Quadro] blocks.
 - [Combat tick contracts](docs/combat-tick-contract.md) — Rust event ordering, Delphi 5 RNG, hitbox/hurtbox records, and strict collision geometry.
 - [Box lifecycle deep dive](docs/box-lifecycle-deep-dive.md) — C selector and Pascal AplicarCaixas update order, stale-box retention, strength variants, and the fighter 11 discrepancy.
-- [RNG compatibility](docs/rng-compatibility.md) — Delphi 5 LCG, Free Pascal Mersenne Twister distinction, seed initialization, and call-order requirements.
+- [RNG compatibility](docs/rng-compatibility.md) — Delphi 5 LCG, Free Pascal RTL distinction, and seed compatibility.
+- [RNG call-site inventory](docs/rng-callsite-inventory.md) — shared C RNG call sites, tick-phase order, and variable draw-count traps.
 - [Original executable reverse engineering](docs/original-executable-reverse-engineering.md) — PE/resource/asset investigation and gameplay cross-reference plan.
 - [REA tooling](tools/README.md) — reproducible preflight evidence collection and REA/Ghidra handoff.
 - [Original executable reverse engineering](docs/original-executable-reverse-engineering.md) — preliminary PE inspection, DelphiX/DirectX clues, resource and asset inventory plan, gameplay cross-reference targets, and the later golden-fixture strategy.
