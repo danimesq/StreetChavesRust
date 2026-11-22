@@ -274,13 +274,22 @@ def validate_trace(path: Path) -> dict[str, Any]:
                     raise TraceValidationError(f"line {line_number}: draw without script must be pascal_direct")
                 source_origin = record.get("source_origin")
                 source_line = record.get("source_line")
+                source_column = record.get("source_column")
                 if source_origin is not None and not isinstance(source_origin, str):
                     raise TraceValidationError(f"line {line_number}: direct source_origin must be text or null")
                 if source_line is not None:
                     _integer(record, "source_line", line_number)
+                if source_column is not None:
+                    _integer(record, "source_column", line_number)
+                    if source_column <= 0:
+                        raise TraceValidationError(f"line {line_number}: source_column must be positive")
                 if (source_origin is None) != (source_line is None):
                     raise TraceValidationError(
                         f"line {line_number}: direct source_origin and source_line must be present together"
+                    )
+                if source_origin is not None and source_origin.lower().endswith(".inc") and source_column is None:
+                    raise TraceValidationError(
+                        f"line {line_number}: direct .inc draw must include source_column"
                     )
             else:
                 expected_draw_index = script_draw_counts[script_id]
@@ -293,6 +302,10 @@ def validate_trace(path: Path) -> dict[str, Any]:
                     raise TraceValidationError(f"line {line_number}: script-context draw must include source_origin")
                 if source_kind == "rot_expression":
                     _integer(record, "source_line", line_number)
+                    if record.get("source_column") is not None:
+                        raise TraceValidationError(
+                            f"line {line_number}: ROT expression column is not yet instrumented"
+                        )
                 elif source_kind == "pascal_helper":
                     if record.get("source_line") is not None:
                         _integer(record, "source_line", line_number)
@@ -300,6 +313,16 @@ def validate_trace(path: Path) -> dict[str, Any]:
                             raise TraceValidationError(
                                 f"line {line_number}: pascal_helper draw must not claim a .rot source line"
                             )
+                        if record["source_origin"].lower().endswith(".inc"):
+                            if record.get("source_column") is None:
+                                raise TraceValidationError(
+                                    f"line {line_number}: direct helper call must include source_column"
+                                )
+                            _integer(record, "source_column", line_number)
+                    elif record.get("source_column") is not None:
+                        raise TraceValidationError(
+                            f"line {line_number}: helper source_column requires source_line"
+                        )
                 else:
                     raise TraceValidationError(
                         f"line {line_number}: script-context draw source_kind must be "
@@ -388,7 +411,8 @@ def main() -> int:
     )
     print(
         "scope note: game-source System.Random call sites are routed through SortearValor; "
-        "external RTL/library calls, source columns and concrete short-circuit subexpression values are not emitted"
+        "direct Pascal .inc calls include source columns, while ROT expression columns and concrete short-circuit "
+        "subexpression values are not emitted"
     )
     return 0
 
