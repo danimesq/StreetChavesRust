@@ -163,3 +163,29 @@ Ordem necessária:
 - `docs/evidence-and-open-questions.md`
 
 **Próximo marco real:** um cenário Rust executando pelo menos uma ação/script real com o replay compartilhado, produzindo checkpoints próprios e permitindo que `pascal-diff` aponte uma divergência real (ou confirme igualdade) por tick. Até lá, o trabalho está na camada de evidência, replay RNG e interfaces de comparação, não na simulação integral do combate.
+
+## First executable Rust runtime slice (2026-11-22)
+
+Implemented on the PR #9 branch:
+- `src/combat_runtime.rs`: a narrow, source-derived Common.rot [IA] walking path.
+- `src/bin/pascal-replay-tick.rs`: replay CLI for the real tick-316 capture sample.
+- `tests/combat_runtime.rs`: replays the captured LongInt `Random(13)` request (range 13, result 12), executes the nonzero IA branch and common left-walk command, then compares independently emitted Rust tick checkpoints with the Pascal sample using `first_divergence`.
+- `docs/first-rust-runtime-slice.md`: exact source path, assumptions, supported branches, reproduction, and next expansion.
+
+The slice preserves the call path `Common.rot [IA] → AcaoJogador → Common.rot [Acao] → Empurra → Common.rot [AcaoFim]` for the observed movement branch. It includes body-overlap separation and screen clamps from Pascal `Empurra`. The single RNG cursor is passed through the runtime via `PascalRandomSource`; the replay must be fully consumed.
+
+**Evidence boundary:** the checked-in tick-316 fixture is an event sample, not a full tick capture. It records the RNG call and the resulting action/frame, but omits `Dist`, `P.DistanciaIA`, facing, and body geometry. The regression therefore supplies explicit admissible inputs (`Dist=150`, `DistanciaIA=250`, facing right, no projectile threat, no close-range attack branch) to select the source-defined left-walk path. It matches the available Pascal checkpoint fields, but does not claim those hidden values are the exact original tick-316 inputs or that the entire tick is equivalent.
+
+Unsupported paths fail explicitly instead of consuming synthetic draws:
+- `Random(13)=0` / the subsequent `Random(6)` target-selection branch.
+- Close-range AI attack probabilities at `Dist <= 80`.
+- Character-specific AI and other unimplemented script operations.
+
+Reproduction:
+```sh
+cargo test --all-targets
+cargo run --bin pascal-replay-tick -- tests/fixtures/pascal-runtime-schema-v2-tick316.jsonl > /tmp/rust-tick316.jsonl
+cargo run --bin pascal-diff -- tests/fixtures/pascal-runtime-schema-v2-tick316.jsonl /tmp/rust-tick316.jsonl
+```
+
+Next work: capture full tick inputs/state, implement the zero branch and close-range probability chain with nested action calls sharing the same replay cursor, then expand into player input, frame scripts, hit resolution, effects, and physics.
