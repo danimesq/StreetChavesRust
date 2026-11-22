@@ -469,14 +469,32 @@ def walk_expr(node):
 
 
 def infer_random_width(arg):
-    # ChavesRoteiro marks Round/Trunc as Int64; it dispatches Random to Sortear64.
-    for sub in walk_expr(arg):
-        if sub["kind"] == "call" and sub["name"].lower() in {"round", "trunc"}:
+    # Match the interpreter's TValor.Largo propagation for the forms used by
+    # the fighter scripts. ShortInt explicitly clears Largo even when its input
+    # was produced by Round/Trunc; Abs and Random preserve their argument width.
+    if arg["kind"] == "call":
+        name = arg["name"].lower()
+        if name == "shortint":
+            return "int32"
+        if name in {"round", "trunc"}:
             return "int64"
-        if sub["kind"] == "literal" and sub.get("literal_type") == "integer":
-            if not -(2**31) <= int(sub["value"]) <= 2**31 - 1:
-                return "int64"
-    return "int32"
+        if name in {"abs", "random"}:
+            return infer_random_width(arg["args"][0])
+    if arg["kind"] == "literal" and arg.get("literal_type") == "integer":
+        return ("int64" if not -(2**31) <= int(arg["value"]) <= 2**31 - 1
+                else "int32")
+    if arg["kind"] in {"unary", "group"}:
+        return infer_random_width(arg["value"])
+    if arg["kind"] == "binary":
+        # Binary integer operations preserve Largo if either operand is Largo.
+        if arg["op"] == "/":
+            return "unknown"
+        left = infer_random_width(arg["left"])
+        right = infer_random_width(arg["right"])
+        if "unknown" in {left, right}:
+            return "unknown"
+        return "int64" if "int64" in {left, right} else "int32"
+    return "unknown"
 
 
 def guard_hints(guards):
