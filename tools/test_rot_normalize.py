@@ -42,7 +42,10 @@ end;
         self.assertEqual(len(draws), 3)
         self.assertEqual(draws[0]["range_expression"], "2")
         self.assertEqual(draws[0]["random_width"], "int32")
+        self.assertEqual(draws[0]["raw_rng_words_consumed"], 1)
         self.assertEqual(draws[1]["random_width"], "int64")
+        self.assertEqual(draws[1]["raw_rng_words_consumed"], 2)
+        self.assertIn("modulo", draws[1]["rng_result_reduction"])
         self.assertTrue(any("RHS skipped only if left is Boolean" in g for g in draws[0]["guards"]))
         self.assertGreaterEqual(sum(e["kind"] == "loop_region" for e in events), 2)
         self.assertTrue(any(e.get("target") == "P.Quadro" for e in events))
@@ -55,6 +58,14 @@ end;
         self.assertEqual(extractor.events[0]["kind"], "loop_region")
         self.assertEqual(extractor.events[0]["body_event_count"], 1)
         self.assertEqual(extractor.events[1]["target"], "P.Quadro")
+
+    def test_pascal_shortint_cast_downgrades_wide_random_argument(self):
+        ast = self.parse("Random(ShortInt(Round(12.5)));")
+        extractor = mod.EventExtractor("C01", "Quadro", "unknown")
+        extractor.statement(ast["body"])
+        draw = next(e for e in extractor.events if e["kind"] == "rng_draw")
+        self.assertEqual(draw["random_width"], "int32")
+        self.assertEqual(draw["raw_rng_words_consumed"], 1)
 
     def test_multi_argument_rng_order_is_not_guessed(self):
         ast = self.parse("CriaEfeito(1, 'A', Jog, Random(10), Random(20));")
