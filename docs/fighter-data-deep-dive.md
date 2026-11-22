@@ -2,7 +2,7 @@
 
 ## Scope and evidence
 
-Comparison of pinned source/data representations, not a Rust schema and not proof either port is canonical.
+Comparison of pinned source/data representations. For the Rust reconstruction, Pascal/OpenStreetChaves is normative by explicit project policy; C is comparative only. This does not prove that the Pascal port matches the original executable.
 
 - Pascal/SDL2: [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves/tree/e1b025c35ecbc2b14d8635564aafd23c2107d3d1), `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`.
 - C17/SDL3: [open-street-chaves](https://github.com/danimesq/open-street-chaves/tree/e76ad2188af6842ff6618ecdb8f425bba61c9183), `e76ad2188af6842ff6618ecdb8f425bba61c9183`.
@@ -91,6 +91,8 @@ Conditions include `Passo=N`, `NoAr`, `CargaSoco>=N`, `CargaChute>=N`. The four 
 C01 has frame anchors through 49; C16 through 50. Data comments say player two adds 50 to the frame index. These are examples, not universal maxima. Missing rows must follow actual consumer behavior; do not interpolate.
 
 ## Pascal `.rot` interpreter
+
+The Rust reconstruction follows this interpreter as its normative script semantics. The static parser/normalizer is documented in [ROT normalizer](rot-normalizer.md); it does not replace the Pascal interpreter or claim to simulate its runtime.
 
 `ChavesRoteiro.pas` parses a restricted Pascal-like language into an internal node representation. Documented syntax includes `if/then/else`, `begin/end`, `for/to/downto`, `repeat/until`, `while`, `case`, assignments, calls, sets (`in [...]`) and typed locals: Byte, ShortInt, SmallInt, Word, Integer, Int64, Double and Boolean.
 
