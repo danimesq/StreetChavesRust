@@ -12,6 +12,7 @@ There are no calendar estimates. Each phase advances when its exit criteria are 
 
 - Independent implementation: do not mechanically translate either SDL project.
 - Evidence-led behavior: distinguish original-game observations from port-specific behavior and inference.
+- Normative-source precedence: follow OpenStreetChaves Pascal/FPC 3.2.2 for Rust behavior; use C17/SDL3 for comparison only. Record disagreements and leave them open for original-executable verification.
 - Simulation/platform separation: the game core must not depend on SDL, window handles, device APIs, or wall-clock time.
 - Deterministic tests: identical initial state, RNG state, and logical inputs should reproduce the same simulation results.
 - Compatibility before embellishment: preserve observed behavior first; improvements and optional enhancements must be explicit.
@@ -23,9 +24,9 @@ There are no calendar estimates. Each phase advances when its exit criteria are 
 | Phase | Focus | Status |
 |---|---|---|
 | 0 | Research baseline and project definition | In progress |
-| 1 | Original-game evidence and source/data inventory | In progress / needs validation |
+| 1 | Original-game evidence and source/data inventory | In progress / needs validation (Pascal .rot pins and symbolic normalizer added) |
 | 2 | Technical architecture and workspace foundation | In progress (minimal Cargo crate created) |
-| 3 | Core simulation primitives and deterministic harness | In progress (event/RNG/collision contracts; no playable simulation yet) |
+| 3 | Core simulation primitives and deterministic harness | In progress (FPC 3.2.2 RNG, timeline contracts and static .rot normalization; no playable simulation yet) |
 | 4 | Fighter data, animation, and state machine | Planned |
 | 5 | Combat, effects, and physics | Planned |
 | 6 | SDL3 runtime, input, rendering, and audio adapters | Planned |
@@ -62,6 +63,7 @@ Exit criteria:
 
 Goals:
 - Pin the exact commits of reference projects used for each investigation.
+- Follow Pascal/FPC 3.2.2 as the normative Rust reconstruction source; keep C-port divergences separately documented for original-executable verification.
 - Inventory and hash the supplied original executable as a preliminary static-research artifact; deeper runtime pairing and differential validation remain reserved for the final compatibility stage and do not block the first playable Rust baseline.
 - Inventory fighter, move, stage, effect, sprite, sound, configuration, and save data.
 - Determine which values are static, decompiled, runtime-observed, cross-project, inferred, or unknown.
@@ -69,6 +71,8 @@ Goals:
 
 Deliverables:
 - Source inventory and pinned revision manifest.
+- Verbatim `Comum.rot` and `C01.rot`..`C15.rot` inputs plus a SHA-pinned manifest.
+- Static symbolic timelines for all 15 fighters and a Pascal RNG source inventory.
 - Data-format and resource catalog.
 - Preliminary original executable identity and PE inspection report; repeatable runtime capture procedure for the later compatibility stage.
 - Provenance/license notes.
@@ -108,7 +112,7 @@ Exit criteria:
 
 **Status: In progress**
 
-Initial contracts now cover ordered per-tick events, a Delphi 5 32-bit RNG transition with injected seed, explicit C/Pascal box lifecycle operations, Pascal strength-conditioned row ordering, and strict AABB overlap. These are contract-level primitives only; the complete fighter simulation, original RandSeed capture, and original call-stream parity remain unimplemented.
+Initial contracts now cover ordered per-tick events, the normative FPC 3.2.2 MTwist RNG with separate LongInt/Int64 raw-word costs, explicit Pascal box lifecycle operations, Pascal strength-conditioned row ordering, and strict AABB overlap. A static normalizer parses the full 15-fighter .rot roster and preserves guards, loops and RNG sites. These are research/contracts only; concrete tick execution, Pascal `--gravar` trace capture and original-executable parity remain unimplemented.
 
 Goals:
 - Implement logical coordinates, ticks, player identifiers, input actions, timers, geometry, and explicit game state types.
