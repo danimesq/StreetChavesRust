@@ -76,16 +76,18 @@ fn tick_316_replays_real_random_gate_and_matches_pascal_checkpoints() {
 }
 
 #[test]
-fn unsupported_random_distance_branch_fails_closed() {
+fn unsupported_close_range_attack_chain_fails_closed() {
     let mut replay = PascalDrawReplay::from_reader(Cursor::new(PASCAL_TICK_316)).unwrap();
     let mut state = fixture_state();
 
-    // The fixture draw is 12, so this test proves the nonzero branch is taken.
-    // A zero draw is covered by the runtime's explicit unsupported-branch path
-    // when a future zero-valued fixture is supplied.
     let result = state.tick_common_ai_walk(
-        AiTickInputs { distance: 150, projectile_threat: false },
+        AiTickInputs { distance: 50, projectile_threat: false },
         &mut replay,
     );
-    assert!(result.is_ok());
+    assert!(matches!(
+        result,
+        Err(street_chaves::combat_runtime::RuntimeError::UnsupportedBranch(
+            "Common.rot [IA]: close-range attack probability chain"
+        ))
+    ));
 }
