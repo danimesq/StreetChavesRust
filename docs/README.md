@@ -14,6 +14,7 @@ This directory records the research and engineering decisions for an independent
 - [Source and data inventory](source-inventory.md): pinned reference revisions, repository structure, runtime entry points, data roots, generated tables, and subsystem ownership.
 - [Fighter data deep dive](fighter-data-deep-dive.md): INI/ROT semantics, the C specification-to-table pipeline, roster boundaries, and fighter-data differences.
 - [Fighter roster matrix](fighter-roster-matrix.md): character IDs, Pascal/C coverage, optional sections, and the Chapolin extension.
+- [Chapolin bonus plan](chapolin-bonus-2026.md): keep Chapolin recoverable as an optional 2026 bonus, separate from the base roster.
 - [Data formats and resource pipelines](data-formats.md): INI/ROT data, fighter/stage/effect resources, generated C tables, asset loading and unresolved parser semantics.
 - [Provenance and licensing review](provenance-and-licenses.md): declared project licenses, third-party material classes, asset rights risks, and current reuse decisions.
 - [Rust architecture proposal](rust-architecture.md): a proposed separation of deterministic game logic from SDL3 presentation and platform services.
