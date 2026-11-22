@@ -26,7 +26,10 @@ impl PascalReplayWidth {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PascalReplayError {
     Trace(String),
-    Exhausted {\n        expected_width: PascalReplayWidth,\n        expected_range: i64,\n    },
+    Exhausted {
+        expected_width: PascalReplayWidth,
+        expected_range: i64,
+    },
     RequestMismatch {
         api_call_index: u64,
         expected_width: String,
@@ -34,8 +37,14 @@ pub enum PascalReplayError {
         expected_range: i64,
         actual_range: i64,
     },
-    InvalidRecordedDraw {\n        api_call_index: u64,\n        reason: String,\n    },
-    Unconsumed {\n        remaining: usize,\n        next_api_call_index: u64,\n    },
+    InvalidRecordedDraw {
+        api_call_index: u64,
+        reason: String,
+    },
+    Unconsumed {
+        remaining: usize,
+        next_api_call_index: u64,
+    },
 }
 
 impl fmt::Display for PascalReplayError {
