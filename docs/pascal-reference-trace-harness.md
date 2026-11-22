@@ -190,23 +190,50 @@ compiled the Pascal branch with FPC 3.2.2 and SDL2, ran the fixed-seed
 both `logica.txt` checkpoints byte for byte, validated both schema-v2 traces,
 and uploaded artifact `pascal-runtime-trace-schema-v2`.
 
-Each run contains 3,000 tick records, 20,437 script invocations, 394,252
-control records, 8,841 `SortearValor` calls, and 14,895 wrapper-scoped MT words.
-The two runs are identical. The artifact is retained by Actions until
+Each run contains 3,000 ticks, 20,437 script invocations, 394,252 control
+records, 8,841 `SortearValor` calls (8,841 `System.Random`, 0 replay), and
+14,895 wrapper-scoped MT words. The overload distribution is 2,787 LongInt
+draws and 6,054 Int64 draws, matching the observed 14,895-word total. Both
+runs are identical. The full trace artifact is retained by Actions until
 2026-12-22. A compact, selected real-event excerpt is committed at
-`tests/fixtures/pascal-runtime-schema-v2-tick316.jsonl`; it is clearly marked
-as an event sample rather than a complete tick trace.
+`tests/fixtures/pascal-runtime-schema-v2-tick316.jsonl`; it is marked as an
+event sample, not a complete tick trace.
 
-The Rust library module `src/trace_join.rs` now loads schema-v2 Pascal JSONL
-and `symbolic-action-tick-index/v1`, then reconciles concrete draws to static
-RNG sites. It emits `Unique`, `Ambiguous`, `Unmatched` or `NonRotSource`
-instead of forcing a match when source columns are unavailable. Its real
-tick-316 fixture joins the first runtime draw to
-`Common.IA.L293.C4` (fighter 1, line 293, LongInt, range 13) and retains the
-actual branch event from the same script invocation. The tests also prove that
-a second same-line candidate remains ambiguous and a Pascal-helper draw is
-not mislabelled as a `.rot` source.
+`src/trace_join.rs` exposes the reconciliation API, and
+`src/bin/trace-join.rs` provides a full-capture CLI:
+
+```sh
+cargo run --release --bin trace-join -- trace/rng.jsonl symbolic-action-tick-index.json reconciliation.jsonl
+```
+
+The end-to-end pipeline in
+[Pascal runtime trace #45039290385](https://github.com/danimesq/StreetChavesRust/actions/runs/45039290385)
+recompiled Pascal, repeated both fixed-seed captures, regenerated the 15
+fighter symbolic index from the pinned Pascal source, reconciled every draw
+in both traces, and confirmed byte-identical reports. The full-capture result:
+
+| Classification | Count |
+|---|---:|
+| Unique static site match | 8,415 |
+| Ambiguous | 0 |
+| Unmatched | 0 |
+| Non-`.rot` source context | 426 |
+
+The 426 non-`.rot` calls are further identified as 422 direct calls through
+`SortearValor` with no active script context and 4 calls from Pascal helpers
+inside a `.rot` execution. They are real wrapper draws, not failed static
+matches. All 8,415 `.rot` expression draws join uniquely under the current
+key (fighter/character, file/section, line, width, and literal range where
+available). The index contains 465 fighter-timeline RNG occurrences from
+255 unique static source sites.
+
+The captured first draw still joins to `Common.IA.L293.C4`. The tests also
+prove that an artificially duplicated same-line candidate remains ambiguous
+and that helper draws are not mislabelled as static `.rot` sites.
 
 Rust CI run
 [contract tests #45038903679](https://github.com/danimesq/StreetChavesRust/actions/runs/45038903679)
 passes formatting and all 22 library tests plus both integration tests.
+The full capture/reconciliation evidence is in
+[artifact #14760554410](https://github.com/danimesq/StreetChavesRust/actions/runs/45039290385/artifacts/14760554410);
+the integrated pipeline passed.
