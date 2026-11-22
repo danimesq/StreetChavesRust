@@ -1,0 +1,28 @@
+# StreetChavesRust documentation
+
+This directory records the research and engineering decisions for an independent Rust reimplementation of **Street Chaves — O Lutador da Vila**.
+
+## Research documents
+
+- [Comparative analysis of the SDL implementations](comparative-analysis.md): the Pascal/SDL2 and C17/SDL3 projects, their architectures, strengths, differences, and limitations.
+- [Rust architecture proposal](rust-architecture.md): a proposed separation of deterministic game logic from SDL3 presentation and platform services.
+- [Evidence register and open questions](evidence-and-open-questions.md): facts, provenance, confidence levels, unresolved questions, and validation priorities.
+
+## Source projects
+
+| Project | Role in this research |
+|---|---|
+| [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves) | Pascal/Lazarus reconstruction migrated to SDL2. Primary reference for a working SDL-hosted game, data-driven fighter scripts, software rendering, and migration strategy. |
+| [open-street-chaves](https://github.com/danimesq/open-street-chaves) | Independent C17 + SDL3 reimplementation. Primary reference for reverse-engineered game rules, state machine, hitboxes, deterministic tests, and SDL3 runtime design. |
+| [street-chaves-hack-sms](https://github.com/danimesq/street-chaves-hack-sms) | Supporting reference only. Useful for ROM tracing, graphics extraction, binary formats, and hardware constraints. It is not a reference implementation of the original PC game's mechanics. |
+
+These repositories are independent projects, not a parent/child chain. Their claims must be compared rather than silently merged.
+
+## Research rules
+
+1. Prefer evidence from the original executable and reproducible observations over assumptions.
+2. Distinguish original-game behavior from port-specific behavior.
+3. Mark facts, inferences, and unknowns explicitly.
+4. Do not copy source code or assets until provenance and license compatibility have been reviewed.
+5. Keep the Rust core independent from SDL and the operating system.
+6. Every behavior that can be tested should eventually have a deterministic test or replay fixture.
