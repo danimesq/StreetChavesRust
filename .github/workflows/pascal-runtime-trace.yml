@@ -134,9 +134,9 @@ jobs:
           assert kinds["rot_expression"] == 8415, kinds
           assert kinds["pascal_helper"] >= 4, kinds
           assert kinds["pascal_direct"] >= 422, kinds
-          assert summary["source_column_draws"] == 2928, summary
+          assert summary["source_column_draws"] == 11343, summary
           assert summary["source_column_available_for_pascal_direct"] is True, summary
-          assert summary["rot_expression_source_column_available"] is False, summary
+          assert summary["rot_expression_source_column_available"] is True, summary
           assert summary["instrumented_game_source_rng_scope"] is True, summary
           assert summary["external_rtl_library_rng_intercepted"] is False, summary
           assert summary["symbolic_rng_timeline_occurrences"] == 465, summary
