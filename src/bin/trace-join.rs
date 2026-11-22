@@ -79,7 +79,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         "match_policy": "fighter+character+section+source_line+source_column_when_available+width+literal_range_when_available",
         "source_column_draws": source_column_draws,
         "source_column_available_for_pascal_direct": true,
-        "rot_expression_source_column_available": false,
+        "rot_expression_source_column_available": true,
         "instrumented_game_source_rng_scope": true,
         "external_rtl_library_rng_intercepted": false
     });
