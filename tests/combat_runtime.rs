@@ -5,8 +5,8 @@ use std::io::Cursor;
 use serde_json::Value;
 use street_chaves::combat_runtime::{
     AiCommand, AiTickInputs, BodyBox, CharacterActionScript, CombatState, FighterState,
-    RuntimeDrawWidth, RuntimeError, ACTION_CROUCHING, ACTION_IDLE, ACTION_POSE, ACTION_VICTORY,
-    ACTION_WALKING, SIDE_LEFT, SIDE_RIGHT,
+    RuntimeDrawWidth, RuntimeError, VictoryAnimationContext, ACTION_CROUCHING, ACTION_IDLE,
+    ACTION_POSE, ACTION_VICTORY, ACTION_WALKING, SIDE_LEFT, SIDE_RIGHT,
 };
 use street_chaves::pascal_differential::{first_divergence, load_tick_checkpoints};
 use street_chaves::pascal_replay::{PascalDrawReplay, PascalRandomSource};
@@ -34,6 +34,7 @@ fn fighter_from_snapshot(value: &Value) -> FighterState {
     assert_eq!(body.len(), 4);
 
     FighterState {
+        sprite_frame: 0,
         character_id: required_i32(value, "character_id") as u8,
         action_id: required_i32(value, "action_id") as u16,
         action_frame: required_i32(value, "action_frame") as u16,
@@ -321,6 +322,146 @@ fn replay_and_pascal_diff_clis_round_trip_tick_316() {
         "unexpected differential output: {}",
         String::from_utf8_lossy(&diff.stdout)
     );
+}
+
+
+#[derive(Default)]
+struct ScriptedRng {
+    values: Vec<i32>,
+    cursor: usize,
+}
+
+impl ScriptedRng {
+    fn with_values(values: &[i32]) -> Self {
+        Self { values: values.to_vec(), cursor: 0 }
+    }
+}
+
+impl PascalRandomSource for ScriptedRng {
+    type Error = String;
+
+    fn draw_longint(&mut self, range: i32) -> Result<i32, Self::Error> {
+        let value = *self.values.get(self.cursor)
+            .ok_or_else(|| format!("missing scripted draw at {}", self.cursor))?;
+        self.cursor += 1;
+        if value < 0 || value >= range {
+            return Err(format!("scripted value {value} outside range {range}"));
+        }
+        Ok(value)
+    }
+
+    fn draw_int64(&mut self, range: i64) -> Result<i64, Self::Error> {
+        self.draw_longint(range as i32).map(i64::from)
+    }
+}
+
+fn victory_context() -> VictoryAnimationContext {
+    VictoryAnimationContext {
+        sprite_offset: 1000,
+        ground_y: 300.0,
+        camera_x: 0.0,
+        camera_left_limit: 100.0,
+        camera_right_limit: 300.0,
+    }
+}
+
+fn victory_state(character_id: u8, action_frame: u16, sprite_frame: i32) -> CombatState {
+    let (mut state, _) = ai_scenario(PASCAL_TICK_316, 316);
+    let fighter = &mut state.fighters[1];
+    fighter.character_id = character_id;
+    fighter.action_id = ACTION_VICTORY;
+    fighter.action_frame = action_frame;
+    fighter.sprite_frame = sprite_frame;
+    fighter.x = 200.0;
+    fighter.y = 290.0;
+    fighter.facing = SIDE_RIGHT;
+    state
+}
+
+#[test]
+fn victory_toggle_characters_read_both_prior_sprite_frames() {
+    for (character_id, boundary) in [(6, 4), (9, 3), (14, 3)] {
+        for previous in [1033, 1034] {
+            let mut state = victory_state(character_id, boundary, previous);
+            let mut rng = ScriptedRng::default();
+            let result = state.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+            assert_eq!(result.draws.len(), 0);
+            assert_eq!(rng.cursor, 0);
+            assert_eq!(
+                state.fighters[1].sprite_frame,
+                if previous == 1033 { 1034 } else { 1033 },
+                "C{character_id:02} must toggle from prior frame {previous}"
+            );
+        }
+    }
+}
+
+#[test]
+fn victory_toggle_characters_preserve_sprite_frame_off_boundary() {
+    for character_id in [6, 9, 14] {
+        let mut state = victory_state(character_id, 2, 1047);
+        let mut rng = ScriptedRng::default();
+        state.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+        assert_eq!(state.fighters[1].sprite_frame, 1047);
+        assert_eq!(rng.cursor, 0);
+    }
+}
+
+#[test]
+fn c02_victory_consumes_exactly_one_shared_random_two_draw() {
+    let mut state = victory_state(2, 17, 0);
+    let mut rng = ScriptedRng::with_values(&[0]);
+    let result = state.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+    assert_eq!(state.fighters[1].sprite_frame, 1034);
+    assert_eq!(rng.cursor, 1);
+    assert_eq!(result.draws.len(), 1);
+    assert_eq!((result.draws[0].range, result.draws[0].value), (2, 0));
+}
+
+#[test]
+fn c12_victory_preserves_movement_clamps_rng_and_particle_order() {
+    let mut state = victory_state(12, 8, 0);
+    state.fighters[1].x = 289.0;
+    state.fighters[1].facing = SIDE_RIGHT;
+    // Random(2) chooses no reversal; then five ordered Random(40)/Random(10) pairs.
+    let mut values = vec![1];
+    for pair in 0..5 {
+        values.push(pair);
+        values.push(9 - pair);
+    }
+    let mut rng = ScriptedRng::with_values(&values);
+    let result = state.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+    assert_eq!(state.fighters[1].x, 301.0);
+    assert_eq!(state.fighters[1].facing, SIDE_LEFT);
+    assert_eq!(state.fighters[1].sprite_frame, 1033);
+    assert_eq!(rng.cursor, 11);
+    assert_eq!(result.draws.iter().map(|draw| draw.range).collect::<Vec<_>>(),
+        vec![2, 40, 10, 40, 10, 40, 10, 40, 10, 40, 10]);
+    assert_eq!(result.particles.len(), 5);
+    assert_eq!(result.particles[0].x, 271.0);
+    assert_eq!(result.particles[0].y, 299.0);
+}
+
+#[test]
+fn c08_and_c13_apply_ground_relative_vertical_motion() {
+    let mut c08 = victory_state(8, 0, 0);
+    c08.fighters[1].y = 299.0;
+    let mut rng = ScriptedRng::default();
+    c08.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+    assert_eq!(c08.fighters[1].y, 295.0);
+
+    let mut c13 = victory_state(13, 0, 0);
+    c13.fighters[1].y = 299.0;
+    c13.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+    assert_eq!(c13.fighters[1].y, 290.0);
+}
+
+#[test]
+fn c15_frame_ten_keeps_the_later_independent_assignment() {
+    let mut state = victory_state(15, 10, 0);
+    let mut rng = ScriptedRng::default();
+    state.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+    assert_eq!(state.fighters[1].sprite_frame, 1034);
 }
 
 #[test]
