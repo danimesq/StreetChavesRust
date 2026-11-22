@@ -1,8 +1,9 @@
 //! Evidence-driven contracts for the Street Chaves simulation core.
 //!
-//! These types preserve source order and source data. They intentionally do
-//! not decide unresolved original-game semantics such as collision edge rules,
-//! box retention between frames, or Delphi's exact random-number algorithm.
+//! These types preserve source order and source data. The crate now models the
+//! pinned Pascal/C box-update rules and Delphi 5 integer RNG recurrence. The
+//! original executable's exact selector choice, initial RandSeed, and complete
+//! random-call stream remain unverified.
 
 use std::fmt;
 
@@ -40,7 +41,8 @@ impl RawBounds {
     }
 }
 
-/// Attack-box row, retaining every field proven to match between Pascal and C.
+/// Attack-box row. `selector` is the Pascal action key or the C state key;
+/// keep the source namespace alongside provenance when storing extracted rows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HitboxRecord {
     pub selector: u16,
@@ -303,8 +305,8 @@ impl fmt::Display for TimelineError {
 
 impl std::error::Error for TimelineError {}
 
-/// Deterministic sequence source for fixtures. This is not Delphi-compatible
-/// RNG; it pins random-call order until the original algorithm is recovered.
+/// Common interface for deterministic test sequences and compatibility RNGs.
+
 pub trait RandomSource {
     type Error;
     fn draw(&mut self, upper_exclusive: u32) -> Result<RandomSample, Self::Error>;
@@ -517,6 +519,41 @@ mod tests {
         let mut strong = PascalAttackState { current_force: 2, current_box: None };
         assert_eq!(strong.apply_ordered_rows(ActionId(27), 1, &rows), 1);
         assert_eq!(strong.current_box.as_ref().unwrap().bounds, bounds_strong);
+    }
+
+    #[test]
+    fn earlier_pascal_row_force_assignment_changes_later_variant_match() {
+        let generic = PascalAttackDefinition {
+            action: ActionId(9),
+            action_timer: 4,
+            strength_condition: None,
+            bounds: RawBounds { x1: 0, y1: 1, x2: 2, y2: 3 },
+            active: false,
+            assigned_strength: 2,
+            damage: 0,
+            guard_damage: 0,
+        };
+        let strong_variant = PascalAttackDefinition {
+            strength_condition: Some(2),
+            bounds: RawBounds { x1: 4, y1: 5, x2: 6, y2: 7 },
+            active: true,
+            assigned_strength: 0,
+            damage: 9,
+            guard_damage: 1,
+            ..generic
+        };
+        let mut state = PascalAttackState {
+            current_force: 1,
+            current_box: None,
+        };
+
+        assert_eq!(
+            state.apply_ordered_rows(ActionId(9), 4, &[generic, strong_variant]),
+            2
+        );
+        assert_eq!(state.current_force, 2);
+        assert_eq!(state.current_box.as_ref().unwrap().bounds, strong_variant.bounds);
+        assert!(state.current_box.as_ref().unwrap().active);
     }
 
     #[test]
