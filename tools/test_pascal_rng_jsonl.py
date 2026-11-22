@@ -269,7 +269,7 @@ class PascalRngJsonlTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("1 ticks, 1 script executions, 1 branch/loop records", result.stdout)
-        self.assertIn("1 SortearValor calls", result.stdout)
+        self.assertIn("1 instrumented game RNG calls", result.stdout)
         self.assertIn("1 instrumented MT word(s)", result.stdout)
 
     def test_rejects_missing_session_header(self) -> None:
