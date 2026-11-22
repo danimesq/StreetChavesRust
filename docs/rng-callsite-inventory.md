@@ -2,7 +2,7 @@
 
 ## 🌈 Purpose and confidence
 
-This is a source-call-site inventory of the pinned C17/SDL3 reference, not yet an expanded dynamic draw trace. It identifies every subsystem that can advance the single `g->fight.rng` state, then places those call groups into the C fight-tick order.
+This is a source-call-site inventory of the pinned C17/SDL3 comparison port, not the normative RNG specification and not yet an expanded dynamic draw trace. It identifies each subsystem that advances the C port's single `g->fight.rng` state, then places those call groups into the C fight-tick order. Pascal/FPC 3.2.2 remains normative for Rust.
 
 Pinned C source: `danimesq/open-street-chaves` at `e76ad2188af6842ff6618ecdb8f425bba61c9183`.
 
@@ -39,7 +39,7 @@ This table is deliberately grouped by subsystem, not sorted into one global chro
 - `src/fight/fight.c:51-69`: `osc_fight_start` may consume RNG for stage and music selection before the first fight tick.
 - `osc_fight_start` does not reinitialize `fight.rng`; the game-state RNG persists between fights.
 
-The deterministic harness seed is a test convenience of the C port. It is not evidence of the original executable's startup `RandSeed`.
+The deterministic harness seed is a test convenience of the C comparison port. It is not evidence of the original executable's startup RandSeed and must not override the Pascal `--gravar` seed/recording path.
 
 ## 🌈 C fight-tick phase order
 
@@ -87,6 +87,10 @@ A frame-selector spawn can draw for X/Y offsets in `fx_spawns_for`, then call `s
 ### Repeated stage debris
 
 `stage.c:40` draws X and Y for each of 30 fragments. Each fragment invokes `spawn_fx`; the effect type may add its own draws. The source-level stage event is not a two-draw event.
+
+## 🌈 Comparison-only consequences
+
+Use this map to annotate differences against Pascal. Do not port these call sites as authoritative where the Pascal source/runtime differs. See [Pascal RNG compatibility](rng-compatibility.md) and [Pascal RNG inventory](pascal-rng-inventory.md).
 
 ## 🌈 Rust consequences
 
