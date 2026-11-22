@@ -166,6 +166,8 @@ workflow run 45047281660. This closes the observed game-source RNG-stream gap
 for the instrumented call sites. External RTL/library RNG calls remain outside
 the trace until proven absent or separately instrumented.
 
-Still open: source columns (including multiple RNG calls on one source line),
-per-subexpression boolean values and short-circuit evaluation traces, and a
-complete executable action interpreter with per-tick state comparison.
+Direct Pascal `.inc` RNG call sites now include source columns, which
+disambiguates multiple calls on one line for those sites. Still open: source
+columns in ROT expression AST events, per-subexpression boolean values and
+short-circuit evaluation traces, and a complete executable action interpreter
+with per-tick state comparison.
