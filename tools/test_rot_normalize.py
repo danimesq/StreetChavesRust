@@ -65,9 +65,9 @@ end;
         extractor.statement(ast["body"])
         draws = [e for e in extractor.events if e["kind"] == "rng_draw"]
         self.assertEqual([e["range_expression"] for e in draws], ["20", "10"])
-        self.assertTrue(all(e["argument_evaluation"] == "right-to-left" for e in draws))
-        self.assertIn("arg[4]", draws[0]["argument_context"])
-        self.assertIn("arg[3]", draws[1]["argument_context"])
+        self.assertTrue(all(e["argument_evaluation"] == "single-argument" for e in draws))
+        self.assertIn("CriaEfeito arg[4] (right-to-left)", draws[0]["argument_context"])
+        self.assertIn("CriaEfeito arg[3] (right-to-left)", draws[1]["argument_context"])
 
     def test_case_later_arms_require_prior_arms_not_to_match(self):
         source = """
