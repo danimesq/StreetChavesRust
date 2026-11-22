@@ -148,3 +148,24 @@ The SMS project is based on a Master System fighting-game hack and imports Chave
 - [Fight engine](https://github.com/danimesq/open-street-chaves/blob/main/docs/spec/05-fight-engine.md)
 - [Open questions in the C17 project](https://github.com/danimesq/open-street-chaves/blob/main/docs/spec/99-open-questions.md)
 - [SMS hack research](https://github.com/danimesq/street-chaves-hack-sms)
+
+
+## 2026-11-22: global game-source RNG cursor
+
+The first full-capture comparison against the wrapper-only trace diverged at
+API call 0. The Pascal session seed was 20261026, but the first captured
+wrapper call was preceded by a direct `System.Random` call. Static scanning
+found 55 direct `Random(...)` call sites across eight game `.inc` files.
+The experimental Pascal branch now routes those sites through
+`SortearDireto(LongInt/Int64)`, so direct and `.rot` draws share one call
+index and one MT-word cursor.
+
+The expanded capture contains 11,769 calls and 18,812 MT words. The Rust
+`Fpc322Rng` independently recalculated and matched all captured results in
+workflow run 45047281660. This closes the observed game-source RNG-stream gap
+for the instrumented call sites. External RTL/library RNG calls remain outside
+the trace until proven absent or separately instrumented.
+
+Still open: source columns (including multiple RNG calls on one source line),
+per-subexpression boolean values and short-circuit evaluation traces, and a
+complete executable action interpreter with per-tick state comparison.
