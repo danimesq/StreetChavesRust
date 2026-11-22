@@ -166,10 +166,11 @@ workflow run 45047281660. This closes the observed game-source RNG-stream gap
 for the instrumented call sites. External RTL/library RNG calls remain outside
 the trace until proven absent or separately instrumented.
 
-Direct Pascal `.inc` RNG call sites now include source columns: 2,928
-runtime draw records across 23 exercised sites. This disambiguates multiple
-calls on one line for those sites. Still open: source columns in ROT expression
-AST events, per-subexpression boolean values and short-circuit evaluation
+Direct Pascal `.inc` RNG call sites include source columns: 2,928 runtime
+draw records across 23 exercised sites. The current Pascal branch also adds
+tokenizer/AST columns for ROT expression draws, expected to cover 8,415 more
+events; this expansion awaits a fresh full capture and MTwist validation.
+Still open: per-subexpression boolean values and short-circuit evaluation
 traces, and a complete executable action interpreter with per-tick state
-comparison. The expanded source-column capture and independent MTwist check
-passed in workflow run 45048408251 (artifact 14764582501).
+comparison. The direct-call column capture and independent MTwist check passed
+in workflow run 45048408251 (artifact 14764582501).
