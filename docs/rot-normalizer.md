@@ -40,7 +40,7 @@ A `Random(...)` call is represented as a static RNG site. Each event records the
 
 Boolean `and/or` follows the Pascal interpreter rule: if the left operand is Boolean it can short-circuit; if it is integer bitwise logic, both operands are evaluated. The normalizer records the actual RHS execution condition. `case` arms retain ordered reachability guards: an arm is reached only if no earlier arm matched, and `else` requires that none of the listed arms matched.
 
-Function arguments with more than one argument preserve an explicit argument-evaluation profile. The Pascal interpreter determines `OrdemArgsInversa` with a runtime compiler probe, so the default is `unknown`. Do not set a direction until the relevant interpreter build has been measured.
+Function arguments with more than one argument preserve an explicit argument-evaluation profile. The Pascal interpreter determines `OrdemArgsInversa` with a runtime compiler probe. The CI now installs the pinned FPC 3.2.2 compiler, builds `tools/fpc-argument-order-probe.pas` (the same probe as the interpreter initialization), and passes the measured direction to the normalizer. On the current x86_64 Linux runner it reported `right-to-left` with evaluation trace `5431`, so the last argument is evaluated first. This is a measured target/compiler profile, not a universal guarantee for every FPC target; rerun the probe for another build environment.
 
 ## 🌈 Pascal RNG inventory
 
@@ -72,10 +72,11 @@ Generated files:
 - `pascal-rng-call-sites.json`: Pascal `.pas/.inc` RNG call-site inventory
 - `rot-rng-call-sites.json`: unique `.rot` RNG sites, including width and raw MT word cost
 - `source-manifest.json`: source hashes for the generated bundle
+- `argument-order.txt`: compiler-order result from the FPC probe (included in the CI artifact)
 
 ## 🌈 CI
 
-The `Pascal .rot normalization` workflow runs grammar unit tests, checks the pinned Pascal source, normalizes the full 15-fighter roster, verifies the output boundaries and uploads the bundle as the `pascal-rot-symbolic-timelines` artifact. The completed full run #30 (7 parser tests passed) produced 5,091 symbolic events grouped into 1,749 symbolic action/timer lanes, 255 unique `.rot` RNG sites represented 465 times across the composed fighter timelines, and 71 RNG-related `.pas/.inc` references. The 255 unique sites split into 160 LongInt (one raw MT word) and 95 Int64 (two raw MT words); composed occurrences split into 244 and 221 respectively.
+The `Pascal .rot normalization` workflow installs and verifies FPC 3.2.2, runs the compiler argument-order probe, tests the grammar, checks the pinned Pascal source, normalizes the full 15-fighter roster with the measured profile, verifies the output boundaries and uploads the bundle as the `pascal-rot-symbolic-timelines` artifact. The completed full run #30 (7 parser tests passed) produced 5,091 symbolic events grouped into 1,749 symbolic action/timer lanes, 255 unique `.rot` RNG sites represented 465 times across the composed fighter timelines, and 71 RNG-related `.pas/.inc` references. The 255 unique sites split into 160 LongInt (one raw MT word) and 95 Int64 (two raw MT words); composed occurrences split into 244 and 221 respectively.
 
 ## 🌈 Deliberate non-goals
 
