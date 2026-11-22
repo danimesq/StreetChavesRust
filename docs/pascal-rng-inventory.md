@@ -54,3 +54,18 @@ Pascal/FPC 3.2.2 is the normative source for the Rust implementation. C-port cal
 The existing runtime capture and differential mechanisms are mapped in [Pascal reference trace harness](pascal-reference-trace-harness.md).
 
 See [RNG compatibility](rng-compatibility.md), [ROT normalizer](rot-normalizer.md), and [C call-site comparison](rng-callsite-inventory.md).
+
+ 
+## 🌈 Dynamic trace status: schema v2
+
+The earlier experimental-exporter paragraph describes schema v1 and is now
+historical. The current Pascal research branch proposes schema v2 with
+logical tick boundaries, nested `.rot` execution IDs, script-local draw
+indices, source origin/line, and concrete `if`/`case`/`for`/`while`/
+`repeat` control records. This links runtime execution to static source
+lanes more closely, but source columns and every short-circuited boolean
+subexpression are not yet emitted.
+
+This is still an uncompiled, unrun experiment. There are no real schema-v2
+fixtures yet. The `SortearValor` MT-word counter remains wrapper-local;
+direct `System.Random` references outside the wrapper are not captured.
