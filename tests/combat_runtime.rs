@@ -5,7 +5,7 @@ use std::io::Cursor;
 use serde_json::Value;
 use street_chaves::combat_runtime::{
     AiCommand, AiTickInputs, BodyBox, CharacterActionScript, CombatState, FighterState,
-    RuntimeDrawWidth, RuntimeError, SIDE_LEFT, SIDE_RIGHT,
+    RuntimeDrawWidth, RuntimeError, ACTION_CROUCHING, ACTION_IDLE, ACTION_VICTORY, ACTION_WALKING, SIDE_LEFT, SIDE_RIGHT,
 };
 use street_chaves::pascal_differential::{first_divergence, load_tick_checkpoints};
 use street_chaves::pascal_replay::{PascalDrawReplay, PascalRandomSource};
@@ -320,4 +320,55 @@ fn replay_and_pascal_diff_clis_round_trip_tick_316() {
         "unexpected differential output: {}",
         String::from_utf8_lossy(&diff.stdout)
     );
+}
+
+
+#[test]
+fn victory_command_matches_the_shared_pascal_contract_for_all_original_fighters() {
+    // C01-C15 each define the same [Acao] victory guard and state writes.
+    for character_id in 1..=15 {
+        let (mut state, _) = ai_scenario(PASCAL_TICK_316, 316);
+        let fighter = &mut state.fighters[1];
+        fighter.character_id = character_id;
+        fighter.action_id = match character_id % 3 {
+            0 => ACTION_IDLE,
+            1 => ACTION_WALKING,
+            _ => ACTION_CROUCHING,
+        };
+        fighter.action_frame = 9;
+        fighter.action_duration = 17;
+
+        assert!(
+            state.apply_character_victory(1),
+            "C{character_id:02} should accept victory from idle/walking/crouching"
+        );
+        assert_eq!(state.fighters[1].action_id, ACTION_VICTORY);
+        assert_eq!(state.fighters[1].action_frame, 0);
+        assert_eq!(state.fighters[1].action_duration, 250);
+        assert_eq!(state.fighters[1].character_id, character_id);
+    }
+}
+
+#[test]
+fn victory_command_rejects_actions_outside_the_pascal_eligibility_set() {
+    for action_id in [3, 4, 5, 6, 8, 12, 21, 22, 23] {
+        let (mut state, _) = ai_scenario(PASCAL_TICK_316, 316);
+        let fighter = &mut state.fighters[1];
+        fighter.action_id = action_id;
+        fighter.action_frame = 7;
+        fighter.action_duration = 31;
+        let before = fighter.clone();
+
+        assert!(!state.apply_character_victory(1));
+        assert_eq!(state.fighters[1], before);
+    }
+}
+
+#[test]
+fn victory_command_rejects_an_invalid_fighter_index_without_mutation() {
+    let (mut state, _) = ai_scenario(PASCAL_TICK_316, 316);
+    let before = state.clone();
+
+    assert!(!state.apply_character_victory(2));
+    assert_eq!(state, before);
 }
