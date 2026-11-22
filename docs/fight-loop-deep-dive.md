@@ -155,7 +155,9 @@ The Pascal drawing path uses `Random` for jitter, stage animation placement, and
 
 If the original shares one RNG stream between gameplay and presentation, moving cosmetic randomness to a separate renderer RNG may change later gameplay randomness. Conversely, keeping all cosmetic RNG in the renderer would make headless simulation nondeterministic relative to the original.
 
-**Open compatibility task:** map every RNG call in the fight path, classify it as gameplay-affecting or presentation-only, and determine whether the original uses one shared stream. Do not split RNG streams until this is established.
+**Important RNG distinction:** this Pascal project is built with Free Pascal/Lazarus. Its ChavesRoteiro.SortearValor wrapper calls FPC System.Random, whose RTL documentation describes a Mersenne Twister implementation. The original Delphi 5 executable uses a different 32-bit generator; the C project implements the Delphi 5 LCG recurrence. Therefore the Pascal port's emitted random values are not a valid sequence oracle for the original.
+
+**Open compatibility task:** map every RNG call in the fight path, classify it as gameplay-affecting or presentation-only, and determine whether the original uses one shared stream. Do not split RNG streams until this is established. See [RNG compatibility](rng-compatibility.md) for the recurrence, seed caveats, and references.
 
 ---
 
