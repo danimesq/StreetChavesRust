@@ -36,7 +36,7 @@ For each fighter it combines the common section before the fighter-specific sect
 
 Each extracted event retains its branch guards, enclosing loop regions, source location, symbolic action predicates, and symbolic `P.QuadroAcao` predicates.
 
-A `Random(...)` call is represented as a static RNG site. The output deliberately leaves runtime tick and dynamic draw index unset. Those values cannot be known without an execution with concrete fighter state and branch outcomes.
+A `Random(...)` call is represented as a static RNG site. Each event records the Pascal integer width and expected raw MT word cost: LongInt consumes one FPC 3.2.2 MT word; Int64 consumes two and reduces the assembled 63-bit value modulo the range. The output deliberately leaves runtime tick and dynamic raw-word index unset. Those values cannot be known without an execution with concrete fighter state and branch outcomes.
 
 Boolean `and/or` follows the Pascal interpreter rule: if the left operand is Boolean it can short-circuit; if it is integer bitwise logic, both operands are evaluated. The normalizer records that distinction rather than assuming every textual `and/or` short-circuits.
 
@@ -46,9 +46,9 @@ Function arguments with more than one argument preserve an explicit argument-eva
 
 The optional `--pascal-source-root` scan finds `Randomize`, `RandSeed`, `Random`, `Sortear` and `Sortear64` in Pascal `.pas` and `.inc` files, excluding comments and string literals. It records path, line, column, call kind and source excerpt.
 
-The scan is static. It does not assign execution order across camera, fighter, stage, effects, HUD or round-state systems. The call-site inventory must be combined with the fight-loop phase graph and conditional guards before it becomes a dynamic RNG trace.
+The scan is static. It does not assign execution order across camera, fighter, stage, effects, HUD or round-state systems. The unique `.rot` RNG inventory is kept separately from the `.pas/.inc` call-site inventory, and shared `Comum.rot` sites are deduplicated even though they occur in each fighter's composed timeline.
 
-An important existing mechanism is already present in `ChavesRoteiro.pas`: `ModoDeSorteio(msGravar/msRepetir)` can record and replay requests, checking both range and 32/64-bit mode. That should be reused as a source for deterministic reference traces, rather than inventing a parallel Pascal recorder.
+An important existing mechanism is already present in `ChavesRoteiro.pas`: `ModoDeSorteio(msGravar/msRepetir)` can record and replay requests, checking both range and 32/64-bit mode. The pinned project README specifies Lazarus 4.8 with FPC 3.2.2; its matching RTL uses MTwist, where LongInt consumes one MT word and Int64 consumes two. Reuse the recorder and the deterministic `--gravar` harness (fixed `RandSeed := 20261026`) as the next source for runtime reference traces.
 
 ## 🌈 Run locally
 
@@ -68,12 +68,13 @@ Generated files:
 
 - `normalized-timelines.json`: full ASTs and symbolic events for all 15 fighters
 - `timeline-summary.md`: roster/section/event counts and interpretation notes
-- `pascal-rng-call-sites.json`: Pascal RNG call-site inventory
+- `pascal-rng-call-sites.json`: Pascal `.pas/.inc` RNG call-site inventory
+- `rot-rng-call-sites.json`: unique `.rot` RNG sites, including width and raw MT word cost
 - `source-manifest.json`: source hashes for the generated bundle
 
 ## 🌈 CI
 
-The `Pascal .rot normalization` workflow runs grammar unit tests, checks the pinned Pascal source, normalizes the full 15-fighter roster, verifies the output boundaries and uploads the bundle as the `pascal-rot-symbolic-timelines` artifact.
+The `Pascal .rot normalization` workflow runs grammar unit tests, checks the pinned Pascal source, normalizes the full 15-fighter roster, verifies the output boundaries and uploads the bundle as the `pascal-rot-symbolic-timelines` artifact. The first full run produced 5,091 symbolic events, 255 unique `.rot` RNG sites represented 465 times across the composed fighter timelines, and 71 RNG-related `.pas/.inc` references.
 
 ## 🌈 Deliberate non-goals
 
