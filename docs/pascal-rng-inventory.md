@@ -50,4 +50,6 @@ The latest normalizer CI run #30 passes 7 grammar tests and verifies the 15-figh
 
 Pascal/FPC 3.2.2 is the normative source for the Rust implementation. C-port call sites and RNG differences remain comparison annotations. The original `Chaves.exe` may later provide evidence for a documented behavior change, but the C port does not silently override Pascal.
 
+The existing runtime capture and differential mechanisms are mapped in [Pascal reference trace harness](pascal-reference-trace-harness.md).
+
 See [RNG compatibility](rng-compatibility.md), [ROT normalizer](rot-normalizer.md), and [C call-site comparison](rng-callsite-inventory.md).
