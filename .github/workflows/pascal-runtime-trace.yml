@@ -140,6 +140,17 @@ jobs:
           assert summary["rot_expression_source_column_available"] is True, summary
           assert summary["boolean_subexpression_records"] == 675222, summary
           assert summary["short_circuit_skips"] == 309092, summary
+          assert summary["width_counts"] == {"Int64": 7043, "LongInt": 4726}, summary
+          assert summary["fighter_indices"] == [1, 2], summary
+          assert summary["action_id_count"] == 24, summary
+          assert summary["script_invocations"] == 20437, summary
+          assert summary["nested_script_invocations"] == 5229, summary
+          assert summary["source_site_count"] == 45, summary
+          assert summary["symbolic_fighter_count"] == 15, summary
+          assert summary["control_type_counts"]["for_start"] == 67, summary
+          assert summary["control_type_counts"]["for_iteration"] == 201, summary
+          assert summary["control_type_counts"]["for_end"] == 67, summary
+          assert summary["control_type_counts"]["case_arm"] == 133, summary
           assert summary["instrumented_game_source_rng_scope"] is True, summary
           assert summary["external_rtl_library_rng_intercepted"] is False, summary
           assert summary["symbolic_rng_timeline_occurrences"] == 465, summary
