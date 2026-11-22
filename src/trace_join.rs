@@ -1,9 +1,9 @@
 //! Conservative join between concrete Pascal schema-v2 traces and the
 //! normalizer's static symbolic RNG/action-tick index.
 //!
-//! Direct Pascal .inc RNG call sites expose source columns; ROT expression
-//! columns are still absent. This module preserves ambiguity instead of
-//! choosing a static AST site based on event order or a guessed column.
+//! Direct Pascal .inc call sites and ROT expression draws expose source columns.
+//! This module preserves ambiguity instead of choosing a static AST site based
+//! on event order or a guessed column.
 
 use serde_json::Value;
 use std::collections::HashMap;
