@@ -282,7 +282,7 @@ impl CombatState {
 
         // Common.rot [IA], lines 310-323. Each independent if consumes its own draw;
         // only the four crouching probabilities are conditional on the fifth draw.
-        if ai_actions_enabled && input.distance <= 80 {
+        if !self.fighters[1].defending && !input.projectile_threat && input.distance <= 80 {
             let factor = input.difficulty_factor;
             if Self::random_zero_int64(&mut rng, 8.0, factor, 312)? {
                 self.execute_action_command(
@@ -382,14 +382,29 @@ impl CombatState {
         source_line: u32,
     ) -> Result<bool, RuntimeError<R::Error>> {
         let unrounded = multiplier * factor;
-        if !unrounded.is_finite() || unrounded > i64::MAX as f64 || unrounded < i64::MIN as f64 {
+        // Keep the declared Rust 1.70 MSRV: implement Pascal's ties-to-even
+        // rounding explicitly instead of relying on newer f64 methods.
+        if !unrounded.is_finite()
+            || unrounded >= 9_223_372_036_854_775_808.0
+            || unrounded < -9_223_372_036_854_775_808.0
+        {
             return Err(RuntimeError::InvalidProbabilityRange {
                 source_line,
                 range: 0,
             });
         }
-        // Free Pascal Round uses nearest integer with ties to even.
-        let range = unrounded.round_ties_even() as i64;
+        let floor = unrounded.floor();
+        let fraction = unrounded - floor;
+        let rounded = if fraction < 0.5 {
+            floor
+        } else if fraction > 0.5 {
+            floor + 1.0
+        } else if (floor as i64).rem_euclid(2) == 0 {
+            floor
+        } else {
+            floor + 1.0
+        };
+        let range = rounded as i64;
         if range <= 0 {
             return Err(RuntimeError::InvalidProbabilityRange { source_line, range });
         }
