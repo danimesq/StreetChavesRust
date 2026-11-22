@@ -140,7 +140,6 @@ impl<T: Clone> BoxState<T> {
     }
 }
 
-
 /// One Pascal [Ataque] row, retaining its two distinct strength concepts:
 /// the optional strength selector condition and the row's optional force assignment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -212,12 +211,26 @@ impl PascalAttackState {
 /// Ordered event emitted by one action on one logical tick.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CombatEvent {
-    FrameChanged { frame: u16 },
-    SoundQueued { sound_id: u16 },
-    EffectSpawned { effect_id: u16, variant: Option<char> },
+    FrameChanged {
+        frame: u16,
+    },
+    SoundQueued {
+        sound_id: u16,
+    },
+    EffectSpawned {
+        effect_id: u16,
+        variant: Option<char>,
+    },
     /// Generic until the final typed player-state schema is evidence-backed.
-    StateMutation { field: String, value: i32 },
-    RandomDraw { upper_exclusive: u32, value: u32, draw_index: u32 },
+    StateMutation {
+        field: String,
+        value: i32,
+    },
+    RandomDraw {
+        upper_exclusive: u32,
+        value: u32,
+        draw_index: u32,
+    },
     Hitboxes(BoxUpdate<HitboxRecord>),
     Hurtboxes(BoxUpdate<HurtboxRecord>),
 }
@@ -238,7 +251,10 @@ pub struct TickEvents {
 
 impl TickEvents {
     pub fn new(tick: Tick) -> Self {
-        Self { tick, events: Vec::new() }
+        Self {
+            tick,
+            events: Vec::new(),
+        }
     }
 
     pub fn events(&self) -> &[OrderedEvent] {
@@ -264,7 +280,11 @@ pub struct ActionTimeline {
 
 impl ActionTimeline {
     pub fn new(fighter: FighterId, action: ActionId) -> Self {
-        Self { fighter, action, ticks: Vec::new() }
+        Self {
+            fighter,
+            action,
+            ticks: Vec::new(),
+        }
     }
 
     pub fn ticks(&self) -> &[TickEvents] {
@@ -297,7 +317,9 @@ impl fmt::Display for TimelineError {
         match self {
             Self::TooManyEvents(tick) => write!(f, "too many events on tick {}", tick.0),
             Self::NonIncreasingTick { previous, next } => write!(
-                f, "timeline tick must increase: {} then {}", previous.0, next.0
+                f,
+                "timeline tick must increase: {} then {}",
+                previous.0, next.0
             ),
         }
     }
@@ -328,7 +350,10 @@ pub struct FixtureRng {
 
 impl FixtureRng {
     pub fn new(values: impl Into<Vec<u32>>) -> Self {
-        Self { values: values.into(), cursor: 0 }
+        Self {
+            values: values.into(),
+            cursor: 0,
+        }
     }
 
     pub fn draws_consumed(&self) -> usize {
@@ -342,19 +367,35 @@ impl FixtureRng {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FixtureRngError {
-    Exhausted { draw_index: u32, upper_exclusive: u32 },
-    OutOfRange { draw_index: u32, value: u32, upper_exclusive: u32 },
+    Exhausted {
+        draw_index: u32,
+        upper_exclusive: u32,
+    },
+    OutOfRange {
+        draw_index: u32,
+        value: u32,
+        upper_exclusive: u32,
+    },
 }
 
 impl fmt::Display for FixtureRngError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Exhausted { draw_index, upper_exclusive } => write!(
-                f, "fixture RNG exhausted at draw {} (requested [0, {}))",
+            Self::Exhausted {
+                draw_index,
+                upper_exclusive,
+            } => write!(
+                f,
+                "fixture RNG exhausted at draw {} (requested [0, {}))",
                 draw_index, upper_exclusive
             ),
-            Self::OutOfRange { draw_index, value, upper_exclusive } => write!(
-                f, "fixture RNG value {} at draw {} is outside [0, {})",
+            Self::OutOfRange {
+                draw_index,
+                value,
+                upper_exclusive,
+            } => write!(
+                f,
+                "fixture RNG value {} at draw {} is outside [0, {})",
                 value, draw_index, upper_exclusive
             ),
         }
@@ -368,21 +409,30 @@ impl RandomSource for FixtureRng {
 
     fn draw(&mut self, upper_exclusive: u32) -> Result<RandomSample, Self::Error> {
         let draw_index = u32::try_from(self.cursor).unwrap_or(u32::MAX);
-        let value = *self.values.get(self.cursor).ok_or(
-            FixtureRngError::Exhausted { draw_index, upper_exclusive }
-        )?;
+        let value = *self
+            .values
+            .get(self.cursor)
+            .ok_or(FixtureRngError::Exhausted {
+                draw_index,
+                upper_exclusive,
+            })?;
 
         if value >= upper_exclusive {
             return Err(FixtureRngError::OutOfRange {
-                draw_index, value, upper_exclusive
+                draw_index,
+                value,
+                upper_exclusive,
             });
         }
 
         self.cursor += 1;
-        Ok(RandomSample { draw_index, upper_exclusive, value })
+        Ok(RandomSample {
+            draw_index,
+            upper_exclusive,
+            value,
+        })
     }
 }
-
 
 /// Delphi 5's 32-bit System.Random range generator.
 ///
@@ -401,7 +451,10 @@ impl DelphiRng {
     pub const MULTIPLIER: u32 = 0x0808_8405;
 
     pub fn new(rand_seed: u32) -> Self {
-        Self { rand_seed, draws: 0 }
+        Self {
+            rand_seed,
+            draws: 0,
+        }
     }
 
     pub fn rand_seed(&self) -> u32 {
@@ -477,14 +530,24 @@ mod tests {
         let first = HitboxRecord {
             selector: 27,
             timer: 1,
-            bounds: RawBounds { x1: 10, y1: 130, x2: 82, y2: 158 },
+            bounds: RawBounds {
+                x1: 10,
+                y1: 130,
+                x2: 82,
+                y2: 158,
+            },
             active: true,
             strength: 0,
             damage: 18,
             guard_damage: 3,
         };
         let second = HitboxRecord {
-            bounds: RawBounds { x1: 10, y1: 25, x2: 70, y2: 55 },
+            bounds: RawBounds {
+                x1: 10,
+                y1: 25,
+                x2: 70,
+                y2: 55,
+            },
             ..first
         };
         let mut state = BoxState::default();
@@ -497,26 +560,52 @@ mod tests {
 
     #[test]
     fn pascal_strength_variants_are_filtered_in_ini_order() {
-        let bounds_weak = RawBounds { x1: 10, y1: 130, x2: 82, y2: 158 };
-        let bounds_strong = RawBounds { x1: 10, y1: 25, x2: 70, y2: 55 };
+        let bounds_weak = RawBounds {
+            x1: 10,
+            y1: 130,
+            x2: 82,
+            y2: 158,
+        };
+        let bounds_strong = RawBounds {
+            x1: 10,
+            y1: 25,
+            x2: 70,
+            y2: 55,
+        };
         let rows = [
             PascalAttackDefinition {
-                action: ActionId(27), action_timer: 1, strength_condition: Some(1),
-                bounds: bounds_weak, active: true, assigned_strength: 0,
-                damage: 18, guard_damage: 3,
+                action: ActionId(27),
+                action_timer: 1,
+                strength_condition: Some(1),
+                bounds: bounds_weak,
+                active: true,
+                assigned_strength: 0,
+                damage: 18,
+                guard_damage: 3,
             },
             PascalAttackDefinition {
-                action: ActionId(27), action_timer: 1, strength_condition: Some(2),
-                bounds: bounds_strong, active: true, assigned_strength: 0,
-                damage: 18, guard_damage: 3,
+                action: ActionId(27),
+                action_timer: 1,
+                strength_condition: Some(2),
+                bounds: bounds_strong,
+                active: true,
+                assigned_strength: 0,
+                damage: 18,
+                guard_damage: 3,
             },
         ];
 
-        let mut weak = PascalAttackState { current_force: 1, current_box: None };
+        let mut weak = PascalAttackState {
+            current_force: 1,
+            current_box: None,
+        };
         assert_eq!(weak.apply_ordered_rows(ActionId(27), 1, &rows), 1);
         assert_eq!(weak.current_box.as_ref().unwrap().bounds, bounds_weak);
 
-        let mut strong = PascalAttackState { current_force: 2, current_box: None };
+        let mut strong = PascalAttackState {
+            current_force: 2,
+            current_box: None,
+        };
         assert_eq!(strong.apply_ordered_rows(ActionId(27), 1, &rows), 1);
         assert_eq!(strong.current_box.as_ref().unwrap().bounds, bounds_strong);
     }
@@ -527,7 +616,12 @@ mod tests {
             action: ActionId(9),
             action_timer: 4,
             strength_condition: None,
-            bounds: RawBounds { x1: 0, y1: 1, x2: 2, y2: 3 },
+            bounds: RawBounds {
+                x1: 0,
+                y1: 1,
+                x2: 2,
+                y2: 3,
+            },
             active: false,
             assigned_strength: 2,
             damage: 0,
@@ -535,7 +629,12 @@ mod tests {
         };
         let strong_variant = PascalAttackDefinition {
             strength_condition: Some(2),
-            bounds: RawBounds { x1: 4, y1: 5, x2: 6, y2: 7 },
+            bounds: RawBounds {
+                x1: 4,
+                y1: 5,
+                x2: 6,
+                y2: 7,
+            },
             active: true,
             assigned_strength: 0,
             damage: 9,
@@ -552,16 +651,28 @@ mod tests {
             2
         );
         assert_eq!(state.current_force, 2);
-        assert_eq!(state.current_box.as_ref().unwrap().bounds, strong_variant.bounds);
+        assert_eq!(
+            state.current_box.as_ref().unwrap().bounds,
+            strong_variant.bounds
+        );
         assert!(state.current_box.as_ref().unwrap().active);
     }
 
     #[test]
     fn pascal_no_matching_attack_row_retains_the_previous_hitbox() {
         let previous = HitboxRecord {
-            selector: 27, timer: 1,
-            bounds: RawBounds { x1: 10, y1: 130, x2: 82, y2: 158 },
-            active: true, strength: 0, damage: 18, guard_damage: 3,
+            selector: 27,
+            timer: 1,
+            bounds: RawBounds {
+                x1: 10,
+                y1: 130,
+                x2: 82,
+                y2: 158,
+            },
+            active: true,
+            strength: 0,
+            damage: 18,
+            guard_damage: 3,
         };
         let mut state = PascalAttackState {
             current_force: 1,
@@ -573,10 +684,20 @@ mod tests {
 
     #[test]
     fn raw_bounds_mirror_by_swapping_and_negating_horizontal_endpoints() {
-        let bounds = RawBounds { x1: 10, y1: 25, x2: 70, y2: 55 };
+        let bounds = RawBounds {
+            x1: 10,
+            y1: 25,
+            x2: 70,
+            y2: 55,
+        };
         assert_eq!(
             bounds.mirrored_horizontally(),
-            RawBounds { x1: -70, y1: 25, x2: -10, y2: 55 }
+            RawBounds {
+                x1: -70,
+                y1: 25,
+                x2: -10,
+                y2: 55
+            }
         );
     }
 
@@ -585,8 +706,14 @@ mod tests {
         let mut tick = TickEvents::new(Tick(4));
         assert_eq!(tick.push(CombatEvent::SoundQueued { sound_id: 14 }), Ok(0));
         assert_eq!(tick.push(CombatEvent::FrameChanged { frame: 37 }), Ok(1));
-        assert_eq!(tick.events()[0].event, CombatEvent::SoundQueued { sound_id: 14 });
-        assert_eq!(tick.events()[1].event, CombatEvent::FrameChanged { frame: 37 });
+        assert_eq!(
+            tick.events()[0].event,
+            CombatEvent::SoundQueued { sound_id: 14 }
+        );
+        assert_eq!(
+            tick.events()[1].event,
+            CombatEvent::FrameChanged { frame: 37 }
+        );
     }
 
     #[test]
@@ -603,15 +730,30 @@ mod tests {
     #[test]
     fn fixture_rng_consumes_values_sequentially() {
         let mut rng = FixtureRng::new(vec![2, 0, 3]);
-        assert_eq!(rng.draw(4).unwrap(), RandomSample {
-            draw_index: 0, upper_exclusive: 4, value: 2
-        });
-        assert_eq!(rng.draw(2).unwrap(), RandomSample {
-            draw_index: 1, upper_exclusive: 2, value: 0
-        });
-        assert_eq!(rng.draw(5).unwrap(), RandomSample {
-            draw_index: 2, upper_exclusive: 5, value: 3
-        });
+        assert_eq!(
+            rng.draw(4).unwrap(),
+            RandomSample {
+                draw_index: 0,
+                upper_exclusive: 4,
+                value: 2
+            }
+        );
+        assert_eq!(
+            rng.draw(2).unwrap(),
+            RandomSample {
+                draw_index: 1,
+                upper_exclusive: 2,
+                value: 0
+            }
+        );
+        assert_eq!(
+            rng.draw(5).unwrap(),
+            RandomSample {
+                draw_index: 2,
+                upper_exclusive: 5,
+                value: 3
+            }
+        );
         assert_eq!(rng.draws_consumed(), 3);
         assert_eq!(rng.remaining(), 0);
     }
@@ -633,9 +775,24 @@ mod tests {
 
     #[test]
     fn strict_aabb_overlap_rejects_edge_contact_and_accepts_one_unit_overlap() {
-        let first = Aabb { left: 0, top: 0, right: 10, bottom: 10 };
-        let touching = Aabb { left: 10, top: 0, right: 20, bottom: 10 };
-        let overlap = Aabb { left: 9, top: 0, right: 20, bottom: 10 };
+        let first = Aabb {
+            left: 0,
+            top: 0,
+            right: 10,
+            bottom: 10,
+        };
+        let touching = Aabb {
+            left: 10,
+            top: 0,
+            right: 20,
+            bottom: 10,
+        };
+        let overlap = Aabb {
+            left: 9,
+            top: 0,
+            right: 20,
+            bottom: 10,
+        };
         assert!(!first.overlaps_strict(touching));
         assert!(first.overlaps_strict(overlap));
     }
@@ -645,13 +802,21 @@ mod tests {
         let first = HitboxRecord {
             selector: 10,
             timer: 3,
-            bounds: RawBounds { x1: 1, y1: 2, x2: 3, y2: 4 },
+            bounds: RawBounds {
+                x1: 1,
+                y1: 2,
+                x2: 3,
+                y2: 4,
+            },
             active: true,
             strength: 1,
             damage: 7,
             guard_damage: 2,
         };
-        let replacement = HitboxRecord { active: false, ..first };
+        let replacement = HitboxRecord {
+            active: false,
+            ..first
+        };
         let mut state = BoxState::default();
         state.apply(&BoxUpdate::Replace(vec![first]));
         assert_eq!(state.rows(), &[first]);
