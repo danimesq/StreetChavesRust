@@ -27,6 +27,8 @@ pub const ACTION_AIR_STRONG_KICK: u16 = 16;
 pub const ACTION_DEFENDING: u16 = 21;
 pub const ACTION_LOW_DEFENDING: u16 = 22;
 pub const ACTION_VICTORY: u16 = 23;
+/// Pascal `acPose`, verified from ChavesTipos.pas at the pinned source revision.
+pub const ACTION_POSE: u16 = 24;
 pub const ACTION_BOUNCING: u16 = 20;
 pub const SIDE_RIGHT: u8 = 1;
 pub const SIDE_LEFT: u8 = 2;
@@ -229,6 +231,27 @@ impl CombatState {
         fighter.action_id = ACTION_VICTORY;
         fighter.action_frame = 0;
         fighter.action_duration = 250;
+        true
+    }
+
+    /// Apply Pascal `cmPose` for C01-C12.
+    ///
+    /// The pinned C01-C12 [Acao] scripts all accept only idle/walking and write
+    /// acPose, frame 0, duration 20. C13-C15 do not define cmPose and are rejected.
+    pub fn apply_character_pose(&mut self, fighter_index: usize) -> bool {
+        let Some(fighter) = self.fighters.get_mut(fighter_index) else {
+            return false;
+        };
+
+        if !(1..=12).contains(&fighter.character_id)
+            || !matches!(fighter.action_id, ACTION_IDLE | ACTION_WALKING)
+        {
+            return false;
+        }
+
+        fighter.action_id = ACTION_POSE;
+        fighter.action_frame = 0;
+        fighter.action_duration = 20;
         true
     }
 
