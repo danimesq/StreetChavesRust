@@ -54,7 +54,7 @@ This is an excellent oracle for the **Pascal migration**: it tests the old Pasca
 
 It is not an original-executable oracle. The comparison is between two implementations inside the Pascal project, not between Pascal and the original Chaves.exe.
 
-## 🌈 Experimental JSONL exporter (upstream branch)
+## 🌈 Experimental JSONL exporter (schema v1 history; superseded by v2 below)
 
 A first opt-in exporter has been implemented on the experimental
 [OpenStreetChaves branch](https://github.com/danimesq/OpenStreetChaves/tree/research/sortearvalor-jsonl-v1),
@@ -142,3 +142,43 @@ For repeated loops, the dynamic trace should attach each iteration's loop variab
 - [ChavesRoteiro.pas Random recorder/replayer](https://github.com/danimesq/OpenStreetChaves/blob/e1b025c35ecbc2b14d8635564aafd23c2107d3d1/source/game/ChavesRoteiro.pas)
 - [ChavesConferencia.pas old-code/script differential harness](https://github.com/danimesq/OpenStreetChaves/blob/e1b025c35ecbc2b14d8635564aafd23c2107d3d1/source/game/ChavesConferencia.pas)
 - [Pinned FPC 3.2.2 MTwist implementation](https://github.com/fpc/FPCSource/blob/release_3_2_2/rtl/inc/system.inc)
+
+ 
+## 🌈 Schema v2: concrete runtime context (experimental, not yet verified)
+
+The schema-v1 description above is historical. The current experimental
+`research/sortearvalor-jsonl-v1` branch upgrades the exporter to schema v2 and
+supersedes the v1 context limitation.
+
+The v2 stream contains:
+
+| Record | Runtime meaning |
+|---|---|
+| `session` | Seed, session identity, pinned Pascal revision, and explicit RNG scope |
+| `tick_start` / `tick_end` | Zero-based `TJogo.PassoSDL` step, whether logic ran, game state, selected fighter/action/frame snapshots |
+| `script_start` / `script_end` | One concrete `.rot` invocation, unique ID, parent ID for nested calls, origin/section, fighter, character, command, action/frame snapshots, draw count |
+| `control` | Actual `if` branch result, selected `case` arm, and concrete `for`/`while`/`repeat` iteration values and counts |
+| `draw` | Existing RNG request fields plus active tick/script, fighter/action/frame, source origin/line, and per-script draw index |
+
+Three sequence counters are deliberately separate:
+`tick_index` counts logical game steps, `api_call_index` orders calls through
+`SortearValor`, and `script_draw_index` counts draws in one particular script
+invocation. Nested `.rot` invocations have their own IDs and local draw counters.
+
+The runtime source line joins a concrete draw/control event to a static
+normalizer event's file, section and line. The Pascal interpreter does not yet
+emit source columns, so same-line events may be ambiguous. Any future joiner
+must retain explicit `unique`, `ambiguous` and `unmatched` outcomes. Control
+records expose branch decisions and loop values at interpreter control nodes;
+they do not expose every short-circuited boolean subexpression. Tick snapshots
+cover selected action/timer fields, not every byte of game memory.
+
+The wrapper-scoped MT-word counter remains unchanged: direct `System.Random`
+calls outside `SortearValor` are still excluded. It is not a global MTwist
+position.
+
+**Verification gate remains open.** These Pascal edits have not yet been
+compiled with Lazarus 4.8/FPC 3.2.2 or run through the deterministic harness.
+No schema-v2 Pascal JSONL capture exists yet. Do not build committed Rust
+reference fixtures from synthetic records; wait for two real, byte-identical
+fixed-seed runs with matching `logica.txt` checkpoints.
