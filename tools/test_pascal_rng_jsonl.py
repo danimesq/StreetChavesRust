@@ -108,6 +108,7 @@ def draw_record(
         "draw_source": source,
         "rand_seed_before": 20261026,
         "rand_seed_after": 20261026,
+        "source_kind": "rot_expression" if is_script else "pascal_direct",
         "source_origin": "C01.rot [Acao]" if is_script else None,
         "source_line": 25 if is_script else None,
         "script_draw_index": script_draw_index if is_script else None,
@@ -179,6 +180,29 @@ class PascalRngJsonlTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("1 replay", result.stdout)
         self.assertIn("0 wrapper-scoped MT word(s)", result.stdout)
+
+    def test_accepts_pascal_helper_draw_inside_script_context(self) -> None:
+        helper_draw = draw_record(0, 0, 1, "LongInt")
+        helper_draw["source_kind"] = "pascal_helper"
+        helper_draw["source_line"] = None
+        records = [
+            session_record(), tick_start(), script_start(),
+            helper_draw, script_end(draws=1), tick_end(),
+        ]
+        result = self.run_validator(records)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_rejects_fabricated_rot_line_for_pascal_helper_draw(self) -> None:
+        helper_draw = draw_record(0, 0, 1, "LongInt")
+        helper_draw["source_kind"] = "pascal_helper"
+        helper_draw["source_line"] = 25
+        records = [
+            session_record(), tick_start(), script_start(),
+            helper_draw, script_end(draws=1), tick_end(),
+        ]
+        result = self.run_validator(records)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("pascal_helper draw must not claim", result.stderr)
 
     def test_rejects_wrong_width_consumption(self) -> None:
         records = [
