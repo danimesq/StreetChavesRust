@@ -189,3 +189,9 @@ cargo run --bin pascal-diff -- tests/fixtures/pascal-runtime-schema-v2-tick316.j
 ```
 
 Next work: capture full tick inputs/state, implement the zero branch and close-range probability chain with nested action calls sharing the same replay cursor, then expand into player input, frame scripts, hit resolution, effects, and physics.
+
+Latest Rust CI for the runtime implementation:
+- [Rust contracts run 45064280853](https://github.com/danimesq/StreetChavesRust/actions/runs/45064280853): **success** on commit `bceaa6f991c28c8661ee4bec1881fa858a4b7840`.
+- `cargo fmt --all -- --check`: passed.
+- `cargo test --all-targets`: passed, including 33 library tests, 2 existing binary tests, and 3 runtime integration tests (38 total).
+- The integration test executes both `pascal-replay-tick` and `pascal-diff` as subprocesses and asserts the two-checkpoint match.
