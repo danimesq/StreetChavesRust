@@ -24,8 +24,8 @@ There are no calendar estimates. Each phase advances when its exit criteria are 
 |---|---|---|
 | 0 | Research baseline and project definition | In progress |
 | 1 | Original-game evidence and source/data inventory | In progress / needs validation |
-| 2 | Technical architecture and workspace foundation | Planned |
-| 3 | Core simulation primitives and deterministic harness | Planned |
+| 2 | Technical architecture and workspace foundation | In progress (minimal Cargo crate created) |
+| 3 | Core simulation primitives and deterministic harness | In progress (event/RNG/collision contracts; no playable simulation yet) |
 | 4 | Fighter data, animation, and state machine | Planned |
 | 5 | Combat, effects, and physics | Planned |
 | 6 | SDL3 runtime, input, rendering, and audio adapters | Planned |
@@ -81,7 +81,9 @@ Exit criteria:
 
 ## Phase 2 — Technical architecture and workspace foundation
 
-**Status: Planned**
+**Status: In progress**
+
+Initial work: a dependency-free Cargo library now exists with typed fighter/action/tick identifiers and source-preserving combat data structures. The full workspace layout and SDL3 application crate remain future work.
 
 Goals:
 - Convert the architecture proposal into a minimal Rust workspace.
@@ -104,7 +106,9 @@ Exit criteria:
 
 ## Phase 3 — Core simulation primitives and deterministic harness
 
-**Status: Planned**
+**Status: In progress**
+
+Initial contracts now cover ordered per-tick events, sequential fixture RNG injection, explicit box updates, and strict AABB overlap. These are contract-level primitives only; no complete fighter simulation or Delphi-compatible RNG is implemented yet.
 
 Goals:
 - Implement logical coordinates, ticks, player identifiers, input actions, timers, geometry, and explicit game state types.
