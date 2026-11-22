@@ -43,6 +43,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .filter(|row| row.draw.source_column.is_some())
         .count();
+    let boolean_subexpression_records = capture
+        .controls
+        .iter()
+        .filter(|control| control.control_type == "boolean_subexpression")
+        .count();
+    let short_circuit_skips = capture
+        .controls
+        .iter()
+        .filter(|control| control.short_circuit == Some(true))
+        .count();
 
     for row in &joined {
         match row.status {
@@ -78,6 +88,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         },
         "match_policy": "fighter+character+section+source_line+width+literal_range_when_available;source_column_retained_for_follow_up",
         "source_column_draws": source_column_draws,
+        "boolean_subexpression_records": boolean_subexpression_records,
+        "short_circuit_skips": short_circuit_skips,
         "source_column_available_for_pascal_direct": true,
         "rot_expression_source_column_available": true,
         "instrumented_game_source_rng_scope": true,
@@ -122,6 +134,29 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             .iter()
             .map(|control| control.control_event_index)
             .collect();
+        let invocation_boolean_subexpressions: Vec<_> = row
+            .invocation_controls
+            .iter()
+            .filter(|control| control.control_type == "boolean_subexpression")
+            .map(|control| {
+                json!({
+                    "control_event_index": control.control_event_index,
+                    "source_line": control.source_line,
+                    "source_column": control.source_column,
+                    "expression_node": control.expression_node,
+                    "operand_node": control.operand_node,
+                    "operand_source_line": control.operand_source_line,
+                    "operand_source_column": control.operand_source_column,
+                    "operator": control.operator,
+                    "operand": control.operand,
+                    "evaluated": control.evaluated,
+                    "boolean_value": control.boolean_value,
+                    "short_circuit": control.short_circuit,
+                    "expression_result": control.expression_result,
+                    "short_circuit_reason": control.short_circuit_reason
+                })
+            })
+            .collect();
 
         let record = json!({
             "record_type": "draw_reconciliation",
@@ -154,7 +189,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             },
             "candidate_count": candidates.len(),
             "candidates": candidates,
-            "invocation_control_event_indices": invocation_control_event_indices
+            "invocation_control_event_indices": invocation_control_event_indices,
+            "invocation_boolean_subexpressions": invocation_boolean_subexpressions
         });
 
         writeln!(output, "{}", serde_json::to_string(&record)?)?;
