@@ -34,6 +34,7 @@ The research and design notes live in [the documentation directory](docs/README.
 - [Source and data inventory](docs/source-inventory.md) — pinned source revisions, code/data layout, entry points, and subsystem ownership.
 - [Fighter data deep dive](docs/fighter-data-deep-dive.md) — INI/ROT semantics, generated C tables, command recognition, and character-specific behavior.
 - [Fighter roster matrix](docs/fighter-roster-matrix.md) — original 15-character roster, Pascal C16 Chapolin extension, and script-section coverage.
+- [Chapolin bonus plan](docs/chapolin-bonus-2026.md) — preservation/recovery plan for Chapolin as a future optional bonus.
 - [Data formats and resource pipelines](docs/data-formats.md) — fighter scripts, INI resources, generated C tables, and unresolved format semantics.
 - [Provenance and licensing review](docs/provenance-and-licenses.md) — code licenses, asset origins, redistribution risks, and reuse decisions.
 - [Fight-loop deep dive](docs/fight-loop-deep-dive.md) — source-level analysis of tick order, frame selection, hit resolution, effects, and physics.
