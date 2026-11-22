@@ -80,7 +80,7 @@ class PascalRngJsonlTests(unittest.TestCase):
         result = self.run_validator(records)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("4 SortearValor calls", result.stdout)
-        self.assertIn("3 wrapper-scoped MT word(s)", result.stdout)
+        self.assertIn("4 wrapper-scoped MT word(s)", result.stdout)
 
     def test_rejects_wrong_width_consumption(self) -> None:
         records = [
