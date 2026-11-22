@@ -135,15 +135,27 @@ Pascal `[Corpo]` records use `frame=x1,y1,x2,y2`. C `hurt frame` rows use `left,
 
 ### 🌈 Interpretation and limits
 
+### 🌈 Important selector discrepancy: character 11, action/state 27, timer 1
+
+The 379/379 result is a multiset comparison: both sources contain the same two strength-specific rectangles and metadata. It is not proof that the runtime selectors choose the same rectangle.
+
+Pascal C11.ini has two rows for 27.1, one conditioned on f1 and one on f2. AplicarCaixas checks the current force condition before applying a row.
+
+The C table contains two rows for character 11, state 27, timer 1. The C sel_boxes loop matches both rows using only character/state/timer, does not filter by hit level, and keeps scanning. Both rows have level=0, so the second row overwrites the first geometry regardless of the current force.
+
+This is a concrete behavior difference in the pinned ports. Preserve the row-multiset match as a data finding, but track the selector discrepancy separately. The original executable must decide which behavior Rust ultimately adopts.
+
 This is unusually strong cross-port evidence: in the pinned snapshots, both projects agree on every listed hitbox coordinate and metadata field, and on every listed hurtbox coordinate. The comparison includes active state, strength/level, damage, and guard/chip damage, not just rectangles.
 
-It still does **not** prove the original executable activates every row on the same tick or uses identical runtime semantics. It also does not establish facing/mirroring behavior, edge-overlap semantics, stale-box retention when a frame has no new row, or the exact interaction with effects and the fight-loop order. Those require code-path tracing and later controlled original-executable observations.
+Code-path tracing now establishes that both pinned ports retain old box fields on a lookup miss, and both mirror coordinates only when a matching row is applied. The C selector's no-strength-filter behavior for character 11/action 27/timer 1 is a separate port divergence. These are [port-specific] execution findings, not original-executable proof. Original activation timing, facing/mirroring edge cases, cross-system call order, and the disputed character-11 variant still require controlled executable observations.
 
 Remaining:
 - Correlate action IDs with named normal/special moves and frame selection.
 - Verify coordinate mirroring and world-space conversion in the Rust core.
-- Verify hit activation/deactivation and empty/inactive rows against the selector and collision loop.
-- Add deterministic fixtures for representative rows, duplicate rows, strength-specific variants, and absent-frame hurtbox retention.
+- [x] Trace hit activation/deactivation and lookup misses in both selectors.
+- [x] Add deterministic Rust contracts for explicit retain, inactive records, and Pascal strength-specific row filtering.
+- [ ] Verify the character-11 state-27/timer-1 variant against the original executable.
+- [ ] Add original-backed fixtures for representative rows and absent-frame hurtbox retention.
 - Reserve original-executable parity checks for the final compatibility stage after the first playable Rust baseline.
 
 ## 🌈 Exceptional move-ID resolution
