@@ -9,9 +9,11 @@ This inventory is generated from the pinned Pascal source and the 15 fighter tim
 | Metric | Count |
 |---|---:|
 | Unique `.rot` Random sites | 255 |
+| ├─ LongInt / 1 raw MT word | 160 |
+| └─ Int64 / 2 raw MT words | 95 |
 | Occurrences across 15 composed fighter timelines | 465 |
-| LongInt-width occurrences | 244 |
-| Int64-width occurrences | 221 |
+| ├─ LongInt / 1 raw MT word | 244 |
+| └─ Int64 / 2 raw MT words | 221 |
 | RNG-related references/calls in Pascal `.pas` and `.inc` | 71 |
 
 The 465 timeline occurrences include each fighter's execution of the shared `Comum.rot` section. The 255 unique sites are deduplicated by path, section, line and column.
@@ -42,7 +44,7 @@ Next work should use that harness to capture a reproducible stream with:
 - requested range and returned value;
 - branch and loop context.
 
-The current source normalizer does not assign these dynamic values. It preserves only the static call graph and symbolic execution guards.
+The current source normalizer does not assign these dynamic values. It preserves only the static call graph and symbolic execution guards. `symbolic-action-tick-index.json` groups the 5,091 events by symbolic `P.Acao` / `P.QuadroAcao` guard contexts and preserves all other guards and loop contexts. These are symbolic lanes, not actual executed ticks.
 
 ## 🌈 Precedence rule
 
