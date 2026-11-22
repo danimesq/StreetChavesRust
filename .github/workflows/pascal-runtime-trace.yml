@@ -1,0 +1,76 @@
+name: Pascal runtime trace (experimental)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/pascal-rng-jsonl
+    paths:
+      - ".github/workflows/pascal-runtime-trace.yml"
+      - "tools/validate-pascal-rng-jsonl.py"
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    name: Compile Pascal trace branch and compare fixed-seed captures
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out StreetChavesRust
+        uses: actions/checkout@v4
+
+      - name: Check out experimental Pascal source
+        uses: actions/checkout@v4
+        with:
+          repository: danimesq/OpenStreetChaves
+          ref: research/sortearvalor-jsonl-v1
+          path: external/OpenStreetChaves
+          persist-credentials: false
+
+      - name: Install Free Pascal 3.2.2 and SDL2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fp-compiler fp-units-base fp-units-fcl libsdl2-dev
+          fpc -iV
+          test "$(fpc -iV)" = "3.2.2"
+
+      - name: Compile the experimental Pascal branch
+        working-directory: external/OpenStreetChaves/source
+        run: |
+          set -euo pipefail
+          mkdir -p build/bin build/units
+          fpc -B \
+            -Fu3party -Fu3party/SDL2 -Fugame -Figame \
+            -FUbuild/units -FEbuild/bin \
+            -obuild/bin/StreetChaves StreetChaves.lpr
+
+      - name: Run two deterministic headless captures
+        working-directory: external/OpenStreetChaves
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          source/build/bin/StreetChaves --gravar build/trace-a 3000 300 --rng-jsonl build/trace-a/rng.jsonl
+          source/build/bin/StreetChaves --gravar build/trace-b 3000 300 --rng-jsonl build/trace-b/rng.jsonl
+          cmp build/trace-a/rng.jsonl build/trace-b/rng.jsonl
+          cmp build/trace-a/logica.txt build/trace-b/logica.txt
+
+      - name: Validate both schema-v2 captures
+        run: |
+          python tools/validate-pascal-rng-jsonl.py external/OpenStreetChaves/build/trace-a/rng.jsonl
+          python tools/validate-pascal-rng-jsonl.py external/OpenStreetChaves/build/trace-b/rng.jsonl
+
+      - name: Upload deterministic Pascal trace evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: pascal-runtime-trace-schema-v2
+          path: |
+            external/OpenStreetChaves/build/trace-a/rng.jsonl
+            external/OpenStreetChaves/build/trace-a/logica.txt
+            external/OpenStreetChaves/build/trace-b/rng.jsonl
+            external/OpenStreetChaves/build/trace-b/logica.txt
+          if-no-files-found: error
+          retention-days: 30
