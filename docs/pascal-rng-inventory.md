@@ -44,7 +44,7 @@ Next work should use that harness to capture a reproducible stream with:
 - requested range and returned value;
 - branch and loop context.
 
-The latest normalizer CI run #30 passes 7 grammar tests and verifies the 15-fighter bundle. The current source normalizer does not assign these dynamic values. It preserves only the static call graph and symbolic execution guards. `symbolic-action-tick-index.json` groups all 5,091 events into 1,749 groups by symbolic `P.Acao` / `P.QuadroAcao` guard contexts and preserves all other guards and loop contexts. These are symbolic lanes, not actual executed ticks.
+The latest normalizer CI run #30 passes 7 grammar tests and verifies the 15-fighter bundle. The current source normalizer does not assign dynamic tick or raw-word indices. It preserves the static call graph and symbolic execution guards, including a measured function-argument evaluation profile. The interpreter's own OrdemArgsInversa probe is reproduced by tools/fpc-argument-order-probe.pas; in the FPC 3.2.2 x86_64 Linux CI build, it reported right-to-left (evaluation trace 5431). `symbolic-action-tick-index.json` groups all 5,091 events into 1,749 groups by symbolic P.Acao / P.QuadroAcao guard contexts and preserves all other guards and loop contexts. These are symbolic lanes, not actual executed ticks.
 
 ## 🌈 Precedence rule
 
