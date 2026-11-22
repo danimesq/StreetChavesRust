@@ -9,6 +9,7 @@
     "Int64": 7043
   },
   "fighter_indices": [1, 2],
+  "fighter_count": 2,
   "action_id_count": 24,
   "script_invocations": 20437,
   "nested_script_invocations": 5229,
