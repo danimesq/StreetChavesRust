@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Validate schema-v2 JSONL emitted by OpenStreetChaves runtime tracing.
 
-The MT-word cursor is intentionally scoped to calls through SortearValor. It is
-not a global FPC MTwist position because some Pascal code calls System.Random
-directly outside that wrapper.
+The MT-word cursor spans instrumented game-source System.Random call sites
+routed through SortearValor. External RTL/library calls are not intercepted.
 """
 
 from __future__ import annotations
@@ -128,7 +127,9 @@ def validate_trace(path: Path) -> dict[str, Any]:
                             f"line {line_number}: event_sample requires a sample_description"
                         )
                 scope = record.get("raw_word_index_scope")
-                if not isinstance(scope, str) or "SortearValor-only" not in scope:
+                if not isinstance(scope, str) or not (
+                    "SortearValor-only" in scope or "all instrumented game-source" in scope
+                ):
                     raise TraceValidationError(
                         f"line {line_number}: raw_word_index_scope must disclose wrapper-only scope"
                     )
@@ -271,8 +272,16 @@ def validate_trace(path: Path) -> dict[str, Any]:
                     raise TraceValidationError(f"line {line_number}: draw without script has script_draw_index")
                 if source_kind != "pascal_direct":
                     raise TraceValidationError(f"line {line_number}: draw without script must be pascal_direct")
-                if record.get("source_origin") is not None or record.get("source_line") is not None:
-                    raise TraceValidationError(f"line {line_number}: direct draw must not claim .rot source")
+                source_origin = record.get("source_origin")
+                source_line = record.get("source_line")
+                if source_origin is not None and not isinstance(source_origin, str):
+                    raise TraceValidationError(f"line {line_number}: direct source_origin must be text or null")
+                if source_line is not None:
+                    _integer(record, "source_line", line_number)
+                if (source_origin is None) != (source_line is None):
+                    raise TraceValidationError(
+                        f"line {line_number}: direct source_origin and source_line must be present together"
+                    )
             else:
                 expected_draw_index = script_draw_counts[script_id]
                 if script_draw_index != expected_draw_index:
@@ -286,9 +295,7 @@ def validate_trace(path: Path) -> dict[str, Any]:
                     _integer(record, "source_line", line_number)
                 elif source_kind == "pascal_helper":
                     if record.get("source_line") is not None:
-                        raise TraceValidationError(
-                            f"line {line_number}: pascal_helper draw must not claim a .rot source line"
-                        )
+                        _integer(record, "source_line", line_number)
                 else:
                     raise TraceValidationError(
                         f"line {line_number}: script-context draw source_kind must be "
@@ -370,14 +377,14 @@ def main() -> int:
         f"valid trace {summary['session_id']}: "
         f"{summary['ticks']} ticks, {summary['script_executions']} script executions, "
         f"{summary['control_records']} branch/loop records, "
-        f"{summary['api_calls']} SortearValor calls "
+        f"{summary['api_calls']} instrumented game RNG calls "
         f"({summary['system_random_calls']} System.Random, {summary['replay_calls']} replay), "
-        f"{summary['raw_mt_words']} wrapper-scoped MT word(s), "
+        f"{summary['raw_mt_words']} instrumented MT word(s), "
         f"initial RandSeed={summary['rand_seed_initial']}"
     )
     print(
-        "scope note: direct System.Random calls outside SortearValor are excluded; "
-        "source columns and concrete short-circuit subexpression values are not emitted"
+        "scope note: game-source System.Random call sites are routed through SortearValor; "
+        "external RTL/library calls, source columns and concrete short-circuit subexpression values are not emitted"
     )
     return 0
 
