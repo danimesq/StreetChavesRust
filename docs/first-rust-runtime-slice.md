@@ -84,12 +84,12 @@ The captured `Fator=3.6` explains the rounded Int64 ranges. The second top-level
 
 `CharacterActionScript` is the child-execution seam corresponding to the character-specific `[Acao]` invoked by Pascal `AcaoJogador`. The child receives the same mutable RNG source used by the parent IA runtime.
 
-A deterministic Rust integration test has a child executor consume one draw after the parent `Random(13)` request. It asserts that:
-- the child receives the next request from the same cursor;
+A deterministic Rust integration test uses the actual strict `PascalDrawReplay` implementation with a two-draw JSONL stream. The first draw is consumed by the parent `Common.rot [IA]` executor; the second is tagged with a child script execution ID and `parent_script_execution_id` pointing to the parent. An injected child executor consumes that second draw. The test asserts that:
+- the child receives the next draw from the same replay cursor;
 - parent and child draws appear in one ordered runtime draw list;
-- the cursor advances twice without resetting.
+- `draws_consumed()==2`, no draws remain, and `finish()` succeeds.
 
-Evidence boundary: the 3,000-tick Pascal capture contains nested script invocations but none of its captured RNG draws has a child-script parent context. The Rust test validates the shared-cursor architecture with an injected child executor; it does not claim that historical Pascal gameplay has yet demonstrated RNG consumption inside one of those child calls. Actual character-specific `CNN.rot [Acao]` scripts remain to be ported.
+Evidence boundary: the 3,000-tick Pascal capture contains nested script invocations but none of its captured RNG draws has a child-script parent context. The Rust regression therefore validates shared-cursor replay behavior with a deterministic parent/child trace fixture; it does not claim that historical gameplay has yet demonstrated RNG consumption inside a real character-specific child script. Actual `CNN.rot [Acao]` scripts remain to be ported and observed.
 
 ## Runtime boundaries
 
