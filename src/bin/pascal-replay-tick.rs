@@ -79,6 +79,8 @@ fn main() -> ExitCode {
                 y: 0.0,
                 speed: 3.0,
                 distance_ai: 250,
+                vertical_velocity: 0,
+                in_air: false,
                 health: 100,
                 body,
             },
