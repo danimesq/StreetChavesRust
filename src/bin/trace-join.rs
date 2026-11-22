@@ -39,7 +39,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut rot_expression_draws = 0usize;
     let mut pascal_helper_draws = 0usize;
     let mut pascal_direct_draws = 0usize;
-    let source_column_draws = joined.iter().filter(|row| row.draw.source_column.is_some()).count();
+    let source_column_draws = joined
+        .iter()
+        .filter(|row| row.draw.source_column.is_some())
+        .count();
 
     for row in &joined {
         match row.status {
