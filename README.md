@@ -5,7 +5,7 @@
 An independent Rust reimplementation project inspired by **Street Chaves — O Lutador da Vila**. The goal is to understand the game’s behavior, compare existing reconstructions, and build a clean Rust implementation with a testable game core and a separate SDL3 presentation layer.
 
 > **Project status: research plus foundational Rust contracts.**
-> The repository now contains a dependency-free Rust library for ordered combat timelines, Delphi 5 RNG compatibility with an injected seed and 64-bit draw tracing, strict AABB geometry, and source-specific hitbox/hurtbox lifecycle contracts, including explicit attack deactivation. GitHub Actions run #38 passed `cargo fmt --all -- --check` and all 16 contract tests (14 unit, 2 integration). It is not yet a playable game; original-executable parity remains incomplete.
+> The repository now contains a dependency-free Rust library for ordered combat timelines, Pascal/FPC 3.2.2 MTwist RNG compatibility with width-aware raw-word tracing, an isolated experimental Delphi LCG candidate, strict AABB geometry, and source-specific hitbox/hurtbox lifecycle contracts. The Pascal .rot normalizer parses all 15 fighters plus Comum.rot, producing 5,091 symbolic events, 255 unique RNG sites (465 composed occurrences), and a 71-reference Pascal source RNG inventory. The normalizer is a static trace, not a concrete tick simulation. The latest Rust CI run is validating the new Fpc322Rng implementation. The game is not yet playable; original-executable parity remains incomplete.
 
 ## Project goals
 
@@ -18,12 +18,12 @@ An independent Rust reimplementation project inspired by **Street Chaves — O L
 
 ## Research references
 
-The project studies three independent repositories. They are evidence sources, not a parent/child chain, and none is treated as automatically canonical.
+The project studies three independent repositories, but they do not have equal authority for this reconstruction. **OpenStreetChaves (Pascal/Lazarus) is the normative project source** for Rust behavior, including its FPC 3.2.2 interpreter/runtime semantics. The C17/SDL3 project is a comparative implementation: disagreements are documented and reserved for original-executable verification, but C behavior does not silently override Pascal.
 
 | Project | Technology | Role here |
 |---|---|---|
-| [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves) | Pascal / Lazarus / SDL2 | Reference for a working SDL-hosted reconstruction, fighter scripts, software rendering, and its migration history. |
-| [open-street-chaves](https://github.com/danimesq/open-street-chaves) | C17 / SDL3 | Independent implementation and a useful reference for game-state logic, hitboxes, combat, effects, and testability. |
+| [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves) | Pascal / Lazarus / SDL2 | **Normative project source** for fighter scripts, interpreter semantics, game-state order, and FPC 3.2.2 RNG behavior. |
+| [open-street-chaves](https://github.com/danimesq/open-street-chaves) | C17 / SDL3 | Comparative implementation for cross-checking state logic, hitboxes, combat and effects. Its differences remain annotations, not normative overrides. |
 | [street-chaves-hack-sms](https://github.com/danimesq/street-chaves-hack-sms) | SMS ROM hack | Supporting reference for ROM investigation, graphics extraction, binary formats, and hardware constraints. It is **not** treated as an authoritative source for the PC game's mechanics. |
 
 ## Documentation
@@ -38,8 +38,10 @@ The research and design notes live in [the documentation directory](docs/README.
 - [Ordered frame event ledger](docs/ordered-frame-event-ledger.md) — source-ordered frame, timer, effect, sound, RNG, and simulation-mutation statements for all 15 Pascal [Quadro] blocks.
 - [Combat tick contracts](docs/combat-tick-contract.md) — Rust event ordering, Delphi 5 RNG, hitbox/hurtbox records, and strict collision geometry.
 - [Box lifecycle deep dive](docs/box-lifecycle-deep-dive.md) — C selector and Pascal AplicarCaixas update order, stale-box retention, strength variants, and the fighter 11 discrepancy.
-- [RNG compatibility](docs/rng-compatibility.md) — Delphi 5 LCG, Free Pascal RTL distinction, and seed compatibility.
-- [RNG call-site inventory](docs/rng-callsite-inventory.md) — shared C RNG call sites, tick-phase order, and variable draw-count traps.
+- [Pascal RNG compatibility](docs/rng-compatibility.md) — FPC 3.2.2 MTwist semantics, LongInt/Int64 raw-word costs, deterministic seed and the optional Delphi candidate.
+- [Pascal RNG inventory](docs/pascal-rng-inventory.md) — 255 unique `.rot` sites, 465 composed occurrences and 71 Pascal source references.
+- [ROT normalizer](docs/rot-normalizer.md) — parser, source pins, symbolic timeline output and CI artifact.
+- [C RNG call-site comparison](docs/rng-callsite-inventory.md) — shared C RNG call sites, tick-phase order and variable draw-count traps.
 - [Original executable reverse engineering](docs/original-executable-reverse-engineering.md) — PE/resource/asset investigation and gameplay cross-reference plan.
 - [REA tooling](tools/README.md) — reproducible preflight evidence collection and REA/Ghidra handoff.
 - [Original executable reverse engineering](docs/original-executable-reverse-engineering.md) — preliminary PE inspection, DelphiX/DirectX clues, resource and asset inventory plan, gameplay cross-reference targets, and the later golden-fixture strategy.
