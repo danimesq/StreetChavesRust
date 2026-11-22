@@ -72,11 +72,11 @@ Generated files:
 - `pascal-rng-call-sites.json`: Pascal `.pas/.inc` RNG call-site inventory
 - `rot-rng-call-sites.json`: unique `.rot` RNG sites, including width and raw MT word cost
 - `source-manifest.json`: source hashes for the generated bundle
-- `argument-order.txt`: compiler-order result from the FPC probe (included in the CI artifact)
+- `argument-order.txt`: compiler-order result and evaluation trace from the FPC probe (included in the CI artifact)
 
 ## 🌈 CI
 
-The `Pascal .rot normalization` workflow installs and verifies FPC 3.2.2, runs the compiler argument-order probe, tests the grammar, checks the pinned Pascal source, normalizes the full 15-fighter roster with the measured profile, verifies the output boundaries and uploads the bundle as the `pascal-rot-symbolic-timelines` artifact. The completed full run #30 (7 parser tests passed) produced 5,091 symbolic events grouped into 1,749 symbolic action/timer lanes, 255 unique `.rot` RNG sites represented 465 times across the composed fighter timelines, and 71 RNG-related `.pas/.inc` references. The 255 unique sites split into 160 LongInt (one raw MT word) and 95 Int64 (two raw MT words); composed occurrences split into 244 and 221 respectively.
+The `Pascal .rot normalization` workflow installs and verifies FPC 3.2.2, runs the compiler argument-order probe, tests the grammar, checks the pinned Pascal source, normalizes the full 15-fighter roster with the measured profile, verifies the output boundaries and uploads the bundle as the `pascal-rot-symbolic-timelines` artifact. The completed full run #42 (9 parser tests passed) installed and verified FPC 3.2.2, measured right-to-left argument evaluation with trace `5431`, then produced 5,091 symbolic events grouped into 1,749 symbolic action/timer lanes, 255 unique `.rot` RNG sites represented 465 times across the composed fighter timelines, and 71 RNG-related `.pas/.inc` references. The 255 unique sites split into 160 LongInt (one raw MT word) and 95 Int64 (two raw MT words); composed occurrences split into 244 and 221 respectively.
 
 ## 🌈 Deliberate non-goals
 
