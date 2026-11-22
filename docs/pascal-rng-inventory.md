@@ -64,14 +64,25 @@ The Pascal exporter compiled with FPC 3.2.2 and passed two deterministic
 wrapper-scoped MT words. Both JSONL files and both `logica.txt` outputs
 matched byte for byte; both traces passed the schema-v2 validator.
 
-A real tick-316 excerpt is committed as a regression fixture. The Rust
-`trace_join` module joins its first `Comum.rot [IA]` draw (line 293,
-LongInt, range 13) to the static site `Common.IA.L293.C4` as a unique match.
-The joiner preserves ambiguous and unmatched results rather than inventing a
-source column. The full 8,841-draw capture has not yet been reconciled
-end-to-end against all 15 symbolic timelines.
+The full-capture Rust join covers all 8,841 observed wrapper draws across
+the 15 fighter timelines:
 
-Source columns, every short-circuited boolean subexpression, direct
-`System.Random` calls outside the wrapper, and full game-state snapshots
-remain outside schema v2. The MT-word index is not a global MTwist cursor.
-The experimental Pascal branch remains unmerged.
+| Runtime classification | Count |
+|---|---:|
+| Unique `.rot` static-site matches | 8,415 |
+| Ambiguous | 0 |
+| Unmatched | 0 |
+| Non-`.rot` source context | 426 |
+
+The 426 non-`.rot` calls split into 422 direct `SortearValor` wrapper calls
+with no active script context and 4 Pascal-helper calls made from a script.
+They are retained as runtime RNG events, but are not falsely assigned to a
+static `.rot` AST site. The static index contains 465 composed RNG
+occurrences representing 255 unique source sites. The 8,415 expression draws
+matched uniquely by fighter/character, source file and section, source line,
+width, and literal range when available.
+
+The Pascal interpreter still does not emit source columns, every
+short-circuited boolean subexpression, direct `System.Random` calls outside
+`SortearValor`, or full game-state snapshots. Its MT-word index is not a
+global MTwist cursor. The experimental Pascal branch remains unmerged.
