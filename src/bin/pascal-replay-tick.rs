@@ -47,6 +47,7 @@ fn main() -> ExitCode {
         clock_stopped: false,
         fighters: [
             FighterState {
+                sprite_frame: 0,
                 character_id: 2,
                 action_id: 1,
                 action_frame: 0,
