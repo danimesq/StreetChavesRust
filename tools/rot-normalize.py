@@ -738,6 +738,79 @@ def git_blob_sha1(path):
     return hashlib.sha1(f"blob {len(data)}\0".encode("ascii") + data).hexdigest()
 
 
+def build_symbolic_action_tick_index(fighters):
+    """Group source events by symbolic P.Acao and P.QuadroAcao guard context.
+
+    This is a navigation/index layer over the static trace. It does not evaluate
+    guards, unroll loops, or assign concrete runtime ticks.
+    """
+    indexed_fighters = []
+    total_groups = 0
+    total_events = 0
+    selected_fields = (
+        "rng_site", "function", "range_expression", "random_width",
+        "raw_rng_words_consumed", "rng_result_reduction",
+        "argument_evaluation", "argument_context",
+        "target", "value_expression", "arguments", "loop_type",
+        "variable", "direction", "first", "last", "condition",
+    )
+
+    for fighter in fighters:
+        fighter_entry = {
+            "fighter_id": fighter["fighter_id"],
+            "source_file": fighter["source_file"],
+            "sections": {},
+        }
+        for section_name, section in fighter["sections"].items():
+            buckets = {}
+            for event in section["symbolic_events"]:
+                action_context = tuple(event["symbolic_action_context"])
+                tick_context = tuple(event["symbolic_tick_context"])
+                key = json.dumps([action_context, tick_context], ensure_ascii=False)
+                if key not in buckets:
+                    buckets[key] = {
+                        "group_index": len(buckets),
+                        "symbolic_action_guards": list(action_context),
+                        "symbolic_tick_guards": list(tick_context),
+                        "events": [],
+                    }
+                compact = {
+                    "sequence": event["combined_sequence"],
+                    "component_order": event["component_order"],
+                    "character": event["character"],
+                    "kind": event["kind"],
+                    "source_line": event["source_line"],
+                    "source_column": event["source_column"],
+                    "guards": event["guards"],
+                    "loop_context": event["loop_context"],
+                }
+                for field in selected_fields:
+                    if field in event:
+                        compact[field] = event[field]
+                buckets[key]["events"].append(compact)
+                total_events += 1
+
+            groups = list(buckets.values())
+            fighter_entry["sections"][section_name] = {
+                "group_count": len(groups),
+                "groups": groups,
+            }
+            total_groups += len(groups)
+
+        indexed_fighters.append(fighter_entry)
+
+    return {
+        "schema": "street-chaves-symbolic-action-tick-index/v1",
+        "normative_source": "Pascal/FPC 3.2.2",
+        "kind": "static_guard_grouping_not_dynamic_execution",
+        "runtime_ticks_assigned": False,
+        "runtime_rng_word_indices_assigned": False,
+        "events_preserved": total_events,
+        "symbolic_groups": total_groups,
+        "fighters": indexed_fighters,
+    }
+
+
 def build_normalization(input_dir, output_dir, source_root, argument_order):
     output_dir.mkdir(parents=True, exist_ok=True)
     common_path = input_dir / "Comum.rot"
@@ -793,6 +866,7 @@ def build_normalization(input_dir, output_dir, source_root, argument_order):
                            "state_writes": sum(e["kind"] == "state_write" for e in combined)}}
         fighters.append(fighter)
 
+    symbolic_index = build_symbolic_action_tick_index(fighters)
     result = {
         "schema": "street-chaves-rot-normalization/v1",
         "normalizer_version": PARSER_VERSION,
@@ -869,11 +943,19 @@ def build_normalization(input_dir, output_dir, source_root, argument_order):
                                "short_circuit_and_loop_contexts_are_preserved": True,
                                "common_sections_run_before_fighter_sections": True},
         "inputs": inputs, "fighters": fighters,
+        "symbolic_action_tick_index_summary": {
+            "symbolic_groups": symbolic_index["symbolic_groups"],
+            "events_preserved": symbolic_index["events_preserved"],
+            "runtime_ticks_assigned": False,
+            "runtime_rng_word_indices_assigned": False,
+        },
         "rot_rng_inventory": rot_rng_inventory}
     if pin:
         result["source_pin_manifest"] = pin
     (output_dir / "rot-rng-call-sites.json").write_text(
         json.dumps(rot_rng_inventory, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (output_dir / "symbolic-action-tick-index.json").write_text(
+        json.dumps(symbolic_index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if source_root is not None:
         sites = inventory_pascal_rng(source_root)
         result["pascal_rng_inventory"] = {
@@ -935,6 +1017,10 @@ def render_summary(result):
             detail = ", ".join(f"{x['name']} L{x['line']}" for x in sites)
             lines.append(f"| {path} | {detail} |")
         lines.append("")
+    index = result.get("symbolic_action_tick_index_summary", {})
+    lines += ["## Symbolic action/tick guard index", "",
+              f"Grouped **{index.get('events_preserved', 0)} events** into **{index.get('symbolic_groups', 0)} guard-context groups** keyed by symbolic P.Acao and P.QuadroAcao predicates.", "",
+              "This is a navigation view over the static source trace, not a dynamic execution. Loops, branches and event guards remain unevaluated; runtime tick and RNG word indices are not assigned.", ""]
     return "\n".join(lines)
 
 
@@ -955,7 +1041,9 @@ def main(argv=None):
         return 2
     total_rng = sum(s["counts"]["rng_draw_sites"] for f in result["fighters"] for s in f["sections"].values())
     total_events = sum(s["counts"]["events"] for f in result["fighters"] for s in f["sections"].values())
+    index = result["symbolic_action_tick_index_summary"]
     print(f"normalized {len(result['fighters'])} fighters; {total_events} symbolic events; {total_rng} RNG sites")
+    print(f"indexed {index['events_preserved']} events in {index['symbolic_groups']} symbolic action/tick groups")
     print(f"output: {args.output_dir}")
     return 0
 
