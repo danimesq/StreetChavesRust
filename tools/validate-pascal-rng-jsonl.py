@@ -296,6 +296,10 @@ def validate_trace(path: Path) -> dict[str, Any]:
                 elif source_kind == "pascal_helper":
                     if record.get("source_line") is not None:
                         _integer(record, "source_line", line_number)
+                        if ".rot" in record["source_origin"].lower():
+                            raise TraceValidationError(
+                                f"line {line_number}: pascal_helper draw must not claim a .rot source line"
+                            )
                 else:
                     raise TraceValidationError(
                         f"line {line_number}: script-context draw source_kind must be "
