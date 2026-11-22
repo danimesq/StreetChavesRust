@@ -95,6 +95,62 @@ end;
         self.assertEqual(draws[0]["range_expression"], "10")
         self.assertEqual(draws[1]["range_expression"], "20")
 
+    def test_symbolic_action_tick_index_groups_without_assigning_runtime_ticks(self):
+        fighters = [{
+            "fighter_id": 1,
+            "source_file": "C01.rot",
+            "sections": {
+                "quadro": {
+                    "symbolic_events": [
+                        {
+                            "combined_sequence": 0, "component_order": 0,
+                            "character": "C01", "kind": "rng_draw",
+                            "source_line": 10, "source_column": 7,
+                            "symbolic_action_context": ["P.Acao = acEspecial2"],
+                            "symbolic_tick_context": ["P.QuadroAcao = 10"],
+                            "guards": ["P.Acao = acEspecial2", "P.QuadroAcao = 10"],
+                            "loop_context": [],
+                            "rng_site": "C01.Quadro.L10.C7",
+                            "range_expression": "4",
+                            "random_width": "int32",
+                            "raw_rng_words_consumed": 1,
+                        },
+                        {
+                            "combined_sequence": 1, "component_order": 0,
+                            "character": "C01", "kind": "state_write",
+                            "source_line": 11, "source_column": 3,
+                            "symbolic_action_context": ["P.Acao = acEspecial2"],
+                            "symbolic_tick_context": ["P.QuadroAcao = 10"],
+                            "guards": ["P.Acao = acEspecial2", "P.QuadroAcao = 10"],
+                            "loop_context": [],
+                            "target": "P.Quadro",
+                            "value_expression": "40",
+                        },
+                        {
+                            "combined_sequence": 2, "component_order": 0,
+                            "character": "C01", "kind": "state_write",
+                            "source_line": 18, "source_column": 3,
+                            "symbolic_action_context": ["P.Acao = acEspecial3"],
+                            "symbolic_tick_context": ["P.QuadroAcao = 4"],
+                            "guards": ["P.Acao = acEspecial3", "P.QuadroAcao = 4"],
+                            "loop_context": [],
+                            "target": "P.Quadro",
+                            "value_expression": "42",
+                        },
+                    ]
+                }
+            }
+        }]
+        index = mod.build_symbolic_action_tick_index(fighters)
+        self.assertEqual(index["events_preserved"], 3)
+        self.assertEqual(index["symbolic_groups"], 2)
+        self.assertFalse(index["runtime_ticks_assigned"])
+        self.assertFalse(index["runtime_rng_word_indices_assigned"])
+        first = index["fighters"][0]["sections"]["quadro"]["groups"][0]
+        self.assertEqual(len(first["events"]), 2)
+        self.assertEqual(first["events"][0]["rng_site"], "C01.Quadro.L10.C7")
+        self.assertEqual(first["events"][1]["target"], "P.Quadro")
+
     def test_sections_ignore_semicolon_comments_and_preserve_line_numbers(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "C01.rot"
