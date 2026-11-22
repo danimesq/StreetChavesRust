@@ -215,4 +215,4 @@ and assert the opposite frame on each eligible action-frame boundary. This is an
 animation update API, not a full renderer/effect-system integration claim.
 
 
-Validation note: GitHub Actions passed formatting and `cargo test --all-targets` on commit `a05fd23c0dcf80e7c20eaaffce475088172f6e06`. The update API preserves the shared RNG cursor; it does not claim renderer integration for C12's returned particle events.
+Validation note: GitHub Actions passed formatting and `cargo test --all-targets` on commit `9f335d9cd23665277081bc17a685b2adac60213d`. The update API preserves the shared RNG cursor; it does not claim renderer integration for C12's returned particle events.
