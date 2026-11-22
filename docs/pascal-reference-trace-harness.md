@@ -241,3 +241,123 @@ passes formatting and all 22 library tests plus both integration tests.
 The full capture/reconciliation evidence is in
 [artifact #14761022549](https://github.com/danimesq/StreetChavesRust/actions/runs/45040091460/artifacts/14761022549);
 the integrated pipeline passed.
+
+
+## 🌈 Rust replay adapter: first real-draw consumer
+
+The Rust crate now exposes `pascal_replay::PascalDrawReplay`. It consumes
+schema-v2 `draw` records in their original `api_call_index` order and returns
+the captured result only when the caller supplies the exact Pascal overload
+(`LongInt` or `Int64`) and range. A mismatch does not advance the cursor.
+The adapter rejects non-sequential API indexes, unknown widths, invalid
+result ranges, and incorrect raw MT-word costs. `finish()` fails when the
+simulator exits while recorded draws remain, making early/extra branch
+divergence observable.
+
+The first regression test uses the committed, verbatim real event sample
+`tests/fixtures/pascal-runtime-schema-v2-tick316.jsonl`: its captured
+`LongInt` request for range 13 must replay as 12. Additional tests verify
+width/range mismatch, cursor preservation, exhaustion, and unconsumed draws.
+
+This is deliberately a **recorded-result replay adapter**, not yet a complete
+Rust game simulation and not a second MTwist implementation. It proves that a
+future simulation can consume real Pascal RNG decisions without inventing
+fixture values. The adapter currently consumes the wrapper-scoped
+`SortearValor` stream; direct `System.Random` calls outside that wrapper are
+still outside the trace contract. Full tick/state transition comparison and
+multi-fighter/action fixtures remain the next integration work.
+
+
+## 🌈 Executable tick differential: first-divergence comparator
+
+The Rust crate now exposes `pascal_differential::load_tick_checkpoints` and
+`first_divergence`. They parse the Pascal harness's concrete `tick_start`
+and `tick_end` records and compare the selected fighter/action/frame fields
+in ascending tick order. A missing checkpoint is itself a divergence. The
+comparator reports the first differing tick, phase, field, and both values.
+
+A CLI is available for a Rust simulator that emits the same checkpoint JSONL
+shape:
+
+```sh
+cargo run --release --bin pascal-diff -- trace/rng.jsonl rust-checkpoints.jsonl
+```
+
+The first version compares only fields actually present in the Pascal
+schema-v2 snapshots. In particular, `tick_end` does not currently carry
+action-duration fields, and neither phase is a full memory dump. A matching
+report therefore means equality of these emitted checkpoint fields, not
+complete game-state parity.
+
+The replay adapter also exposes width-specific
+`random_longint(i32)` and `random_int64(i64)` entrypoints. A simulator can
+call these at the corresponding RNG sites and gets a strict error on the
+first unexpected width/range, exhausted stream, or leftover draw at
+`finish()`. This is the execution seam; the repository does not yet contain
+a complete action runner that drives the existing combat state model through
+all 3,000 captured ticks.
+
+## Full game-source RNG capture and independent MTwist result
+
+The original wrapper-only capture contained 8,841 draws. Its first draw did not
+match the independent Rust MTwist stream: the Rust result was 0 while Pascal
+returned 12. The session seed was 20261026, but the first wrapper draw occurred
+after an unrecorded direct `System.Random` call. A source scan found 55 direct
+`Random(...)` call sites in eight game `.inc` files. They are now routed
+through overloaded `SortearDireto(LongInt/Int64)` entrypoints, preserving the
+selected Pascal overload and recording source filename and line.
+
+The expanded 3,000-tick capture now contains:
+
+- **11,769 instrumented game-source RNG calls**: 8,415 `rot_expression`,
+  3,350 `pascal_direct`, and 4 `pascal_helper`.
+- **18,812 raw MT words**: 4,726 LongInt calls and 7,043 Int64 calls.
+- 1,069,474 control records, including 675,222 boolean-subexpression operand records, and 20,437 script invocations.
+- **309,092 short-circuit skips**: 308,942 `and_false` and 150 `or_true` right operands.
+- Runtime coverage: 2 fighter indices, 24 action IDs, 5,229 nested script invocations, 67 loop starts, 201 loop iterations, and 67 loop ends.
+- RNG widths: 4,726 `LongInt` draws and 7,043 `Int64` draws. The static symbolic index contains timelines for all 15 fighters. CI compares these
+coverage figures against the committed golden fixture
+`tests/fixtures/pascal-runtime-3k-coverage.json`, so changes to fighter/action,
+loop, nesting, width, source-column, or boolean-evaluation coverage are tested
+rather than merely documented.
+- Two byte-identical RNG traces and identical `logica.txt` output, including
+  the trace-off comparison.
+
+<badge color="success">Full MTwist regression passed</badge>
+
+The Pascal capture workflow fed every one of the 11,769 calls through the
+independent Rust `Fpc322Rng` and matched the result, overload width, range,
+API call index, first MT-word index, and raw-word cost. The source-column
+capture validated 11,343 draw locations across direct Pascal and ROT AST sites.
+The boolean trace recorded each evaluated operand and each skipped right side.
+This confirms the
+captured MTwist sequence across the instrumented game-source call sites.
+It does not yet prove that every possible external RTL/library RNG call is
+intercepted, nor does it provide a complete combat/action simulator.
+
+The full source-column and boolean artifact is Actions artifact **14765291483**, retained until
+2026-12-22. The expanded run passed in [workflow 45049647139](https://github.com/danimesq/StreetChavesRust/actions/runs/45049647139). The compact committed tick-316 sample remains a small fixture,
+not a substitute for the full run. Direct Pascal `.inc` call sites and ROT expression AST nodes now carry source
+columns. The 3,000-tick capture has **11,343 column-bearing draws across 45
+distinct source sites**: 2,928 direct Pascal draws across 23 exercised call
+sites, plus all 8,415 ROT expression draws across 22 sites. The static scan
+found 55 direct call sites across eight files. The remaining 426 legacy
+Pascal-direct/helper draws still lack an explicit callsite location.
+Logical `and/or/xor` operand values and short-circuit outcomes are now traced. Unary `not` and other boolean constructs remain open instrumentation work.
+
+
+## Boolean subexpression trace
+
+Logical `and`, `or`, and `xor` evaluation now emits one control record per
+operand with `control_type = boolean_subexpression`. Each record carries the
+expression and operand node IDs, operator, operand side, expression and operand
+source line/column, whether the operand was evaluated, its boolean value, and
+the expression result when known. A skipped right operand is explicit:
+`evaluated=false`, `boolean_value=null`, `short_circuit=true`, with
+`short_circuit_reason` set to `and_false` or `or_true`.
+
+For the fixed 3,000-tick scenario this produced 675,222 operand records and
+309,092 short-circuit skips. The Rust reconciliation report counts these
+records and emits them once as dedicated `boolean_subexpression` rows rather
+than duplicating them for every RNG draw in the same script invocation.
+Unary `not` and other boolean constructs remain future coverage.

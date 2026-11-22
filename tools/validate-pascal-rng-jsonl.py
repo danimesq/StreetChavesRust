@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Validate schema-v2 JSONL emitted by OpenStreetChaves runtime tracing.
 
-The MT-word cursor is intentionally scoped to calls through SortearValor. It is
-not a global FPC MTwist position because some Pascal code calls System.Random
-directly outside that wrapper.
+The MT-word cursor spans instrumented game-source System.Random call sites
+routed through SortearValor. External RTL/library calls are not intercepted.
 """
 
 from __future__ import annotations
@@ -47,6 +46,7 @@ def validate_trace(path: Path) -> dict[str, Any]:
     """Validate ordering, nested script contexts, controls and RNG cursor semantics."""
     session: dict[str, Any] | None = None
     next_api_call = next_mt_word = next_tick = next_script_id = next_control_id = 0
+    api_call_index_start = first_mt_word_index_start = 0
     system_random_calls = replay_calls = control_records = script_records = 0
     active_tick: int | None = None
     script_stack: list[int] = []
@@ -104,8 +104,10 @@ def validate_trace(path: Path) -> dict[str, Any]:
                     elif counter_name == "control":
                         next_control_id = offset
                     elif counter_name == "api":
+                        api_call_index_start = offset
                         next_api_call = offset
                     elif counter_name == "mt":
+                        first_mt_word_index_start = offset
                         next_mt_word = offset
                 if record.get("record_scope", "full_trace") not in (
                     "full_trace", "consecutive_tick_window", "event_sample"
@@ -128,9 +130,20 @@ def validate_trace(path: Path) -> dict[str, Any]:
                             f"line {line_number}: event_sample requires a sample_description"
                         )
                 scope = record.get("raw_word_index_scope")
-                if not isinstance(scope, str) or "SortearValor-only" not in scope:
+                if not isinstance(scope, str) or not (
+                    "SortearValor-only" in scope or "all instrumented game-source" in scope
+                ):
                     raise TraceValidationError(
-                        f"line {line_number}: raw_word_index_scope must disclose wrapper-only scope"
+                        f"line {line_number}: raw_word_index_scope must disclose instrumented RNG scope"
+                    )
+                source_column_scope = record.get("source_column_scope", "legacy")
+                if source_column_scope not in (
+                    "legacy",
+                    "direct_pascal_inc",
+                    "direct_pascal_inc+rot_ast",
+                ):
+                    raise TraceValidationError(
+                        f"line {line_number}: unsupported source_column_scope"
                     )
                 session = record
                 continue
@@ -220,6 +233,34 @@ def validate_trace(path: Path) -> dict[str, Any]:
                     raise TraceValidationError(f"line {line_number}: control_type must be text")
                 if record.get("script_execution_id") != script_stack[-1]:
                     raise TraceValidationError(f"line {line_number}: control event script context mismatch")
+                if record.get("control_type") == "boolean_subexpression":
+                    _integer(record, "source_column", line_number)
+                    _integer(record, "expression_node", line_number)
+                    _integer(record, "operand_node", line_number)
+                    _integer(record, "operand_source_line", line_number)
+                    _integer(record, "operand_source_column", line_number)
+                    if record.get("operator") not in ("and", "or", "xor"):
+                        raise TraceValidationError(f"line {line_number}: invalid boolean operator")
+                    if record.get("operand") not in ("left", "right"):
+                        raise TraceValidationError(f"line {line_number}: invalid boolean operand side")
+                    evaluated = record.get("evaluated")
+                    boolean_value = record.get("boolean_value")
+                    short_circuit = record.get("short_circuit")
+                    expression_result = record.get("expression_result")
+                    reason = record.get("short_circuit_reason")
+                    if not isinstance(evaluated, bool) or not isinstance(short_circuit, bool):
+                        raise TraceValidationError(f"line {line_number}: boolean evaluation flags must be boolean")
+                    if evaluated != isinstance(boolean_value, bool):
+                        raise TraceValidationError(f"line {line_number}: boolean_value must match evaluated")
+                    if expression_result is not None and not isinstance(expression_result, bool):
+                        raise TraceValidationError(f"line {line_number}: expression_result must be boolean or null")
+                    if short_circuit:
+                        if record.get("operand") != "right" or evaluated or expression_result is None:
+                            raise TraceValidationError(f"line {line_number}: invalid short-circuit record")
+                        if reason not in ("and_false", "or_true"):
+                            raise TraceValidationError(f"line {line_number}: short-circuit reason is missing")
+                    elif reason is not None:
+                        raise TraceValidationError(f"line {line_number}: unexpected short-circuit reason")
                 control_records += 1
                 continue
 
@@ -271,8 +312,25 @@ def validate_trace(path: Path) -> dict[str, Any]:
                     raise TraceValidationError(f"line {line_number}: draw without script has script_draw_index")
                 if source_kind != "pascal_direct":
                     raise TraceValidationError(f"line {line_number}: draw without script must be pascal_direct")
-                if record.get("source_origin") is not None or record.get("source_line") is not None:
-                    raise TraceValidationError(f"line {line_number}: direct draw must not claim .rot source")
+                source_origin = record.get("source_origin")
+                source_line = record.get("source_line")
+                source_column = record.get("source_column")
+                if source_origin is not None and not isinstance(source_origin, str):
+                    raise TraceValidationError(f"line {line_number}: direct source_origin must be text or null")
+                if source_line is not None:
+                    _integer(record, "source_line", line_number)
+                if source_column is not None:
+                    _integer(record, "source_column", line_number)
+                    if source_column <= 0:
+                        raise TraceValidationError(f"line {line_number}: source_column must be positive")
+                if (source_origin is None) != (source_line is None):
+                    raise TraceValidationError(
+                        f"line {line_number}: direct source_origin and source_line must be present together"
+                    )
+                if source_origin is not None and source_origin.lower().endswith(".inc") and source_column is None:
+                    raise TraceValidationError(
+                        f"line {line_number}: direct .inc draw must include source_column"
+                    )
             else:
                 expected_draw_index = script_draw_counts[script_id]
                 if script_draw_index != expected_draw_index:
@@ -284,10 +342,30 @@ def validate_trace(path: Path) -> dict[str, Any]:
                     raise TraceValidationError(f"line {line_number}: script-context draw must include source_origin")
                 if source_kind == "rot_expression":
                     _integer(record, "source_line", line_number)
+                    if session.get("source_column_scope") == "direct_pascal_inc+rot_ast":
+                        if record.get("source_column") is None:
+                            raise TraceValidationError(
+                                f"line {line_number}: ROT expression draw requires source_column"
+                            )
+                        _integer(record, "source_column", line_number)
+                    elif record.get("source_column") is not None:
+                        _integer(record, "source_column", line_number)
                 elif source_kind == "pascal_helper":
                     if record.get("source_line") is not None:
+                        _integer(record, "source_line", line_number)
+                        if ".rot" in record["source_origin"].lower():
+                            raise TraceValidationError(
+                                f"line {line_number}: pascal_helper draw must not claim a .rot source line"
+                            )
+                        if record["source_origin"].lower().endswith(".inc"):
+                            if record.get("source_column") is None:
+                                raise TraceValidationError(
+                                    f"line {line_number}: direct helper call must include source_column"
+                                )
+                            _integer(record, "source_column", line_number)
+                    elif record.get("source_column") is not None:
                         raise TraceValidationError(
-                            f"line {line_number}: pascal_helper draw must not claim a .rot source line"
+                            f"line {line_number}: helper source_column requires source_line"
                         )
                 else:
                     raise TraceValidationError(
@@ -347,10 +425,12 @@ def validate_trace(path: Path) -> dict[str, Any]:
         "ticks": tick_count,
         "script_executions": script_records,
         "control_records": control_records,
-        "api_calls": next_api_call,
+        # Window fixtures retain absolute cursors, but summary counts describe only
+        # the records present in this JSONL excerpt.
+        "api_calls": next_api_call - api_call_index_start,
         "system_random_calls": system_random_calls,
         "replay_calls": replay_calls,
-        "raw_mt_words": next_mt_word,
+        "raw_mt_words": next_mt_word - first_mt_word_index_start,
         "rng_scope": "SortearValor",
     }
 
@@ -370,14 +450,15 @@ def main() -> int:
         f"valid trace {summary['session_id']}: "
         f"{summary['ticks']} ticks, {summary['script_executions']} script executions, "
         f"{summary['control_records']} branch/loop records, "
-        f"{summary['api_calls']} SortearValor calls "
+        f"{summary['api_calls']} instrumented game RNG calls "
         f"({summary['system_random_calls']} System.Random, {summary['replay_calls']} replay), "
-        f"{summary['raw_mt_words']} wrapper-scoped MT word(s), "
+        f"{summary['raw_mt_words']} instrumented MT word(s), "
         f"initial RandSeed={summary['rand_seed_initial']}"
     )
     print(
-        "scope note: direct System.Random calls outside SortearValor are excluded; "
-        "source columns and concrete short-circuit subexpression values are not emitted"
+        "scope note: game-source System.Random call sites are routed through SortearValor; "
+        "direct Pascal .inc and ROT expression draws include source columns; concrete short-circuit "
+        "subexpression values are not emitted"
     )
     return 0
 

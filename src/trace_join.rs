@@ -1,12 +1,12 @@
 //! Conservative join between concrete Pascal schema-v2 traces and the
 //! normalizer's static symbolic RNG/action-tick index.
 //!
-//! Runtime traces currently expose source lines but not source columns. This
-//! module therefore preserves ambiguity instead of choosing a static AST site
-//! based on event order or a guessed column.
+//! Direct Pascal .inc call sites and ROT expression draws expose source columns.
+//! The current symbolic index remains line-based, so this module preserves
+//! ambiguity instead of choosing a static AST site by guessed column.
 
 use serde_json::Value;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::io::{BufRead, Read};
 
@@ -52,6 +52,7 @@ pub struct RuntimeDraw {
     pub source_kind: String,
     pub source_origin: Option<String>,
     pub source_line: Option<u32>,
+    pub source_column: Option<u32>,
     pub width: String,
     pub range: i64,
     pub result: i64,
@@ -65,7 +66,19 @@ pub struct RuntimeControl {
     pub tick_index: Option<u64>,
     pub script_execution_id: Option<u64>,
     pub source_line: u32,
+    pub source_column: Option<u32>,
     pub control_type: String,
+    pub expression_node: Option<u32>,
+    pub operand_node: Option<u32>,
+    pub operand_source_line: Option<u32>,
+    pub operand_source_column: Option<u32>,
+    pub operator: Option<String>,
+    pub operand: Option<String>,
+    pub evaluated: Option<bool>,
+    pub boolean_value: Option<bool>,
+    pub short_circuit: Option<bool>,
+    pub expression_result: Option<bool>,
+    pub short_circuit_reason: Option<String>,
     pub branch_taken: Option<bool>,
     pub iteration_index: Option<u64>,
     pub iteration_value: Option<i64>,
@@ -81,6 +94,10 @@ pub struct RuntimeCapture {
     pub schema_version: u64,
     pub draws: Vec<RuntimeDraw>,
     pub controls: Vec<RuntimeControl>,
+    pub script_invocations: usize,
+    pub nested_script_invocations: usize,
+    pub fighter_indices: Vec<u8>,
+    pub action_ids: Vec<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -184,6 +201,7 @@ fn optional_bool(record: &Value, key: &str) -> Option<bool> {
 
 fn parse_draw(record: &Value, line: usize) -> Result<RuntimeDraw, TraceJoinError> {
     let source_line = optional_u32(record, "source_line");
+    let source_column = optional_u32(record, "source_column");
     let first_mt_word_index = optional_u64(record, "first_mt_word_index");
 
     Ok(RuntimeDraw {
@@ -203,6 +221,7 @@ fn parse_draw(record: &Value, line: usize) -> Result<RuntimeDraw, TraceJoinError
             .and_then(Value::as_str)
             .map(ToOwned::to_owned),
         source_line,
+        source_column,
         width: required_string(record, "width", line)?,
         range: required_i64(record, "range", line)?,
         result: required_i64(record, "result", line)?,
@@ -220,6 +239,27 @@ fn parse_control(record: &Value, line: usize) -> Result<RuntimeControl, TraceJoi
             invalid_record(line, "control source_line must be a non-negative integer")
         })?,
         control_type: required_string(record, "control_type", line)?,
+        source_column: optional_u32(record, "source_column"),
+        expression_node: optional_u32(record, "expression_node"),
+        operand_node: optional_u32(record, "operand_node"),
+        operand_source_line: optional_u32(record, "operand_source_line"),
+        operand_source_column: optional_u32(record, "operand_source_column"),
+        operator: record
+            .get("operator")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        operand: record
+            .get("operand")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        evaluated: optional_bool(record, "evaluated"),
+        boolean_value: optional_bool(record, "boolean_value"),
+        short_circuit: optional_bool(record, "short_circuit"),
+        expression_result: optional_bool(record, "expression_result"),
+        short_circuit_reason: record
+            .get("short_circuit_reason")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
         branch_taken: optional_bool(record, "branch_taken"),
         iteration_index: optional_u64(record, "iteration_index"),
         iteration_value: optional_i64(record, "iteration_value"),
@@ -237,6 +277,10 @@ pub fn load_runtime_capture<R: BufRead>(reader: R) -> Result<RuntimeCapture, Tra
     let mut schema_version = None;
     let mut draws = Vec::new();
     let mut controls = Vec::new();
+    let mut script_invocations = 0usize;
+    let mut nested_script_invocations = 0usize;
+    let mut fighter_indices = HashSet::new();
+    let mut action_ids = HashSet::new();
 
     for (index, raw_line) in reader.lines().enumerate() {
         let line_number = index + 1;
@@ -265,7 +309,28 @@ pub fn load_runtime_capture<R: BufRead>(reader: R) -> Result<RuntimeCapture, Tra
                 schema_version = Some(required_u64(&record, "schema_version", line_number)?);
                 session_id = Some(required_string(&record, "session_id", line_number)?);
             }
-            "draw" => draws.push(parse_draw(&record, line_number)?),
+            "draw" => {
+                let draw = parse_draw(&record, line_number)?;
+                if let Some(fighter_index) = draw.fighter_index {
+                    fighter_indices.insert(fighter_index);
+                }
+                if let Some(action_id) = draw.action_id {
+                    action_ids.insert(action_id);
+                }
+                draws.push(draw);
+            }
+            "script_start" => {
+                script_invocations += 1;
+                if optional_u64(&record, "parent_script_execution_id").is_some() {
+                    nested_script_invocations += 1;
+                }
+                if let Some(fighter_index) = optional_u8(&record, "fighter_index") {
+                    fighter_indices.insert(fighter_index);
+                }
+                if let Some(action_id) = optional_u32(&record, "action_id") {
+                    action_ids.insert(action_id);
+                }
+            }
             "control" => controls.push(parse_control(&record, line_number)?),
             _ => {}
         }
@@ -286,6 +351,18 @@ pub fn load_runtime_capture<R: BufRead>(reader: R) -> Result<RuntimeCapture, Tra
         schema_version,
         draws,
         controls,
+        script_invocations,
+        nested_script_invocations,
+        fighter_indices: {
+            let mut values: Vec<_> = fighter_indices.into_iter().collect();
+            values.sort_unstable();
+            values
+        },
+        action_ids: {
+            let mut values: Vec<_> = action_ids.into_iter().collect();
+            values.sort_unstable();
+            values
+        },
     })
 }
 
@@ -512,6 +589,11 @@ pub fn reconcile_capture(
     let mut controls_by_invocation: HashMap<(Option<u64>, Option<u64>), Vec<RuntimeControl>> =
         HashMap::new();
     for control in &capture.controls {
+        // Boolean subexpressions are emitted once as dedicated CLI records;
+        // do not clone them into every draw from the same invocation.
+        if control.control_type == "boolean_subexpression" {
+            continue;
+        }
         controls_by_invocation
             .entry((control.tick_index, control.script_execution_id))
             .or_default()
@@ -584,7 +666,7 @@ mod tests {
         let result = &joined[0];
         assert_eq!(result.status, SiteMatchStatus::Unique);
         assert_eq!(result.draw.tick_index, Some(316));
-        assert_eq!(result.draw.api_call_index, 0);
+        assert_eq!(result.draw.api_call_index, 88);
         assert_eq!(result.draw.result, 12);
         assert_eq!(result.draw.width, "LongInt");
         assert_eq!(result.candidates.len(), 1);

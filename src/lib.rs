@@ -10,6 +10,16 @@ use std::fmt;
 /// Parse and conservatively reconcile concrete Pascal JSONL traces with static symbolic sites.
 pub mod trace_join;
 
+/// Strict replay of concrete RNG requests from Pascal schema-v2 captures.
+pub mod pascal_replay;
+
+/// Differential support for concrete Pascal tick checkpoints.
+#[rustfmt::skip]
+pub mod pascal_differential;
+
+/// Bounded Pascal-derived AI runtime: target selection, movement, close-range attacks and child RNG.
+pub mod combat_runtime;
+
 /// Stable fighter identifier from the researched roster.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FighterId(pub u8);

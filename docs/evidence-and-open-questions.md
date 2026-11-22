@@ -97,9 +97,9 @@ The SMS project is based on a Master System fighting-game hack and imports Chave
 - [x] Run two fixed-seed 3,000-step `--gravar` captures and require byte-identical JSONL plus matching `logica.txt` checkpoints.
 - [x] Validate both real schema-v2 captures and commit a compact tick-316 excerpt as a Rust regression fixture.
 - [x] Implement the first Rust reconciliation path and test a unique real draw match, an ambiguous same-line match, and a Pascal-helper non-match.
-- [x] Reconcile all 8,841 runtime RNG draws against all 15 fighter timelines; preserve unique, ambiguous, unmatched and non-.rot classifications.
+- [x] Reconcile all 8,841 runtime RNG draws against all 15 fighter timelines; preserve unique, ambiguous, unmatched and non-.rot classifications.\n- [x] Add a strict Rust consumer for schema-v2 recorded draws: preserve API order, validate overload width/range/raw-word cost, reject divergent requests without advancing, and detect leftover draws.
 - [x] Validate real LongInt/Int64 draws and script helper/direct-call provenance in the full deterministic capture.
-- [ ] Expand compact committed regression fixtures across action sections, nested scripts, loop branches, Int64 draws, helper/direct calls and more fighters.
+- [ ] Expand compact committed regression fixtures across action sections, nested scripts, loop branches, Int64 draws, helper/direct calls and more fighters. The current tick-316 sample is a real event excerpt, not broad scenario coverage.
 - [ ] Decide whether to extend runtime attribution with source columns, direct `System.Random` call sites and fuller game-state snapshots; these remain outside schema v2.
 - [ ] Capture the original executable's initial RNG state and algorithm in the later compatibility phase; the C LCG remains comparative only.
 - [x] Trace retain-on-miss behavior in Pascal AplicarCaixas and C sel_boxes.
@@ -148,3 +148,35 @@ The SMS project is based on a Master System fighting-game hack and imports Chave
 - [Fight engine](https://github.com/danimesq/open-street-chaves/blob/main/docs/spec/05-fight-engine.md)
 - [Open questions in the C17 project](https://github.com/danimesq/open-street-chaves/blob/main/docs/spec/99-open-questions.md)
 - [SMS hack research](https://github.com/danimesq/street-chaves-hack-sms)
+
+
+## 2026-11-22: global game-source RNG cursor
+
+The first full-capture comparison against the wrapper-only trace diverged at
+API call 0. The Pascal session seed was 20261026, but the first captured
+wrapper call was preceded by a direct `System.Random` call. Static scanning
+found 55 direct `Random(...)` call sites across eight game `.inc` files.
+The experimental Pascal branch now routes those sites through
+`SortearDireto(LongInt/Int64)`, so direct and `.rot` draws share one call
+index and one MT-word cursor.
+
+The expanded capture contains 11,769 calls and 18,812 MT words. The Rust
+`Fpc322Rng` independently recalculated and matched all captured results in
+workflow run 45047281660. This closes the observed game-source RNG-stream gap
+for the instrumented call sites. External RTL/library RNG calls remain outside
+the trace until proven absent or separately instrumented.
+
+Direct Pascal `.inc` and ROT AST RNG call sites now include source columns:
+11,343 runtime draw records across 45 distinct sites (2,928 direct calls and
+8,415 ROT expressions). The 426 legacy Pascal-direct/helper draws still lack
+explicit source locations. The full capture, schema validation, symbolic
+reconciliation, independent MTwist comparison, and boolean subexpression
+validation passed in workflow run 45049647139 (artifact 14765291483). The trace now contains 675,222 logical boolean operand records and 309,092
+right-side short-circuit skips (308,942 `and_false`, 150 `or_true`). The
+records carry expression/operand node IDs, source line/column, evaluated/value
+flags, final expression result, and short-circuit reason. The same capture exercises 2 fighter indices, 24 action IDs, 5,229 nested
+script invocations, 67 loop starts / 201 iterations / 67 loop ends, and both
+RNG widths (4,726 LongInt; 7,043 Int64); the static symbolic index spans all
+15 fighters. Still open: unary `not` and other boolean constructs, a complete
+executable action interpreter, and real Rust-produced per-tick state snapshots
+for the differential comparator.

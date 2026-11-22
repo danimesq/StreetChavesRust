@@ -2,7 +2,7 @@
 //! symbolic RNG/action-tick index. Writes JSONL: one summary followed by one
 //! record per observed SortearValor request.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::File;
 use std::io::{self, BufReader, BufWriter, Write};
@@ -32,6 +32,29 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .map(|site| site.rng_site.as_str())
         .collect();
 
+    let symbolic_fighter_ids: HashSet<_> =
+        symbolic_sites.iter().map(|site| site.fighter_id).collect();
+    let source_sites: HashSet<_> = joined
+        .iter()
+        .filter_map(|row| {
+            Some((
+                row.draw.source_origin.clone()?,
+                row.draw.source_line?,
+                row.draw.source_column?,
+            ))
+        })
+        .collect();
+    let mut width_counts = HashMap::<String, usize>::new();
+    let mut control_type_counts = HashMap::<String, usize>::new();
+    for row in &joined {
+        *width_counts.entry(row.draw.width.clone()).or_default() += 1;
+    }
+    for control in &capture.controls {
+        *control_type_counts
+            .entry(control.control_type.clone())
+            .or_default() += 1;
+    }
+
     let mut unique = 0usize;
     let mut ambiguous = 0usize;
     let mut unmatched = 0usize;
@@ -39,6 +62,32 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut rot_expression_draws = 0usize;
     let mut pascal_helper_draws = 0usize;
     let mut pascal_direct_draws = 0usize;
+    let source_column_draws = joined
+        .iter()
+        .filter(|row| row.draw.source_column.is_some())
+        .count();
+    let boolean_subexpression_records = capture
+        .controls
+        .iter()
+        .filter(|control| control.control_type == "boolean_subexpression")
+        .count();
+    let short_circuit_skips = capture
+        .controls
+        .iter()
+        .filter(|control| control.short_circuit == Some(true))
+        .count();
+    let mut short_circuit_reason_counts = HashMap::<String, usize>::new();
+    for control in capture
+        .controls
+        .iter()
+        .filter(|control| control.short_circuit == Some(true))
+    {
+        if let Some(reason) = &control.short_circuit_reason {
+            *short_circuit_reason_counts
+                .entry(reason.clone())
+                .or_default() += 1;
+        }
+    }
 
     for row in &joined {
         match row.status {
@@ -58,9 +107,20 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let summary = json!({
         "record_type": "reconciliation_summary",
         "schema_version": 1,
-        "session_id": capture.session_id,
+        "session_id": capture.session_id.clone(),
         "runtime_schema_version": capture.schema_version,
         "runtime_draws": joined.len(),
+        "width_counts": width_counts,
+        "fighter_indices": capture.fighter_indices.clone(),
+        "fighter_count": capture.fighter_indices.len(),
+        "action_ids": capture.action_ids.clone(),
+        "action_id_count": capture.action_ids.len(),
+        "script_invocations": capture.script_invocations,
+        "nested_script_invocations": capture.nested_script_invocations,
+        "source_site_count": source_sites.len(),
+        "symbolic_fighter_count": symbolic_fighter_ids.len(),
+        "control_records": capture.controls.len(),
+        "control_type_counts": control_type_counts,
         "symbolic_rng_timeline_occurrences": symbolic_sites.len(),
         "unique_symbolic_rng_sites": unique_symbolic_sites.len(),
         "unique": unique,
@@ -72,9 +132,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "pascal_helper": pascal_helper_draws,
             "pascal_direct": pascal_direct_draws
         },
-        "match_policy": "fighter+character+section+source_line+width+literal_range_when_available",
-        "source_column_available_at_runtime": false,
-        "wrapper_rng_scope_only": true
+        "match_policy": "fighter+character+section+source_line+width+literal_range_when_available;source_column_retained_for_follow_up",
+        "source_column_draws": source_column_draws,
+        "boolean_subexpression_records": boolean_subexpression_records,
+        "short_circuit_skips": short_circuit_skips,
+        "short_circuit_reason_counts": short_circuit_reason_counts,
+        "source_column_available_for_pascal_direct": true,
+        "rot_expression_source_column_available": true,
+        "instrumented_game_source_rng_scope": true,
+        "external_rtl_library_rng_intercepted": false
     });
 
     let output: Box<dyn Write> = if args.len() == 4 {
@@ -115,7 +181,6 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             .iter()
             .map(|control| control.control_event_index)
             .collect();
-
         let record = json!({
             "record_type": "draw_reconciliation",
             "status": match row.status {
@@ -138,6 +203,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 "source_kind": row.draw.source_kind,
                 "source_origin": row.draw.source_origin,
                 "source_line": row.draw.source_line,
+                "source_column": row.draw.source_column,
                 "width": row.draw.width,
                 "range": row.draw.range,
                 "result": row.draw.result,
@@ -149,6 +215,36 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "invocation_control_event_indices": invocation_control_event_indices
         });
 
+        writeln!(output, "{}", serde_json::to_string(&record)?)?;
+    }
+
+    // Emit each boolean subexpression once instead of duplicating it per draw
+    // in the same script invocation.
+    for control in capture
+        .controls
+        .iter()
+        .filter(|control| control.control_type == "boolean_subexpression")
+    {
+        let record = json!({
+            "record_type": "boolean_subexpression",
+            "session_id": capture.session_id,
+            "control_event_index": control.control_event_index,
+            "tick_index": control.tick_index,
+            "script_execution_id": control.script_execution_id,
+            "source_line": control.source_line,
+            "source_column": control.source_column,
+            "expression_node": control.expression_node,
+            "operand_node": control.operand_node,
+            "operand_source_line": control.operand_source_line,
+            "operand_source_column": control.operand_source_column,
+            "operator": control.operator.clone(),
+            "operand": control.operand.clone(),
+            "evaluated": control.evaluated,
+            "boolean_value": control.boolean_value,
+            "short_circuit": control.short_circuit,
+            "expression_result": control.expression_result,
+            "short_circuit_reason": control.short_circuit_reason.clone()
+        });
         writeln!(output, "{}", serde_json::to_string(&record)?)?;
     }
 

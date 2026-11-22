@@ -22,7 +22,7 @@ def session_record() -> dict[str, object]:
         "rng_scope": "SortearValor",
         "rand_seed_initial": 20261026,
         "raw_word_index_scope": (
-            "SortearValor-only; direct System.Random calls outside this wrapper are excluded"
+            "all instrumented game-source System.Random calls routed through SortearValor"
         ),
         "context_status": "logical_tick_and_nested_script_context_attached",
     }
@@ -60,6 +60,34 @@ def context(tick: int | None, script_id: int | None, parent: int | None = None) 
         "action_id": 3 if script_id is not None else None,
         "action_frame": 4 if script_id is not None else None,
         "command_code": 3 if script_id is not None else None,
+    }
+
+
+def boolean_subexpression_record(
+    *, operand: str = "right", evaluated: bool = False, boolean_value: bool | None = None,
+    short_circuit: bool = True, expression_result: bool | None = False,
+    reason: str | None = "and_false",
+) -> dict[str, object]:
+    return {
+        "record_type": "control",
+        "schema_version": 2,
+        "session_id": "gravar-seed-20261026",
+        "control_event_index": 0,
+        "control_type": "boolean_subexpression",
+        "source_line": 18,
+        "source_column": 23,
+        **context(0, 0),
+        "expression_node": 4,
+        "operand_node": 3,
+        "operand_source_line": 18,
+        "operand_source_column": 12,
+        "operator": "and",
+        "operand": operand,
+        "evaluated": evaluated,
+        "boolean_value": boolean_value,
+        "short_circuit": short_circuit,
+        "expression_result": expression_result,
+        "short_circuit_reason": reason,
     }
 
 
@@ -152,7 +180,59 @@ class PascalRngJsonlTests(unittest.TestCase):
         result = self.run_validator(records)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("1 ticks, 1 script executions, 1 branch/loop records", result.stdout)
-        self.assertIn("1 SortearValor calls", result.stdout)
+        self.assertIn("1 instrumented game RNG calls", result.stdout)
+
+    def test_accepts_rot_expression_source_column_when_declared(self) -> None:
+        session = session_record()
+        session["source_column_scope"] = "direct_pascal_inc+rot_ast"
+        draw = draw_record(0, 0, 1, "LongInt")
+        draw["source_column"] = 17
+        result = self.run_validator([session, tick_start(), script_start(), draw, script_end(), tick_end()])
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_rejects_rot_expression_without_column_when_declared(self) -> None:
+        session = session_record()
+        session["source_column_scope"] = "direct_pascal_inc+rot_ast"
+        draw = draw_record(0, 0, 1, "LongInt")
+        result = self.run_validator([session, tick_start(), script_start(), draw, script_end(), tick_end()])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("ROT expression draw requires source_column", result.stderr)
+
+    def test_accepts_boolean_subexpression_short_circuit_record(self) -> None:
+        record = boolean_subexpression_record()
+        result = self.run_validator([
+            session_record(), tick_start(), script_start(), record,
+            script_end(draws=0), tick_end()
+        ])
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_rejects_evaluated_boolean_operand_without_value(self) -> None:
+        record = boolean_subexpression_record(
+            operand="left", evaluated=True, boolean_value=None,
+            short_circuit=False, expression_result=None, reason=None,
+        )
+        result = self.run_validator([
+            session_record(), tick_start(), script_start(), record,
+            script_end(draws=0), tick_end()
+        ])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("boolean_value must match evaluated", result.stderr)
+
+    def test_accepts_direct_pascal_draw_with_source_column(self) -> None:
+        direct = draw_record(0, 0, 1, "LongInt", script_id=None, script_draw_index=None)
+        direct["source_origin"] = "Estado4_Selecao.inc"
+        direct["source_line"] = 22
+        direct["source_column"] = 12
+        result = self.run_validator([session_record(), tick_start(), direct, tick_end()])
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_rejects_direct_inc_draw_without_source_column(self) -> None:
+        direct = draw_record(0, 0, 1, "LongInt", script_id=None, script_draw_index=None)
+        direct["source_origin"] = "Estado4_Selecao.inc"
+        direct["source_line"] = 22
+        result = self.run_validator([session_record(), tick_start(), direct, tick_end()])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("direct .inc draw must include source_column", result.stderr)
 
     def test_accepts_nested_script_frames(self) -> None:
         records = [
@@ -179,7 +259,7 @@ class PascalRngJsonlTests(unittest.TestCase):
         result = self.run_validator(records)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("1 replay", result.stdout)
-        self.assertIn("0 wrapper-scoped MT word(s)", result.stdout)
+        self.assertIn("0 instrumented MT word(s)", result.stdout)
 
     def test_accepts_pascal_helper_draw_inside_script_context(self) -> None:
         helper_draw = draw_record(0, 0, 1, "LongInt")
@@ -269,8 +349,28 @@ class PascalRngJsonlTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("1 ticks, 1 script executions, 1 branch/loop records", result.stdout)
-        self.assertIn("1 SortearValor calls", result.stdout)
-        self.assertIn("1 wrapper-scoped MT word(s)", result.stdout)
+        self.assertIn("1 instrumented game RNG calls", result.stdout)
+        self.assertIn("1 instrumented MT word(s)", result.stdout)
+
+    def test_accepts_captured_ai_branch_window_fixtures(self) -> None:
+        # These selected event samples preserve their original global cursor offsets.
+        fixtures = [
+            ("pascal-runtime-ai-target-tick317.jsonl", 2, 2),
+            ("pascal-runtime-ai-close-range-tick381.jsonl", 10, 19),
+        ]
+        root = Path(__file__).resolve().parents[1] / "tests" / "fixtures"
+        for name, expected_calls, expected_words in fixtures:
+            with self.subTest(fixture=name):
+                result = subprocess.run(
+                    [sys.executable, str(VALIDATOR), str(root / name)],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("1 ticks, 1 script executions, 1 branch/loop records", result.stdout)
+                self.assertIn(f"{expected_calls} instrumented game RNG calls", result.stdout)
+                self.assertIn(f"{expected_words} instrumented MT word(s)", result.stdout)
 
     def test_rejects_missing_session_header(self) -> None:
         result = self.run_validator([tick_start()])
