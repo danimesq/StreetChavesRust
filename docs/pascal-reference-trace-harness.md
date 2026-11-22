@@ -338,3 +338,20 @@ sites, plus all 8,415 ROT expression draws across 22 sites. The static scan
 found 55 direct call sites across eight files. The remaining 426 legacy
 Pascal-direct/helper draws still lack an explicit callsite location.
 Logical `and/or/xor` operand values and short-circuit outcomes are now traced. Unary `not` and other boolean constructs remain open instrumentation work.
+
+
+## Boolean subexpression trace
+
+Logical `and`, `or`, and `xor` evaluation now emits one control record per
+operand with `control_type = boolean_subexpression`. Each record carries the
+expression and operand node IDs, operator, operand side, expression and operand
+source line/column, whether the operand was evaluated, its boolean value, and
+the expression result when known. A skipped right operand is explicit:
+`evaluated=false`, `boolean_value=null`, `short_circuit=true`, with
+`short_circuit_reason` set to `and_false` or `or_true`.
+
+For the fixed 3,000-tick scenario this produced 675,222 operand records and
+309,092 short-circuit skips. The Rust reconciliation report counts these
+records and emits them once as dedicated `boolean_subexpression` rows rather
+than duplicating them for every RNG draw in the same script invocation.
+Unary `not` and other boolean constructs remain future coverage.
