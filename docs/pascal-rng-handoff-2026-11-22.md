@@ -195,3 +195,30 @@ Latest Rust CI for the runtime implementation:
 - `cargo fmt --all -- --check`: passed.
 - `cargo test --all-targets`: passed, including 33 library tests, 2 existing binary tests, and 3 runtime integration tests (38 total).
 - The integration test executes both `pascal-replay-tick` and `pascal-diff` as subprocesses and asserts the two-checkpoint match.
+
+## Runtime expansion update (2026-11-22, PR #9)
+
+The first AI runtime has expanded beyond tick 316. New evidence fixtures are selected draw segments from the deterministic 3,000-tick Pascal capture:
+
+- \`tests/fixtures/pascal-runtime-ai-target-tick317.jsonl\`: global API calls 94-95; \`Random(13)\` LongInt returns 0, then \`Random(6)\` LongInt returns 2, selecting distance target 200.
+- \`tests/fixtures/pascal-runtime-ai-close-range-tick381.jsonl\`: global API calls 423-432; records the real \`Random(13)\` gate and the four independent plus four conditional close-range probability draws, including LongInt/Int64 width distinctions and source order.
+
+\`src/combat_runtime.rs\` now executes both target-selection branches and the close-range chain. \`Random(Round(multiplier * Fator))\` is requested through the Int64 interface, while \`Random(13)\` and \`Random(6)\` use LongInt. The implementation preserves each draw's exact range, result, and ordering. Basic common \`[Acao]\` handling is implemented for movement, basic attacks, crouch, and airborne attack commands.
+
+A \`CharacterActionScript\` callback models the character-specific \`[Acao]\` call inside Pascal \`AcaoJogador\`. The parent AI and child callback receive the same mutable \`PascalRandomSource\`; a recording wrapper captures both in one sequence. A dedicated test has the child consume the next draw after the parent's \`Random(13)\` call and asserts that the cursor advances from call 0 to call 1 without resetting.
+
+**Evidence boundary for nested RNG:** the existing 3,000-tick Pascal trace contains nested script invocations but no RNG draw recorded while a nested child-script context is active. The Rust test validates the shared-cursor contract with a deterministic child executor; it is not evidence that this particular historical capture includes child-script RNG consumption.
+
+**Evidence boundary for tick inputs:** the current full Pascal trace still omits numeric \`Dist\`, \`P.DistanciaIA\`, \`P.Lado\`, fighter positions, vertical state, and body boxes at IA entry. Tick 317 and tick 381 tests therefore use explicit scenario inputs to select the captured branch/draw sequence; they are not claims that all hidden inputs equal the historical tick values. The factor 3.6 used for tick 381 is compatible with the captured rounded ranges but is not directly present in the trace.
+
+A separate trace-only Pascal instrumentation PR now captures the missing AI inputs and both fighters' action/position/body-box state in additive \`ai_inputs\` properties on \`.rot [IA]\` \`script_start\` records:
+- OpenStreetChaves PR #3: https://github.com/danimesq/OpenStreetChaves/pull/3
+- Its FPC 3.2.2 compile + deterministic 3,000-tick capture + JSON field validation workflow passed: https://github.com/danimesq/OpenStreetChaves/actions/runs/45068941855
+- This changes observability only; it does not change Pascal game behavior or RNG calls.
+
+Rust PR #9 validation after the runtime expansion:
+- Rust contracts: https://github.com/danimesq/StreetChavesRust/actions/runs/45069053782 (success; 33 library tests, 2 existing binary tests, 5 combat-runtime integration tests).
+- Pascal \`.rot\` normalization: https://github.com/danimesq/StreetChavesRust/actions/runs/45069053781 (success).
+- The Pascal runtime capture/reconciliation workflow remains a separate check for the capture/instrumentation branch; do not infer its status from the Rust contracts workflow.
+
+Next work is to merge the trace-only input snapshot PR, regenerate the Pascal capture with \`ai_inputs\`, and use the actual tick inputs to remove assumptions from the tick 317/381 regressions. Then add a child-script RNG draw capture before claiming historical nested-script RNG parity.
