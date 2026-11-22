@@ -67,8 +67,8 @@ Recommended fixture groups:
 - sequential RNG call-order fixtures;
 - action entry and timer-boundary fixtures;
 - same-tick multi-event ordering fixtures;
-- hitbox replace/clear/retain lifecycle fixtures once source semantics are known;
-- facing/mirroring and collision-boundary fixtures after the original flow is resolved;
+- golden hitbox lifecycle fixtures once original-executable semantics are observed;
+- original-backed facing/mirroring and collision-boundary fixtures after the original flow is resolved;
 - one representative action per fighter, then exceptional move chains for Seu Madruga, Sr. Furtado, and Jaiminho.
 
 ## 🌈 Validation status
@@ -81,10 +81,12 @@ Recommended fixture groups:
 - [x] Add strict AABB overlap geometry from the inspected Pascal/C collision paths.
 - [x] Trace retain-on-miss in both ports, including the distinct Pascal row-order and C last-match behavior.
 - [x] Add the character 11 state 27 timer 1 selector divergence as a documented open original-compatibility question.
-- [ ] Run cargo fmt --check and cargo test in a Rust toolchain environment.
+- [x] Run cargo fmt --all -- --check and cargo test --all-targets in GitHub Actions (run #23: 13 unit + 2 integration tests passed).
+- [x] Implement DelphiRng's 32-bit LCG transition and multiply-high range reduction with an injected seed.
+- [x] Trace C and Pascal lookup misses as retain operations and matched inactive rows as explicit inactive writes.
+- [ ] Capture original RandSeed and expand the complete original RNG call stream.
 - [ ] Expand the 15 fighter ledgers into fully evaluated action/tick traces.
-- [ ] Resolve box retention and activation from the combat update path.
-- [ ] Implement and verify the Delphi RNG adapter.
+- [ ] Confirm the fighter 11 selector divergence against the original executable.
 - [ ] Run the PE preflight against the canonical Chaves.exe and hand off its bundle to REA/Ghidra.
 
 ## 🌈 Provenance
