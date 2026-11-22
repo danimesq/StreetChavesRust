@@ -20,8 +20,10 @@ This directory records the research and engineering decisions for an independent
 - [Ordered frame event ledger](ordered-frame-event-ledger.md): source-ordered frame/timer, effect, sound, RNG, and simulation-mutation statements from all 15 Pascal [Quadro] blocks.
 - [Combat tick contracts](combat-tick-contract.md): Rust contracts for ordered events, Delphi 5 RNG, collision geometry, and box records.
 - [Box lifecycle deep dive](box-lifecycle-deep-dive.md): exact C selector and Pascal AplicarCaixas behavior, including retain-on-miss, inactive rows, ordered strength variants, and a port divergence.
-- [RNG compatibility](rng-compatibility.md): Delphi 5 LCG implementation, Free Pascal RTL mismatch, seed initialization, and stream ordering.
-- [RNG call-site inventory](rng-callsite-inventory.md): C shared RNG call sites, fight-tick phase order, and variable-consumption traps.
+- [RNG compatibility](rng-compatibility.md): normative FPC 3.2.2 MTwist implementation, one-word LongInt and two-word Int64 behavior; experimental Delphi LCG candidate remains separate.
+- [Pascal RNG inventory](pascal-rng-inventory.md): 255 unique .rot RNG sites, 465 composed occurrences, and 71 .pas/.inc references.
+- [ROT normalizer](rot-normalizer.md): parser for all 15 fighter scripts, nested guards/loops and symbolic RNG sites.
+- [C RNG call-site inventory](rng-callsite-inventory.md): comparative C shared RNG call sites and fight-tick phase order.
 - [Original executable reverse engineering](original-executable-reverse-engineering.md): PE/toolchain, resources, assets, gameplay cross-references, and final compatibility-fixture plan.
 - [Chapolin bonus plan](chapolin-bonus-2026.md): keep Chapolin recoverable as an optional 2026 bonus, separate from the base roster.
 - [Data formats and resource pipelines](data-formats.md): INI/ROT data, fighter/stage/effect resources, generated C tables, asset loading and unresolved parser semantics.
@@ -37,17 +39,18 @@ This directory records the research and engineering decisions for an independent
 
 | Project | Role in this research |
 |---|---|
-| [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves) | Pascal/Lazarus reconstruction migrated to SDL2. Primary reference for a working SDL-hosted game, data-driven fighter scripts, software rendering, and migration strategy. |
-| [open-street-chaves](https://github.com/danimesq/open-street-chaves) | Independent C17 + SDL3 reimplementation. Primary reference for reverse-engineered game rules, state machine, hitboxes, deterministic tests, and SDL3 runtime design. |
+| [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves) | Pascal/Lazarus reconstruction migrated to SDL2. **Normative project source** for fighter scripts, interpreter behavior, update order and FPC 3.2.2 RNG semantics. |
+| [open-street-chaves](https://github.com/danimesq/open-street-chaves) | Independent C17 + SDL3 reimplementation. Comparative source for rules, hitboxes and testability; differences are annotations and do not override Pascal. |
 | [street-chaves-hack-sms](https://github.com/danimesq/street-chaves-hack-sms) | Supporting reference only. Useful for ROM tracing, graphics extraction, binary formats, and hardware constraints. It is not a reference implementation of the original PC game's mechanics. |
 
-These repositories are independent projects, not a parent/child chain. Their claims must be compared rather than silently merged.
+These repositories are independent projects, not a parent/child chain. For the Rust reconstruction, Pascal is the normative source by explicit project policy. C is compared and disagreements are documented for later original-executable reverse engineering.
 
 ## Research rules
 
-1. Prefer evidence from the original executable and reproducible observations over assumptions.
-2. Distinguish original-game behavior from port-specific behavior.
-3. Mark facts, inferences, and unknowns explicitly.
-4. Do not copy source code or assets until provenance and license compatibility have been reviewed.
-5. Keep the Rust core independent from SDL and the operating system.
-6. Every behavior that can be tested should eventually have a deterministic test or replay fixture.
+1. Follow the Pascal source/runtime first; keep C as a comparative implementation and record divergences for original-executable verification.
+2. Prefer evidence from the original executable and reproducible observations over assumptions.
+3. Distinguish original-game behavior from port-specific behavior.
+4. Mark facts, inferences, and unknowns explicitly.
+5. Do not copy source code or assets until provenance and license compatibility have been reviewed.
+6. Keep the Rust core independent from SDL and the operating system.
+7. Every behavior that can be tested should eventually have a deterministic test or replay fixture.
