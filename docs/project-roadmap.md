@@ -189,9 +189,9 @@ Exit criteria:
 - Missing or malformed data fails clearly rather than crashing unpredictably.
 - The game is playable with keyboard and at least one supported controller path, if controller support is validated for the chosen SDL target.
 
-## Phase 8 — Compatibility, regression, and platform hardening
+## Phase 8 — Final original-executable compatibility, regression, and platform hardening
 
-**Status: Planned**
+**Status: Deferred until the first playable Rust baseline exists**
 
 Goals:
 - Begin systematic differential testing against the original executable only after the first playable Rust baseline exists.
