@@ -79,10 +79,18 @@ impl PascalDrawReplay {
             .map_err(|error| PascalReplayError::Trace(error.to_string()))?;
 
         for (position, draw) in capture.draws.iter().enumerate() {
-            if draw.api_call_index != position as u64 {
+            // A tick-scoped fixture may begin in the middle of the process-wide stream.
+            // Preserve the original absolute API index, but require every subsequent
+            // selected draw to remain contiguous so a fixture cannot silently skip calls.
+            if position > 0
+                && draw.api_call_index != capture.draws[position - 1].api_call_index + 1
+            {
                 return Err(PascalReplayError::InvalidRecordedDraw {
                     api_call_index: draw.api_call_index,
-                    reason: format!("expected sequential API index {position}"),
+                    reason: format!(
+                        "expected API index {} after the preceding recorded draw",
+                        capture.draws[position - 1].api_call_index + 1
+                    ),
                 });
             }
             let expected_words = match draw.width.as_str() {
