@@ -8,11 +8,15 @@ use street_chaves::combat_runtime::{
 use street_chaves::pascal_differential::{first_divergence, load_tick_checkpoints};
 use street_chaves::pascal_replay::PascalDrawReplay;
 
-const PASCAL_TICK_316: &str =
-    include_str!("fixtures/pascal-runtime-schema-v2-tick316.jsonl");
+const PASCAL_TICK_316: &str = include_str!("fixtures/pascal-runtime-schema-v2-tick316.jsonl");
 
 fn fixture_state() -> CombatState {
-    let body = BodyBox { x1: -10.0, y1: -40.0, x2: 10.0, y2: 0.0 };
+    let body = BodyBox {
+        x1: -10.0,
+        y1: -40.0,
+        x2: 10.0,
+        y2: 0.0,
+    };
     CombatState {
         tick_index: 316,
         game_state: 7,
@@ -58,7 +62,10 @@ fn tick_316_replays_real_random_gate_and_matches_pascal_checkpoints() {
 
     let result = state
         .tick_common_ai_walk(
-            AiTickInputs { distance: 150, projectile_threat: false },
+            AiTickInputs {
+                distance: 150,
+                projectile_threat: false,
+            },
             &mut replay,
         )
         .unwrap();
@@ -81,13 +88,18 @@ fn unsupported_close_range_attack_chain_fails_closed() {
     let mut state = fixture_state();
 
     let result = state.tick_common_ai_walk(
-        AiTickInputs { distance: 50, projectile_threat: false },
+        AiTickInputs {
+            distance: 50,
+            projectile_threat: false,
+        },
         &mut replay,
     );
     assert!(matches!(
         result,
-        Err(street_chaves::combat_runtime::RuntimeError::UnsupportedBranch(
-            "Common.rot [IA]: close-range attack probability chain"
-        ))
+        Err(
+            street_chaves::combat_runtime::RuntimeError::UnsupportedBranch(
+                "Common.rot [IA]: close-range attack probability chain"
+            )
+        )
     ));
 }
