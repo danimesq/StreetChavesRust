@@ -49,6 +49,24 @@ rea-output/<binary>-<sha-prefix>-<utc-time>/
 
 The report bundle is tied to the input SHA-256. Do not compare addresses or RVAs across different hashes without revalidating them.
 
+## 🌈 Pascal RNG JSONL validator
+
+The experimental Pascal exporter emits JSONL through `SortearValor`. Validate the
+schema and sequential wrapper-local counters with:
+
+```bash
+python3 tools/validate-pascal-rng-jsonl.py ./saida/rng.jsonl
+python3 -m unittest discover -s tools -p 'test_*.py' -v
+```
+
+The validator checks session headers, call ordering, LongInt/Int64 word costs,
+replay entries that must not consume MT words, and positive-range results. It
+does not upgrade the file into a global MTwist trace: direct `System.Random`
+calls outside `SortearValor` are explicitly outside schema v1. The exporter
+and the current schema are experimental; see
+[the Pascal reference trace harness](../docs/pascal-reference-trace-harness.md)
+for the source branch, usage and compatibility limits.
+
 ## 🌈 Using the bundle with REA
 
 REA means **Reverse Engineer Anything**. It is the MCP-based reverse-engineering environment, not this shell script. The preflight collector prepares a stable, traceable input package for that workflow.
