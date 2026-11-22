@@ -114,7 +114,10 @@ fn main() -> ExitCode {
     }
 
     for draw in &tick.draws {
-        eprintln!("RNG {:?} range={} -> {}", draw.width, draw.range, draw.value);
+        eprintln!(
+            "RNG {:?} range={} -> {}",
+            draw.width, draw.range, draw.value
+        );
     }
     print!("{}", tick.checkpoint_jsonl);
     ExitCode::SUCCESS
