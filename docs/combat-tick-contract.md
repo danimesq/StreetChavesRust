@@ -18,30 +18,29 @@ This document defines the first Rust-facing contracts derived from the research 
 | ActionTimeline | One fighter/action timeline has strictly increasing logical ticks. |
 | TickEvents | Events retain insertion/source order; they are not sorted by event category. |
 | FixtureRng | Tests consume a supplied sequence in exact call order and fail on exhaustion or invalid range. |
-| HitboxRecord | Retains frame, timer, raw coordinates, active, strength, damage, and guard damage. |
+| DelphiRng | Implements the Delphi 5 32-bit LCG transition and multiply-high range reduction for an injected seed. |
+| PascalAttackState | Preserves INI row order and separates strength selector conditions from row force assignments. |
+| HitboxRecord | Retains selector key (Pascal action / C state), timer, raw coordinates, active, strength, damage, and guard damage. |
 | HurtboxRecord | Retains frame and raw coordinates. |
 | BoxUpdate | Makes replace, clear, and retain explicit operations. |
 | Aabb | Implements strict AABB overlap; edge contact alone is not a collision. |
 
-The fixture RNG is **not** a Delphi RNG implementation. It is a deterministic injection point for tests. The exact original RNG algorithm, seed initialization, and call sequence remain separate research tasks.
+FixtureRng remains a synthetic deterministic test source. DelphiRng now implements the Delphi 5 32-bit recurrence and multiply-high range reduction, with the initial RandSeed supplied by the caller. The recurrence is implemented; original startup seeding and the full original call sequence remain separate research tasks.
 
-## 🌈 Hitbox and hurtbox lifecycle: unresolved on purpose
+## 🌈 Hitbox and hurtbox lifecycle: source paths now traced
 
-The current cross-port table comparison proves row agreement, not a shared lifecycle implementation. The pinned C selector gives one concrete port-specific rule: `sel_boxes` scans rows for the selected frame/state/timer and writes matching fields, but does not clear the previous box fields before scanning. Its fighter initialization supplies a fallback hurtbox. Therefore, in this C snapshot, a lookup with no matching row leaves the previous box values in place. This is **[port-specific]**, not yet promoted to original-game behavior or assumed for the Pascal port.
+Both ports retain prior box values on a lookup miss, but the implementation details differ. Pascal does so in AplicarCaixas, where an undefined body row or an unmatched attack row causes no write. C does so in sel_boxes, where no matching hurt/hit row also causes no write. See [the lifecycle deep dive](box-lifecycle-deep-dive.md) for the exact selector keys, update order, independent clear paths, and the fighter 11 duplicate-key discrepancy.
 
-The Pascal `desenhalutador` calls `AtualizaQuadro` from its draw path, and the fight loop later checks `GolpeAtivo` and the current attack/body coordinates. The exact per-frame assignment/clear behavior inside the script/data update path still needs its own source trace.
+A matched row with active=false is not a clear. It stores the row's geometry and metadata while disabling the attack. A miss is different: it leaves all prior fields untouched. Rust now represents these separately and includes a Pascal ordered-row adapter.
 
-The C melee path also uses strict AABB comparisons (`left < other.right`, `right > other.left`, `top < other.bottom`, `bottom > other.top`). The Pascal fight/object/effect paths inspected use the same strict edge-overlap pattern. The Rust crate now exposes this as a pure geometry contract; it does not yet implement hit resolution.
+The C melee path uses strict AABB comparisons (left < other.right, right > other.left, top < other.bottom, bottom > other.top). The inspected Pascal fight/object/effect paths use the same strict edge-overlap pattern. Rust exposes that geometry as a pure contract; hit consequences are not implemented yet.
 
-It does not prove:
+Still unverified against the original executable:
 
-- whether the Pascal port clears or retains a previous box when a frame has no row;
-- whether the C port's observed stale-box retention matches the original executable;
-- whether active=false removes a hitbox or leaves a disabled row in place;
-- when attack boxes are sampled relative to action timers and collision detection;
-- whether facing changes mirror coordinates before or after collision checks;
-- whether collision edges are inclusive or exclusive;
-- whether a hitbox can remain active across a state transition or hit-stop.
+- whether the original preserves the Pascal strength-specific selection behavior for fighter 11 action 27 timer 1;
+- exact clear sites and whether facing changes on a selector miss retain previously mirrored coordinates;
+- activation behavior across state transitions, hit-stop, and same-tick victim re-selection;
+- whether the original uses the same strict AABB comparisons in every collision path.
 
 The Rust model therefore exposes Replace, Clear, and Retain as explicit operations. An adapter must map source behavior to one of them only after the relevant update and collision flow is established. Missing data must not silently mean Retain.
 
