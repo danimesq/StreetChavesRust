@@ -2,7 +2,7 @@
 //! symbolic RNG/action-tick index. Writes JSONL: one summary followed by one
 //! record per observed SortearValor request.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::File;
 use std::io::{self, BufReader, BufWriter, Write};
@@ -31,6 +31,29 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .map(|site| site.rng_site.as_str())
         .collect();
+
+    let symbolic_fighter_ids: HashSet<_> =
+        symbolic_sites.iter().map(|site| site.fighter_id).collect();
+    let source_sites: HashSet<_> = joined
+        .iter()
+        .filter_map(|row| {
+            Some((
+                row.draw.source_origin.clone()?,
+                row.draw.source_line?,
+                row.draw.source_column?,
+            ))
+        })
+        .collect();
+    let mut width_counts = HashMap::<String, usize>::new();
+    let mut control_type_counts = HashMap::<String, usize>::new();
+    for row in &joined {
+        *width_counts.entry(row.draw.width.clone()).or_default() += 1;
+    }
+    for control in &capture.controls {
+        *control_type_counts
+            .entry(control.control_type.clone())
+            .or_default() += 1;
+    }
 
     let mut unique = 0usize;
     let mut ambiguous = 0usize;
@@ -75,6 +98,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         "session_id": capture.session_id.clone(),
         "runtime_schema_version": capture.schema_version,
         "runtime_draws": joined.len(),
+        "width_counts": width_counts,
+        "fighter_indices": capture.fighter_indices,
+        "fighter_count": capture.fighter_indices.len(),
+        "action_ids": capture.action_ids,
+        "action_id_count": capture.action_ids.len(),
+        "script_invocations": capture.script_invocations,
+        "nested_script_invocations": capture.nested_script_invocations,
+        "source_site_count": source_sites.len(),
+        "symbolic_fighter_count": symbolic_fighter_ids.len(),
+        "control_type_counts": control_type_counts,
         "symbolic_rng_timeline_occurrences": symbolic_sites.len(),
         "unique_symbolic_rng_sites": unique_symbolic_sites.len(),
         "unique": unique,
