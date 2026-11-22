@@ -197,9 +197,9 @@ The AI snapshot does not yet include `CameraX` or `RelogioParado`; those globals
 
 ### Nested RNG cursor
 
-A `CharacterActionScript` callback represents the character-specific `[Acao]` call inside Pascal `AcaoJogador`. Parent AI and child callback receive the same mutable `PascalRandomSource`. A deterministic integration test makes the child consume the next draw and verifies the cursor is not reset.
+A `CharacterActionScript` callback represents the character-specific `[Acao]` call inside Pascal `AcaoJogador`. Parent AI and child callback receive the same mutable `PascalRandomSource`. A deterministic Rust integration test uses the strict `PascalDrawReplay` implementation with a two-draw JSONL fixture: the parent consumes `Random(13)`, then a child draw tagged with `parent_script_execution_id` pointing to the parent. The test asserts both draws are consumed through one cursor and replay `finish()` succeeds.
 
-**Evidence boundary:** the captured Pascal 3,000-tick trace contains nested script invocations, but no RNG draw with a non-null parent script execution ID. The Rust test proves the shared-cursor architecture, not historical child-script RNG parity. Actual character-specific scripts still need to be ported, and a Pascal child-script RNG draw should be captured before claiming behavioral validation for that case.
+**Evidence boundary:** the captured Pascal 3,000-tick trace contains nested script invocations, but no RNG draw with a non-null parent script execution ID. The Rust test proves shared-cursor replay behavior using a deterministic parent/child trace fixture, not historical child-script RNG parity. Actual character-specific scripts still need to be ported, and a real Pascal child-script RNG draw should be captured before claiming behavioral validation for that case.
 
 ### PRs and CI
 
