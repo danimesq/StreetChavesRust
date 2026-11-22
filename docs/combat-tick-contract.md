@@ -18,7 +18,8 @@ This document defines the first Rust-facing contracts derived from the research 
 | ActionTimeline | One fighter/action timeline has strictly increasing logical ticks. |
 | TickEvents | Events retain insertion/source order; they are not sorted by event category. |
 | FixtureRng | Tests consume a supplied sequence in exact call order and fail on exhaustion or invalid range. |
-| DelphiRng | Implements the Delphi 5 32-bit LCG transition and multiply-high range reduction for an injected seed; trace indices are 64-bit and ranges are restricted to non-negative LongInt. |
+| Fpc322Rng | Normative Pascal/FPC 3.2.2 MTwist; LongInt calls consume one word and Int64 calls consume two words before modulo reduction. |
+| DelphiRng | Experimental C-port/Delphi candidate only; it is not the default Rust RNG while Pascal is normative. |
 | PascalAttackState | Preserves INI row order and separates strength selector conditions from row force assignments. |
 | HitboxRecord | Retains selector key (Pascal action / C state), timer, raw coordinates, active, strength, damage, and guard damage. |
 | HurtboxRecord | Retains frame and raw coordinates. |
@@ -26,7 +27,7 @@ This document defines the first Rust-facing contracts derived from the research 
 | AttackDeactivated | Sets the attack-active flag false while preserving stored geometry/metadata. |
 | Aabb | Implements strict AABB overlap; edge contact alone is not a collision. |
 
-FixtureRng remains a synthetic deterministic test source. DelphiRng now implements the Delphi 5 32-bit recurrence and multiply-high range reduction, with the initial RandSeed supplied by the caller. The recurrence is implemented; original startup seeding and the full original call sequence remain separate research tasks.
+FixtureRng remains a synthetic deterministic test source. Fpc322Rng now models the pinned Pascal project's FPC 3.2.2 MTwist behavior, preserving the different raw-word costs of Random(LongInt) and Random(Int64). DelphiRng remains an isolated candidate for later original-executable comparison, not a default override.
 
 ## 🌈 Hitbox and hurtbox lifecycle: source paths now traced
 
@@ -57,7 +58,7 @@ For each fighter/action, the next research pass must produce one record per logi
 6. Record box-table lookup and lifecycle operations at the exact point they occur in the fight loop.
 7. Attach source path, pinned revision, and line range to every event.
 
-The existing 1,056-statement ledger is the input index, not a substitute for this normalized trace.
+The static normalizer now covers all 15 fighters and the common script, producing 5,091 symbolic events. It preserves guards, loop regions, static Random sites and width-specific MT word costs. The output does not assign concrete tick numbers or runtime RNG word indices. The first complete pass found 255 unique .rot RNG sites (465 composed timeline occurrences) and 71 RNG-related references in Pascal .pas/.inc source. The normalized JSON is uploaded by the `pascal-rot-symbolic-timelines` CI artifact. The existing 1,056-statement frame ledger remains a complementary index, not a substitute for runtime traces.
 
 ## 🌈 Fixture policy
 
@@ -77,6 +78,8 @@ Recommended fixture groups:
 - [x] Add dependency-free Rust contract crate.
 - [x] Add ordered tick/action event types.
 - [x] Add deterministic sequential fixture RNG.
+- [x] Implement the normative Pascal/FPC 3.2.2 MTwist RNG with width-aware one-word/two-word calls.
+- [x] Add a static parser/normalizer for all 15 Pascal .rot scripts and the common script.
 - [x] Preserve full hitbox metadata and raw hurtbox coordinates.
 - [x] Model explicit replace/clear/retain operations.
 - [x] Add strict AABB overlap geometry from the inspected Pascal/C collision paths.
@@ -87,7 +90,8 @@ Recommended fixture groups:
 - [x] Implement DelphiRng's 32-bit LCG transition and multiply-high range reduction with an injected seed.
 - [x] Trace C and Pascal lookup misses as retain operations and matched inactive rows as explicit inactive writes.
 - [x] Distinguish explicit attack deactivation from clearing the stored box.
-- [ ] Capture original RandSeed and expand the complete original RNG call stream.
+- [ ] Use Pascal `--gravar` / `ModoDeSorteio` to capture deterministic dynamic call traces and compare them with Rust.
+- [ ] Capture original Chaves.exe RNG state/algorithm in the later compatibility phase.
 - [ ] Expand the 15 fighter ledgers into fully evaluated action/tick traces.
 - [ ] Confirm the fighter 11 selector divergence against the original executable.
 - [ ] Run the PE preflight against the canonical Chaves.exe and hand off its bundle to REA/Ghidra.
