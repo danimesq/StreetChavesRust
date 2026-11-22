@@ -26,6 +26,8 @@ A fact may carry more than one label. Record the exact file, section, commit, bi
 | Player record | Reconstructed 176-byte record with position, state, frame, hit/hurt boxes, health, meter, etc. | [original-decomp], SDL3 `docs/spec/02-player-record.md` | Use typed Rust fields; preserve raw offsets only in research notes |
 | Fight update order | The original tick has a specific order for input, AI, stage, hit detection, timers, and physics | [original-decomp], SDL3 `docs/spec/05-fight-engine.md` | Encode order explicitly and test it |
 | Fighter scripts | Pascal project uses INI + `.rot` data and an interpreter | [port-specific], OpenStreetChaves README and `source/LEIAME.md` | Data-driven design is promising; format is not binding |
+| Hitbox metadata | 379/379 Pascal/C hitbox rows match in action/timer, geometry, active, strength, damage, and guard damage | [cross-project], pinned Pascal `C01.ini`–`C15.ini` and C `05a-anim-tables.txt` | Preserve complete metadata and duplicate/strength-specific rows |
+| Hurtboxes | 305/305 Pascal `[Corpo]` and C `hurt frame` rows match after coordinate reordering | [cross-project], same pinned snapshots | Preserve per-frame hurtbox state and investigate absent-frame retention separately |
 | Logic comparison | Pascal project has `--gravar` and legacy-vs-script comparison support | [port-specific], OpenStreetChaves README and migration notes | Adopt deterministic trace comparison as a development practice |
 | Golden screenshots | C17 project documents fixed-seed headless scenarios and SHA-256 screenshot checks | [port-specific], open-street-chaves README | Keep logical-state hashes and render hashes separate |
 | Asset licensing | C17 project explicitly excludes original game assets from its source license | Project README | Keep original game data external; audit every asset source |
@@ -33,6 +35,10 @@ A fact may carry more than one label. Record the exact file, section, commit, bi
 | SMS graphics formats | SMS project documents tile/frame/palette extraction and console-specific limits | [port-specific], SMS README and ROM reference | Reuse methodology only; do not infer PC-game behavior from SMS |
 
 ## Important disagreements and caveats
+
+### Hitbox/hurtbox cross-port comparison
+
+The pinned Pascal and C snapshots have exact multiset matches for all 379 hitbox rows, including active/strength/damage/guard-damage metadata, and all 305 hurtbox rows after coordinate normalization. This is [cross-project] evidence only. It does not establish original executable activation timing, facing/mirroring, collision edge semantics, or runtime stale-box behavior.
 
 ### README status versus implementation
 
