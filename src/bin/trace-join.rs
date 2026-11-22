@@ -119,6 +119,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         "nested_script_invocations": capture.nested_script_invocations,
         "source_site_count": source_sites.len(),
         "symbolic_fighter_count": symbolic_fighter_ids.len(),
+        "control_records": capture.controls.len(),
         "control_type_counts": control_type_counts,
         "symbolic_rng_timeline_occurrences": symbolic_sites.len(),
         "unique_symbolic_rng_sites": unique_symbolic_sites.len(),
