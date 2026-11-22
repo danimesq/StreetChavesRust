@@ -164,61 +164,57 @@ Ordem necessária:
 
 **Próximo marco real:** um cenário Rust executando pelo menos uma ação/script real com o replay compartilhado, produzindo checkpoints próprios e permitindo que `pascal-diff` aponte uma divergência real (ou confirme igualdade) por tick. Até lá, o trabalho está na camada de evidência, replay RNG e interfaces de comparação, não na simulação integral do combate.
 
-## First executable Rust runtime slice (2026-11-22)
+
+## First executable Rust runtime slice and expansion (2026-11-22, PR #9)
+
+The first Rust runtime now executes a bounded portion of `Dados/Lutadores/Comum.rot [IA]`: target selection, movement and the close-range attack probability chain.
 
 Implemented on the PR #9 branch:
-- `src/combat_runtime.rs`: a narrow, source-derived Common.rot [IA] walking path.
-- `src/bin/pascal-replay-tick.rs`: replay CLI for the real tick-316 capture sample.
-- `tests/combat_runtime.rs`: replays the captured LongInt `Random(13)` request (range 13, result 12), executes the nonzero IA branch and common left-walk command, then compares independently emitted Rust tick checkpoints with the Pascal sample using `first_divergence`.
-- `docs/first-rust-runtime-slice.md`: exact source path, assumptions, supported branches, reproduction, and next expansion.
+- `src/combat_runtime.rs`: both `Random(13)` branches, `Random(6)` target selection, ordered movement predicates, close-range probability draws, common basic action state changes, and an injectable character-action callback.
+- `src/bin/pascal-replay-tick.rs`: reconstructs tick 316 from the actual captured AI snapshot and emits Rust-owned checkpoints.
+- `tests/combat_runtime.rs`: snapshot-driven tests for ticks 316, 317 and 381; a shared-cursor child callback test; and a CLI round-trip through `pascal-diff`.
+- `docs/first-rust-runtime-slice.md`: source-level behavior, actual input snapshots, evidence boundaries and reproduction.
 
-The slice preserves the call path `Common.rot [IA] → AcaoJogador → Common.rot [Acao] → Empurra → Common.rot [AcaoFim]` for the observed movement branch. It includes body-overlap separation and screen clamps from Pascal `Empurra`. The single RNG cursor is passed through the runtime via `PascalRandomSource`; the replay must be fully consumed.
+### Captured input snapshots
 
-**Evidence boundary:** the checked-in tick-316 fixture is an event sample, not a full tick capture. It records the RNG call and the resulting action/frame, but omits `Dist`, `P.DistanciaIA`, facing, and body geometry. The regression therefore supplies explicit admissible inputs (`Dist=150`, `DistanciaIA=250`, facing right, no projectile threat, no close-range attack branch) to select the source-defined left-walk path. It matches the available Pascal checkpoint fields, but does not claim those hidden values are the exact original tick-316 inputs or that the entire tick is equivalent.
+OpenStreetChaves PR #3 adds trace-only `ai_inputs` to `.rot [IA]` `script_start` JSONL records. The fresh 3,000-tick capture contains these actual entry inputs:
 
-Unsupported paths fail explicitly instead of consuming synthetic draws:
-- `Random(13)=0` / the subsequent `Random(6)` target-selection branch.
-- Close-range AI attack probabilities at `Dist <= 80`.
-- Character-specific AI and other unimplemented script operations.
+| Tick | Dist | DistProj | OppY | Ameaca | Fator | IA P.DistanciaIA | IA facing |
+|---:|---:|---:|---:|---:|---:|---:|---|
+| 316 | 132 | 0 | 300 | 0 | 3.6 | 0 | left |
+| 317 | 124 | 0 | 300 | 0 | 3.6 | 0 | left |
+| 381 | 78 | 0 | 300 | 0 | 3.6 | 300 | left |
 
-Reproduction:
-```sh
-cargo test --all-targets
-cargo run --bin pascal-replay-tick -- tests/fixtures/pascal-runtime-schema-v2-tick316.jsonl > /tmp/rust-tick316.jsonl
-cargo run --bin pascal-diff -- tests/fixtures/pascal-runtime-schema-v2-tick316.jsonl /tmp/rust-tick316.jsonl
-```
+The snapshots also include both fighters' character/action/frame/duration, facing, defending state, X/Y, vertical velocity, airborne state, speed, health and body boxes. The tests parse these values from the fixtures rather than inventing convenient state.
 
-Next work: capture full tick inputs/state, implement the zero branch and close-range probability chain with nested action calls sharing the same replay cursor, then expand into player input, frame scripts, hit resolution, effects, and physics.
+Tick 316 starts with the IA fighter at X=366, the opponent at X=234, IA speed 8, body boxes `[-19,35,13,164]` and `[-18,30,13,170]`. The Rust executor walks left to X=358, action 2/frame 1. Its independent tick checkpoints match the two available Pascal checkpoints using `pascal-diff`.
 
-Latest Rust CI for the runtime implementation:
-- [Rust contracts run 45064280853](https://github.com/danimesq/StreetChavesRust/actions/runs/45064280853): **success** on commit `bceaa6f991c28c8661ee4bec1881fa858a4b7840`.
-- `cargo fmt --all -- --check`: passed.
-- `cargo test --all-targets`: passed, including 33 library tests, 2 existing binary tests, and 3 runtime integration tests (38 total).
-- The integration test executes both `pascal-replay-tick` and `pascal-diff` as subprocesses and asserts the two-checkpoint match.
+Tick 317 records `Random(13)=0`, followed by `Random(6)=2`, selecting target distance 200. With the captured Dist=124 and facing left, the IA walks right.
 
-## Runtime expansion update (2026-11-22, PR #9)
+Tick 381 records the ten real draws at global API call indices 423-432. The captured factor is 3.6. The runtime preserves the exact LongInt/Int64 widths, ranges, results and source order, then reproduces the weak-kick and crouch command decisions for the recorded sequence.
 
-The first AI runtime has expanded beyond tick 316. New evidence fixtures are selected draw segments from the deterministic 3,000-tick Pascal capture:
+The AI snapshot does not yet include `CameraX` or `RelogioParado`; those globals are needed before claiming parity for screen-edge or paused-clock overlap cases.
 
-- \`tests/fixtures/pascal-runtime-ai-target-tick317.jsonl\`: global API calls 94-95; \`Random(13)\` LongInt returns 0, then \`Random(6)\` LongInt returns 2, selecting distance target 200.
-- \`tests/fixtures/pascal-runtime-ai-close-range-tick381.jsonl\`: global API calls 423-432; records the real \`Random(13)\` gate and the four independent plus four conditional close-range probability draws, including LongInt/Int64 width distinctions and source order.
+### Nested RNG cursor
 
-\`src/combat_runtime.rs\` now executes both target-selection branches and the close-range chain. \`Random(Round(multiplier * Fator))\` is requested through the Int64 interface, while \`Random(13)\` and \`Random(6)\` use LongInt. The implementation preserves each draw's exact range, result, and ordering. Basic common \`[Acao]\` handling is implemented for movement, basic attacks, crouch, and airborne attack commands.
+A `CharacterActionScript` callback represents the character-specific `[Acao]` call inside Pascal `AcaoJogador`. Parent AI and child callback receive the same mutable `PascalRandomSource`. A deterministic integration test makes the child consume the next draw and verifies the cursor is not reset.
 
-A \`CharacterActionScript\` callback models the character-specific \`[Acao]\` call inside Pascal \`AcaoJogador\`. The parent AI and child callback receive the same mutable \`PascalRandomSource\`; a recording wrapper captures both in one sequence. A dedicated test has the child consume the next draw after the parent's \`Random(13)\` call and asserts that the cursor advances from call 0 to call 1 without resetting.
+**Evidence boundary:** the captured Pascal 3,000-tick trace contains nested script invocations, but no RNG draw with a non-null parent script execution ID. The Rust test proves the shared-cursor architecture, not historical child-script RNG parity. Actual character-specific scripts still need to be ported, and a Pascal child-script RNG draw should be captured before claiming behavioral validation for that case.
 
-**Evidence boundary for nested RNG:** the existing 3,000-tick Pascal trace contains nested script invocations but no RNG draw recorded while a nested child-script context is active. The Rust test validates the shared-cursor contract with a deterministic child executor; it is not evidence that this particular historical capture includes child-script RNG consumption.
+### PRs and CI
 
-**Evidence boundary for tick inputs:** the current full Pascal trace still omits numeric \`Dist\`, \`P.DistanciaIA\`, \`P.Lado\`, fighter positions, vertical state, and body boxes at IA entry. Tick 317 and tick 381 tests therefore use explicit scenario inputs to select the captured branch/draw sequence; they are not claims that all hidden inputs equal the historical tick values. The factor 3.6 used for tick 381 is compatible with the captured rounded ranges but is not directly present in the trace.
+- Rust implementation: https://github.com/danimesq/StreetChavesRust/pull/9
+- Trace-only Pascal input snapshot PR: https://github.com/danimesq/OpenStreetChaves/pull/3
+- Pascal FPC 3.2.2 compile, deterministic 3,000-tick capture, snapshot validation and artifact upload: https://github.com/danimesq/OpenStreetChaves/actions/runs/45069244306
+- Full Pascal trace artifact: `ai-input-snapshot-trace`, artifact ID `14772348640`.
+- Rust contracts success before the newest snapshot-driven test/CLI updates: https://github.com/danimesq/StreetChavesRust/actions/runs/45069192699
+- Pascal .rot normalization success before those newest updates: https://github.com/danimesq/StreetChavesRust/actions/runs/45069192703
 
-A separate trace-only Pascal instrumentation PR now captures the missing AI inputs and both fighters' action/position/body-box state in additive \`ai_inputs\` properties on \`.rot [IA]\` \`script_start\` records:
-- OpenStreetChaves PR #3: https://github.com/danimesq/OpenStreetChaves/pull/3
-- Its FPC 3.2.2 compile + deterministic 3,000-tick capture + JSON field validation workflow passed: https://github.com/danimesq/OpenStreetChaves/actions/runs/45068941855
-- This changes observability only; it does not change Pascal game behavior or RNG calls.
+The selected tick-316 sample is a complete two-checkpoint differential regression. Ticks 317 and 381 currently validate the captured RNG path and selected IA-script outcome; they are not yet full tick-level differential matches. This runtime is not a full combat simulator or a general Pascal .rot interpreter.
 
-Rust PR #9 validation after the runtime expansion:
-- Rust contracts: https://github.com/danimesq/StreetChavesRust/actions/runs/45069053782 (success; 33 library tests, 2 existing binary tests, 5 combat-runtime integration tests).
-- Pascal \`.rot\` normalization: https://github.com/danimesq/StreetChavesRust/actions/runs/45069053781 (success).
-- The Pascal runtime capture/reconciliation workflow remains a separate check for the capture/instrumentation branch; do not infer its status from the Rust contracts workflow.
+### Next work
 
-Next work is to merge the trace-only input snapshot PR, regenerate the Pascal capture with \`ai_inputs\`, and use the actual tick inputs to remove assumptions from the tick 317/381 regressions. Then add a child-script RNG draw capture before claiming historical nested-script RNG parity.
+1. Port and test actual character-specific `[Acao]` scripts against the common runtime.
+2. Obtain a Pascal capture where a child script itself consumes RNG; compare that exact nested sequence with Rust.
+3. Add `CameraX`, `RelogioParado` and remaining global state required for edge/collision cases.
+4. Expand full-state checkpoints and gameplay phases incrementally, only when backed by real Pascal captures.
