@@ -222,52 +222,11 @@ fn tick_381_replays_the_ordered_close_range_chain_with_captured_inputs() {
     replay.finish().unwrap();
 }
 
-/// Small deterministic RNG stream used to prove that a child executor receives the
-/// exact parent cursor, rather than constructing or resetting its own RNG.
-struct SequenceRng {
-    expected: Vec<(RuntimeDrawWidth, i64, i64)>,
-    cursor: usize,
-}
-
-impl SequenceRng {
-    fn new(expected: Vec<(RuntimeDrawWidth, i64, i64)>) -> Self {
-        Self {
-            expected,
-            cursor: 0,
-        }
-    }
-
-    fn draw(&mut self, width: RuntimeDrawWidth, range: i64) -> Result<i64, String> {
-        let Some((expected_width, expected_range, value)) = self.expected.get(self.cursor).copied()
-        else {
-            return Err(format!(
-                "unexpected extra RNG request at cursor {}",
-                self.cursor
-            ));
-        };
-        if (width, range) != (expected_width, expected_range) {
-            return Err(format!(
-                "RNG mismatch at cursor {}: expected {expected_width:?}/{expected_range}, got {width:?}/{range}",
-                self.cursor
-            ));
-        }
-        self.cursor += 1;
-        Ok(value)
-    }
-}
-
-impl PascalRandomSource for SequenceRng {
-    type Error = String;
-
-    fn draw_longint(&mut self, range: i32) -> Result<i32, Self::Error> {
-        i32::try_from(self.draw(RuntimeDrawWidth::LongInt, range as i64)?)
-            .map_err(|error| error.to_string())
-    }
-
-    fn draw_int64(&mut self, range: i64) -> Result<i64, Self::Error> {
-        self.draw(RuntimeDrawWidth::Int64, range)
-    }
-}
+const NESTED_CHILD_REPLAY: &str = concat!(
+    "{\"record_type\":\"session\",\"schema_version\":2,\"session_id\":\"nested-child-test\",\"rng_scope\":\"SortearValor\",\"rand_seed_initial\":1}\n",
+    "{\"record_type\":\"draw\",\"schema_version\":2,\"session_id\":\"nested-child-test\",\"api_call_index\":0,\"first_mt_word_index\":0,\"raw_mt_words\":1,\"width\":\"LongInt\",\"range\":13,\"result\":12,\"source_kind\":\"rot_expression\",\"source_origin\":\"Comum.rot [IA]\",\"source_line\":293,\"source_column\":4,\"script_execution_id\":900,\"parent_script_execution_id\":null}\n",
+    "{\"record_type\":\"draw\",\"schema_version\":2,\"session_id\":\"nested-child-test\",\"api_call_index\":1,\"first_mt_word_index\":1,\"raw_mt_words\":1,\"width\":\"LongInt\",\"range\":7,\"result\":3,\"source_kind\":\"rot_expression\",\"source_origin\":\"Character.rot [Acao]\",\"source_line\":42,\"source_column\":8,\"script_execution_id\":901,\"parent_script_execution_id\":900}\n",
+);
 
 #[derive(Default)]
 struct ChildThatConsumesOneDraw {
@@ -289,20 +248,22 @@ impl CharacterActionScript for ChildThatConsumesOneDraw {
 }
 
 #[test]
-fn nested_character_action_consumes_the_parent_rng_cursor() {
-    let mut rng = SequenceRng::new(vec![
-        (RuntimeDrawWidth::LongInt, 13, 12),
-        (RuntimeDrawWidth::LongInt, 7, 3),
-    ]);
+fn nested_character_action_consumes_the_parent_replay_cursor() {
+    // The second captured-style draw belongs to a child script. Its parent execution
+    // ID points back to the Common IA script; the runtime must consume it on the same
+    // PascalDrawReplay cursor after the parent's Random(13) request.
+    let mut replay = PascalDrawReplay::from_reader(Cursor::new(NESTED_CHILD_REPLAY)).unwrap();
     let (mut state, inputs) = ai_scenario(PASCAL_TICK_316, 316);
     state.tick_index = 400;
     let mut child = ChildThatConsumesOneDraw::default();
 
     let result = state
-        .tick_common_ai_with_child(inputs, &mut rng, &mut child)
+        .tick_common_ai_with_child(inputs, &mut replay, &mut child)
         .unwrap();
 
-    assert_eq!(rng.cursor, 2);
+    assert_eq!(replay.draws_consumed(), 2);
+    assert_eq!(replay.draws_remaining(), 0);
+    replay.finish().unwrap();
     assert_eq!(child.values, vec![3]);
     assert_eq!(result.commands, vec![AiCommand::WalkLeft]);
     assert_eq!(
