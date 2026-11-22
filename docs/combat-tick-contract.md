@@ -86,13 +86,14 @@ Recommended fixture groups:
 - [x] Trace retain-on-miss in both ports, including the distinct Pascal row-order and C last-match behavior.
 - [x] Model explicit `GolpeAtivo := False` / `attacking = false` separately from a full box clear.
 - [x] Add the character 11 state 27 timer 1 selector divergence as a documented open original-compatibility question.
-- [x] Run cargo fmt --all -- --check and cargo test --all-targets in GitHub Actions (run #38: 14 unit + 2 integration tests passed).
-- [x] Implement DelphiRng's 32-bit LCG transition and multiply-high range reduction with an injected seed.
+- [x] Run cargo fmt --all -- --check and cargo test --all-targets in GitHub Actions (run #74: 19 unit + 2 integration tests passed).
+- [x] Implement the normative Fpc322Rng MTwist implementation with LongInt/Int64 raw-word accounting.
+- [x] Keep DelphiRng isolated as a comparison candidate, not the normative Rust RNG.
 - [x] Trace C and Pascal lookup misses as retain operations and matched inactive rows as explicit inactive writes.
 - [x] Distinguish explicit attack deactivation from clearing the stored box.
 - [ ] Use Pascal `--gravar` / `ModoDeSorteio` to capture deterministic dynamic call traces and compare them with Rust.
 - [ ] Capture original Chaves.exe RNG state/algorithm in the later compatibility phase.
-- [ ] Expand the 15 fighter ledgers into fully evaluated action/tick traces.
+- [ ] Execute the symbolic timelines with concrete fighter states to assign actual runtime ticks and RNG word indices; keep static guard groups separate from runtime traces.
 - [ ] Confirm the fighter 11 selector divergence against the original executable.
 - [ ] Run the PE preflight against the canonical Chaves.exe and hand off its bundle to REA/Ghidra.
 
