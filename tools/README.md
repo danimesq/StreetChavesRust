@@ -51,21 +51,31 @@ The report bundle is tied to the input SHA-256. Do not compare addresses or RVAs
 
 ## 🌈 Pascal RNG JSONL validator
 
-The experimental Pascal exporter emits JSONL through `SortearValor`. Validate the
-schema and sequential wrapper-local counters with:
+The Pascal schema-v2 exporter writes ticks, nested `.rot` invocations,
+interpreter branch/loop events, and `SortearValor` draws. Validate its JSONL
+and wrapper-local counters with:
 
 ```bash
 python3 tools/validate-pascal-rng-jsonl.py ./saida/rng.jsonl
 python3 -m unittest discover -s tools -p 'test_*.py' -v
 ```
 
-The validator checks session headers, call ordering, LongInt/Int64 word costs,
-replay entries that must not consume MT words, and positive-range results. It
-does not upgrade the file into a global MTwist trace: direct `System.Random`
-calls outside `SortearValor` are explicitly outside schema v1. The exporter
-and the current schema are experimental; see
-[the Pascal reference trace harness](../docs/pascal-reference-trace-harness.md)
-for the source branch, usage and compatibility limits.
+The validator checks tick and script nesting, source provenance, call ordering,
+LongInt/Int64 word costs, replay entries that must not consume MT words, and
+positive-range results. It does not make the capture a global MTwist trace:
+direct `System.Random` calls outside `SortearValor` remain outside the
+captured RNG cursor.
+
+The Rust library module `src/trace_join.rs` loads schema-v2 JSONL and the
+static symbolic action/tick index. It matches by fighter/character, script
+origin/section, source line, RNG width and literal range when available, while
+preserving `Unique`, `Ambiguous`, `Unmatched`, and `NonRotSource`
+outcomes. A real tick-316 draw fixture exercises the unique match against
+`Common.IA.L293.C4`. The Python validator remains a developer-only helper;
+the project's Rust-only policy for tooling is still an open design decision.
+
+See [the Pascal reference trace harness](../docs/pascal-reference-trace-harness.md)
+for compile/capture evidence and known limits.
 
 ## 🌈 Using the bundle with REA
 
