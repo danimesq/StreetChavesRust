@@ -182,14 +182,7 @@ fn tick_381_replays_the_ordered_close_range_attack_probability_chain() {
             (RuntimeDrawWidth::Int64, 11, 5),
         ]
     );
-    assert_eq!(
-        result.commands,
-        vec![
-            AiCommand::WalkLeft,
-            AiCommand::WeakKick,
-            AiCommand::Crouch
-        ]
-    );
+    assert_eq!(result.commands, vec![AiCommand::WalkLeft, AiCommand::WeakKick, AiCommand::Crouch]);
     assert_eq!(state.fighters[1].action_id, 4);
     assert_eq!(state.fighters[1].action_frame, 0);
     assert_eq!(state.fighters[1].action_duration, 6);
@@ -211,11 +204,7 @@ impl SequenceRng {
         }
     }
 
-    fn draw(
-        &mut self,
-        width: RuntimeDrawWidth,
-        range: i64,
-    ) -> Result<i64, String> {
+    fn draw(&mut self, width: RuntimeDrawWidth, range: i64) -> Result<i64, String> {
         let Some((expected_width, expected_range, value)) =
             self.expected.get(self.cursor).copied()
         else {
