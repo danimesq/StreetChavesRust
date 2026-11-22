@@ -131,7 +131,16 @@ def validate_trace(path: Path) -> dict[str, Any]:
                     "SortearValor-only" in scope or "all instrumented game-source" in scope
                 ):
                     raise TraceValidationError(
-                        f"line {line_number}: raw_word_index_scope must disclose wrapper-only scope"
+                        f"line {line_number}: raw_word_index_scope must disclose instrumented RNG scope"
+                    )
+                source_column_scope = record.get("source_column_scope", "legacy")
+                if source_column_scope not in (
+                    "legacy",
+                    "direct_pascal_inc",
+                    "direct_pascal_inc+rot_ast",
+                ):
+                    raise TraceValidationError(
+                        f"line {line_number}: unsupported source_column_scope"
                     )
                 session = record
                 continue
@@ -302,10 +311,14 @@ def validate_trace(path: Path) -> dict[str, Any]:
                     raise TraceValidationError(f"line {line_number}: script-context draw must include source_origin")
                 if source_kind == "rot_expression":
                     _integer(record, "source_line", line_number)
-                    if record.get("source_column") is not None:
-                        raise TraceValidationError(
-                            f"line {line_number}: ROT expression column is not yet instrumented"
-                        )
+                    if session.get("source_column_scope") == "direct_pascal_inc+rot_ast":
+                        if record.get("source_column") is None:
+                            raise TraceValidationError(
+                                f"line {line_number}: ROT expression draw requires source_column"
+                            )
+                        _integer(record, "source_column", line_number)
+                    elif record.get("source_column") is not None:
+                        _integer(record, "source_column", line_number)
                 elif source_kind == "pascal_helper":
                     if record.get("source_line") is not None:
                         _integer(record, "source_line", line_number)
@@ -411,7 +424,7 @@ def main() -> int:
     )
     print(
         "scope note: game-source System.Random call sites are routed through SortearValor; "
-        "direct Pascal .inc calls include source columns, while ROT expression columns and concrete short-circuit "
+        "direct Pascal .inc and ROT expression draws include source columns; concrete short-circuit "
         "subexpression values are not emitted"
     )
     return 0
