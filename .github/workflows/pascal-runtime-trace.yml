@@ -130,31 +130,22 @@ jobs:
           assert summary["ambiguous"] == 0, summary
           assert summary["unmatched"] == 0, summary
           assert summary["non_rot_source"] == summary["runtime_draws"] - summary["unique"] - summary["ambiguous"] - summary["unmatched"], summary
-          kinds = summary["source_kind_counts"]
-          assert kinds["rot_expression"] == 8415, kinds
-          assert kinds["pascal_helper"] >= 4, kinds
-          assert kinds["pascal_direct"] >= 422, kinds
-          # Direct Pascal .inc and ROT AST RNG calls now carry source columns.
-          assert summary["source_column_draws"] == 11343, summary
+          expected = json.loads(Path("tests/fixtures/pascal-runtime-3k-coverage.json").read_text())
+          for key in (
+              "runtime_draws", "width_counts", "fighter_indices", "fighter_count",
+              "action_id_count", "script_invocations", "nested_script_invocations",
+              "source_site_count", "source_column_draws", "symbolic_fighter_count",
+              "symbolic_rng_timeline_occurrences", "unique_symbolic_rng_sites",
+              "unique", "ambiguous", "unmatched", "non_rot_source",
+              "source_kind_counts", "control_records", "control_type_counts",
+              "boolean_subexpression_records", "short_circuit_skips",
+              "short_circuit_reason_counts",
+          ):
+              assert summary[key] == expected[key], (key, summary[key], expected[key])
           assert summary["source_column_available_for_pascal_direct"] is True, summary
           assert summary["rot_expression_source_column_available"] is True, summary
-          assert summary["boolean_subexpression_records"] == 675222, summary
-          assert summary["short_circuit_skips"] == 309092, summary
-          assert summary["width_counts"] == {"Int64": 7043, "LongInt": 4726}, summary
-          assert summary["fighter_indices"] == [1, 2], summary
-          assert summary["action_id_count"] == 24, summary
-          assert summary["script_invocations"] == 20437, summary
-          assert summary["nested_script_invocations"] == 5229, summary
-          assert summary["source_site_count"] == 45, summary
-          assert summary["symbolic_fighter_count"] == 15, summary
-          assert summary["control_type_counts"]["for_start"] == 67, summary
-          assert summary["control_type_counts"]["for_iteration"] == 201, summary
-          assert summary["control_type_counts"]["for_end"] == 67, summary
-          assert summary["control_type_counts"]["case_arm"] == 133, summary
           assert summary["instrumented_game_source_rng_scope"] is True, summary
           assert summary["external_rtl_library_rng_intercepted"] is False, summary
-          assert summary["symbolic_rng_timeline_occurrences"] == 465, summary
-          assert summary["unique_symbolic_rng_sites"] == 255, summary
           assert (
               summary["unique"] + summary["ambiguous"] +
               summary["unmatched"] + summary["non_rot_source"]
