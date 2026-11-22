@@ -1,3 +1,5 @@
+#![rustfmt::skip]
+
 //! Compare Rust-emitted tick checkpoint JSONL against the Pascal schema-v2 trace.
 //!
 //! Usage: cargo run --bin pascal-diff -- pascal-rng.jsonl rust-checkpoints.jsonl
