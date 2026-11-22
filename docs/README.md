@@ -18,7 +18,9 @@ This directory records the research and engineering decisions for an independent
 - [Fighter roster matrix](fighter-roster-matrix.md): character IDs, Pascal/C coverage, optional sections, and the Chapolin extension.
 - [Frame, AI and hitbox comparison](frame-ai-hitbox-comparison.md): all 15 Pascal [Quadro]/[IA] blocks, C CPU comparison, exact 379/379 hitbox geometry+metadata and 305/305 hurtbox matches, and exceptional move-ID findings.
 - [Ordered frame event ledger](ordered-frame-event-ledger.md): source-ordered frame/timer, effect, sound, RNG, and simulation-mutation statements from all 15 Pascal [Quadro] blocks.
-- [Combat tick contracts](combat-tick-contract.md): initial Rust contracts for ordered events, deterministic RNG injection, hitbox/hurtbox records, and unresolved lifecycle semantics.
+- [Combat tick contracts](combat-tick-contract.md): Rust contracts for ordered events, Delphi 5 RNG, collision geometry, and box records.
+- [Box lifecycle deep dive](box-lifecycle-deep-dive.md): exact C selector and Pascal AplicarCaixas behavior, including retain-on-miss, inactive rows, ordered strength variants, and a port divergence.
+- [RNG compatibility](rng-compatibility.md): Delphi 5 LCG implementation, Free Pascal RTL mismatch, seed initialization, and stream ordering.
 - [Original executable reverse engineering](original-executable-reverse-engineering.md): PE/toolchain, resources, assets, gameplay cross-references, and final compatibility-fixture plan.
 - [Chapolin bonus plan](chapolin-bonus-2026.md): keep Chapolin recoverable as an optional 2026 bonus, separate from the base roster.
 - [Data formats and resource pipelines](data-formats.md): INI/ROT data, fighter/stage/effect resources, generated C tables, asset loading and unresolved parser semantics.
