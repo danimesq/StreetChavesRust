@@ -2,6 +2,11 @@
 
 This directory records the research and engineering decisions for an independent Rust reimplementation of **Street Chaves — O Lutador da Vila**.
 
+## Roadmaps
+
+- [Project roadmap](project-roadmap.md): the whole project, from research and architecture through implementation, validation, packaging, and release.
+- [Documentation and research roadmap](documentation-roadmap.md): the research and specifications needed to support those project phases.
+
 ## Research documents
 
 - [Comparative analysis of the SDL implementations](comparative-analysis.md): the Pascal/SDL2 and C17/SDL3 projects, their architectures, strengths, differences, and limitations.
