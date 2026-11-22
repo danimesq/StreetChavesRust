@@ -47,6 +47,25 @@ pub struct HurtboxRecord {
     pub bounds: RawBounds,
 }
 
+/// World-space axis-aligned bounds using the strict comparisons observed in
+/// both reference combat paths. Edge contact alone is not an overlap.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Aabb {
+    pub left: i32,
+    pub top: i32,
+    pub right: i32,
+    pub bottom: i32,
+}
+
+impl Aabb {
+    pub fn overlaps_strict(self, other: Self) -> bool {
+        self.left < other.right
+            && self.right > other.left
+            && self.top < other.bottom
+            && self.bottom > other.top
+    }
+}
+
 /// Explicit update to a box collection. Retain is representable, not a claim
 /// that the original game retains boxes when a frame has no table row.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,9 +76,15 @@ pub enum BoxUpdate<T> {
 }
 
 /// Current box state for a simulation adapter or deterministic fixture.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BoxState<T> {
     rows: Vec<T>,
+}
+
+impl<T> Default for BoxState<T> {
+    fn default() -> Self {
+        Self { rows: Vec::new() }
+    }
 }
 
 impl<T: Clone> BoxState<T> {
@@ -304,6 +329,15 @@ mod tests {
             empty.draw(10),
             Err(FixtureRngError::Exhausted { draw_index: 0, .. })
         ));
+    }
+
+    #[test]
+    fn strict_aabb_overlap_rejects_edge_contact_and_accepts_one_unit_overlap() {
+        let first = Aabb { left: 0, top: 0, right: 10, bottom: 10 };
+        let touching = Aabb { left: 10, top: 0, right: 20, bottom: 10 };
+        let overlap = Aabb { left: 9, top: 0, right: 20, bottom: 10 };
+        assert!(!first.overlaps_strict(touching));
+        assert!(first.overlaps_strict(overlap));
     }
 
     #[test]
