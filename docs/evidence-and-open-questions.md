@@ -12,6 +12,7 @@ Use these labels consistently in documentation, code comments, tests, and issue 
 - **[unknown]**: not established yet.
 - **[port-specific]**: a behavior or implementation detail belonging to one port, not necessarily the original game.
 - **[normative-project-source]**: a deliberate project policy selecting Pascal/OpenStreetChaves as the primary source for Rust reconstruction when ports differ; it is not proof that the port is identical to the original executable.
+- **[design-question]**: an unresolved architecture or project-policy choice; it is not yet an implementation requirement.
 
 A fact may carry more than one label. Record the exact file, section, commit, binary hash, or test fixture that supports it.
 
@@ -34,6 +35,7 @@ A fact may carry more than one label. Record the exact file, section, commit, bi
 | Golden screenshots | C17 project documents fixed-seed headless scenarios and SHA-256 screenshot checks | [port-specific], open-street-chaves README | Keep logical-state hashes and render hashes separate |
 | Asset licensing | C17 project explicitly excludes original game assets from its source license | Project README | Keep original game data external; audit every asset source |
 | SDL2 platform validation | Pascal README reports Windows 64-bit testing and lists Linux/macOS/Android as pending | Project README | Do not assume SDL abstraction equals cross-platform validation |
+| Language boundary and native dependencies | The Rust project still needs to define whether Rust-only applies to shipped code only or also to developer tools. SDL3 is a C library even when called through Rust bindings; the experimental JSONL validator is currently Python and is developer-only. | [design-question], current architecture proposal and experimental research tooling | Keep project-owned game/runtime logic in Rust; isolate native libraries behind Rust adapters; decide explicitly whether Python/tooling exceptions are acceptable or migrate the validator to Rust |
 | SMS graphics formats | SMS project documents tile/frame/palette extraction and console-specific limits | [port-specific], SMS README and ROM reference | Reuse methodology only; do not infer PC-game behavior from SMS |
 
 ## Important disagreements and caveats
@@ -65,6 +67,14 @@ A 28 ms default tick is approximately 35.7 ticks per wall-clock second. The on-s
 The SMS project is based on a Master System fighting-game hack and imports Chaves character art from a separate SNES hack. Its tile formats, palette restrictions, sprite limits, and adaptation decisions belong to that console project. They are not authoritative for the original PC game's hitboxes, timing, AI, or state machine.
 
 ## Open questions for the Rust project
+
+### Language boundary and native dependencies
+
+- [ ] Define whether "everything in Rust" applies to shipped game/runtime code only, or also to developer tools, generators, validators, build scripts and test harnesses.
+- [ ] Decide whether SDL3 and other native C/system libraries are acceptable behind narrow Rust FFI adapters, or whether a different rendering/window/audio stack should be investigated.
+- [ ] For each accepted native dependency, choose system linking versus vendoring/build-from-source and document version pinning, licensing, security updates, reproducible-build implications and supported platforms.
+- [ ] Decide whether the experimental Python JSONL validator is an approved developer-only exception or should be replaced by a Rust CLI/test tool before the trace workflow is considered permanent.
+- [ ] Require every non-Rust project-owned tool to state why it is not Rust, whether it is optional, and whether it adds any runtime or release dependency.
 
 ### Original-game compatibility
 
