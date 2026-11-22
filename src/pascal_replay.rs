@@ -300,4 +300,38 @@ mod tests {
         assert_eq!(replay.random_int64(108), Ok(87));
         assert_eq!(replay.finish(), Ok(()));
     }
+    /// When the full Pascal capture is supplied by the trace workflow, recalculate
+    /// every result with the independent FPC MTwist implementation.
+    #[test]
+    fn fpc_322_rng_matches_full_pascal_capture_when_available() {
+        use std::fs::File;
+        use std::io::BufReader;
+
+        let Ok(path) = std::env::var("PASCAL_RUNTIME_TRACE") else {
+            return;
+        };
+        let file = File::open(path).unwrap();
+        let capture = load_runtime_capture(BufReader::new(file)).unwrap();
+        let mut rng = crate::Fpc322Rng::new(20_261_026);
+
+        for draw in capture.draws {
+            let sample = match draw.width.as_str() {
+                "LongInt" => rng.random_longint(i32::try_from(draw.range).unwrap()),
+                "Int64" => rng.random_int64(draw.range),
+                width => panic!("unexpected width {width} at API call {}", draw.api_call_index),
+            };
+
+            assert_eq!(sample.call_index, draw.api_call_index, "API call index");
+            assert_eq!(Some(sample.first_word_index), draw.first_mt_word_index,
+                "first MT word at API call {}", draw.api_call_index);
+            assert_eq!(u64::from(sample.words_consumed), draw.raw_mt_words,
+                "raw MT word count at API call {}", draw.api_call_index);
+            assert_eq!(sample.range, draw.range, "range at API call {}", draw.api_call_index);
+            assert_eq!(sample.value, draw.result, "result at API call {}", draw.api_call_index);
+        }
+
+        assert_eq!(rng.calls_consumed(), 8_841);
+        assert_eq!(rng.words_consumed(), 14_895);
+    }
+
 }
