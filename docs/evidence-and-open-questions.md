@@ -174,6 +174,9 @@ reconciliation, independent MTwist comparison, and boolean subexpression
 validation passed in workflow run 45049647139 (artifact 14765291483). The trace now contains 675,222 logical boolean operand records and 309,092
 right-side short-circuit skips (308,942 `and_false`, 150 `or_true`). The
 records carry expression/operand node IDs, source line/column, evaluated/value
-flags, final expression result, and short-circuit reason. Still open: unary
-`not` and other boolean constructs, and a complete executable action
-interpreter with per-tick state comparison.
+flags, final expression result, and short-circuit reason. The same capture exercises 2 fighter indices, 24 action IDs, 5,229 nested
+script invocations, 67 loop starts / 201 iterations / 67 loop ends, and both
+RNG widths (4,726 LongInt; 7,043 Int64); the static symbolic index spans all
+15 fighters. Still open: unary `not` and other boolean constructs, a complete
+executable action interpreter, and real Rust-produced per-tick state snapshots
+for the differential comparator.
