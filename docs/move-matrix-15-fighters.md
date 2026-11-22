@@ -186,3 +186,150 @@ The remaining 14 fighters are not yet move-matrix researched. No behavior is ext
 | 13 | Jaiminho | Planned |
 | 14 | Dona Neves | Planned |
 | 15 | Glória | Planned |
+
+
+---
+
+## Cross-roster pass — all 15 fighters
+
+This pass expands coverage beyond Chaves. It is a **source comparison**, not a claim of original-game validation. The Pascal files are data-driven INI/ROT; the C project has a decompiled command/move setup specification and generated static tables. The two models are not interchangeable.
+
+### Pinned C evidence
+
+C reference: `open-street-chaves`, commit `e76ad2188af6842ff6618ecdb8f425bba61c9183`.
+
+- `docs/spec/04-moves.md`: move IDs, notation, command parser, sequence state, CPU overview.
+- `docs/spec/04a-move-tables.txt`: per-character direction transitions and button/sequence-state mappings.
+- `docs/spec/05b-move-setup.txt`: accepted starting states, resulting states, durations, meter multipliers, sound IDs and special conditions.
+- `docs/spec/05d-cpu-table.txt`: per-character CPU decisions and probability coefficients.
+- `docs/spec/05a-anim-tables.txt`: animation/hit/hurt table evidence.
+
+The C specification labels decompiled behavior separately from static bytes and inference. Its move-start routine `0x4775fc` is identified as the entry point, but the detailed per-move frame data is still marked unknown in that reference. Do not fill this gap from the Pascal implementation.
+
+### Base roster move-name and notation inventory
+
+The following inventory is recorded in both Pascal `[Golpes]` and C `04-moves.md`. The notation assumes facing right in the displayed list; the runtime parser resolves forward/back relative to fighter facing.
+
+| ID | Fighter | Special 1 | Special 2 | Special 3 | Special 4 | Super |
+|---:|---|---|---|---|---|---|
+| 1 | Chaves | BDP Power Wave | BEP Burn Knuckle | BCP Rising Tackle | BEK Crack Shoot | BEBDP Power Geyser |
+| 2 | Seu Madruga | BDP Ryuu Geki Ken | DBDP RyuuGa | DEDK Genei Kyaku | CBEK Hien Ryuu Jin Kyaku | BDBEP Ryuko Ranbu |
+| 3 | Chiquinha | BDP Ko Ou Ken | DBDP Kuu Ga | BEP Hien Senpuuken | BEK Hien Senpuukyaku | BDBEK Hien Honou Kyaku |
+| 4 | Quico | BEP Hi Sho Ken | YDP Zan Ei Ken | EBDK Ku Ha Dan | BDP Sho Ryu Dan | BEBDK Cho Reppa Da |
+| 5 | Dona Florinda | BDP Souhakkei | BEK Sen en Shuu | BCK Spinning Bird Kick | KR Hyakuretsu Kyaku | BDBDK Senretsu Kyaku |
+| 6 | Prof. Girafales | BDP Tiger Shot | BDK Low Tiger Shot | DBDP Tiger Blow | DBDK Tiger Crush | BDBDK Tiger Cannon |
+| 7 | Sr. Barriga | PR Tekkyu Dai Kaiten | EDP Tekkyu FunsaiGeki | BCK Tekkyu Hi En Zan | BCP Ricchi Futoi | BDBEP Tekkyu Dai Bouson |
+| 8 | Bruxa do 71 | BDP Chaos Flare | CBDP Chaos Flare (AR) | DBDP Demon Cradle | BEK Bat Spin | BDBDK Demon Horde |
+| 9 | Paty | BDK Cannon Drill | DBDK Cannon Spike | BDP Accel S. Knuckle | CBEK Cannon Strike (AR) | BDBDK Spin D. Smasher |
+| 10 | Nhonho | PR Hyakuretsu Harite | EDP Super Zutsuki | BCK Super Hyakkan Otoshi | BDK Biggu Hara | EDEDP Onimussou |
+| 11 | Godines | BDP Bad Stone | BEP Criminal Upper | BDK Raffian Kick | BEK Bushin Hurricane | BDBDK Dead End Irony |
+| 12 | Sr. Furtado | BDP Gadouken | DBDP Kouryuken | BEK Dankuu Kyaku | CBEK Dankuu Kyaku (AR) | BDBDK Kouryuu Rekka |
+| 13 | Jaiminho | BDP Psycho Shot | BDK Double Knee Press | BEP Psycho Field | DBD? Jaiminho Warp | EDEDP Psycho Crusher |
+| 14 | Dona Neves | BEP Psycho Ball Attack | BEK Psycho Reflector | BEK Phoenix Arrow (AR) | DBDP Psycho Sword | BEBEP Shining Crystal Bit |
+| 15 | Glória | BDP KaChoSen | BEP RyuEnBu | DBDK Hisho RyuEnJin | BDK Hissatsu Shinobibachi | BEBDK Cho Hissatsu S. |
+
+**Notation key:** C=up, B=down, D=forward/right, E=back/left, Y/Z=diagonals, P=punch, K=kick, R=rapid mash, ?=punch or kick, (AR)=airborne. The C analysis infers Y as down-back from Zan Ei Ken; keep that as inference until independently checked.
+
+### Pascal special-action duration inventory
+
+Values below are `P.DuracaoAcao` assignments in each character's `[Acao]` script, in action-timer units. Where the source uses separate weak/strong branches, both values are shown. These are not necessarily equal to C's durations or original executable timing.
+
+| ID | Fighter | Esp. 1 | Esp. 2 | Esp. 3 | Esp. 4 | Final / special |
+|---:|---|---:|---:|---:|---:|---:|
+| 1 | Chaves | 28 | 16 / 27 | 10 / 16 | 22 | 38 |
+| 2 | Seu Madruga | 28 | 30 | 20 | 45 | 30; follow-up actions 13 and 40 |
+| 3 | Chiquinha | 28 | 15 | 14 / 19 | 15 | 15; follow-up 30 |
+| 4 | Quico | 28 | 13 / 16 | 15 | 15 | 13 |
+| 5 | Dona Florinda | 28 | 23 | 38 / 40 | 20 | 30 |
+| 6 | Prof. Girafales | 28 | 28 | 25 | 30 | 50 |
+| 7 | Sr. Barriga | 17 / 20 | 15 | 15 | 15 | 12; follow-up 15 |
+| 8 | Bruxa do 71 | 28 | 15 | 20 | 25 | 20 |
+| 9 | Paty | 14 / 23 | 20 | 15 | 15 | 40 |
+| 10 | Nhonho | 20 | 11 / 20 | 20 | 13 | 40 |
+| 11 | Godines | 28 | 30 | 9 / 15 | 12 | 45 |
+| 12 | Sr. Furtado | 28 | 20 | 28 | 32 | Special 4 is final-like and consumes power |
+| 13 | Jaiminho | 28 | 16 | 30 | 30 | 30; Extra 2 enters a separate final action |
+| 14 | Dona Neves | 28 | 35 | 35 | 35 | 70 |
+| 15 | Glória | 28 | 22 | 25 | 18 | 30 |
+
+**Important:** Jaiminho's Pascal script groups `Esp4Fraco`, `Esp4Forte`, `EspFinal` and `EspExtra1` into `acEspecial4`, while `EspExtra2` enters `acEspecial5`. Sr. Furtado's script maps `Esp4Fraco` to a power-consuming final-like action; do not force the generic five-slot model onto these exceptions.
+
+### C move setup comparison
+
+The C `05b-move-setup.txt` uses move IDs 16/17, 18/19, 20/21, 22/23 and 24 for the usual special slots/super, with character-specific exceptions. Durations below are decimal conversions of the values in that file. They are C reference values, not Pascal values.
+
+| ID | Fighter | C S1 16/17 | C S2 18/19 | C S3 20/21 | C S4 22/23 | C super |
+|---:|---|---:|---:|---:|---:|---:|
+| 1 | Chaves | 28 | 16 | 10 | 22 | 38 |
+| 2 | Seu Madruga | 28 | 30 | 20 | 45 (22 only) | 13 (23 follow-up) |
+| 3 | Chiquinha | 28 | 15 | 14 | 15 | 15 |
+| 4 | Quico | 28 | 13 | 15 | 15 | 13 |
+| 5 | Dona Florinda | 28 | 23 | 38 | 20 | 30 |
+| 6 | Prof. Girafales | 28 | 28 | 25 | 30 | 50 |
+| 7 | Sr. Barriga | 17 | 15 | 15 | 15 | 12 |
+| 8 | Bruxa do 71 | 28 | 15 | 20 | 25 | 20 |
+| 9 | Paty | 14 | 20 | 15 | 15 | 40 |
+| 10 | Nhonho | 20 | 11 | 20 | 13 | 40 |
+| 11 | Godines | 28 | 30 | 9 | 12 | 45 |
+| 12 | Sr. Furtado | 28 | 20 | 28 | 32 | Not represented as ordinary ID 24 in this table |
+| 13 | Jaiminho | 28 | 16 | 30 | 30 | 30 (ID 26) |
+| 14 | Dona Neves | 28 | 35 | 35 | 35 | 70 |
+| 15 | Glória | 28 | 22 | 25 | 18 | 30 |
+
+C table columns are a convenient alignment for the common roster, not a guarantee that all character-specific branches share the same semantic role. For Seu Madruga, Sr. Furtado and Jaiminho, the IDs and chained states require their own explicit treatment. C's move-setup table also records accepted source states, meter multipliers and sound IDs; consult the pinned file rather than inferring those from the duration summary.
+
+### Cross-roster findings and divergences
+
+1. **The five displayed special-move names are not enough to describe runtime behavior.** Command transitions and button maps differ per fighter. Some characters reuse a sequence state for different buttons or moves; some have extra command states.
+2. **Charge and mash mechanics are character-specific.** Chaves and several fighters use directional sequences; Sr. Barriga and Nhonho have charge/mash conditions; Dona Florinda's fourth special uses repeated kick charge in Pascal; Jaiminho uses a back-charge sequence for an extra move.
+3. **Air-only and state-gated moves exist.** Bruxa's second special has explicit `NoAr` button conditions and requires `acPulo` in Pascal. Dona Neves's third special is only accepted from `acPulo`. Paty's fourth special is also jump-only in Pascal.
+4. **Move eligibility differs even where the displayed move name and slot align.** Pascal scripts permit some specials from guard, crouch, jump, or even a preceding special; others require a narrow state. C's accepted-state sets are separate evidence and can differ.
+5. **Meter use is not uniform.** Most Pascal ordinary specials add `5 * GanhoCarga` or `6 * GanhoCarga` when below `CargaMax`; final-like actions decrement `P.Poder` and may clear `CargaPoder` when power was 3. C records multipliers such as x5, x6, x7 and x2; these must not be silently equated to Pascal's named variables.
+6. **Hitbox table action IDs vary.** Pascal `[Ataque]` uses action/timer keys, including special actions such as 25–30 and character-specific rows. C generated hit tables use their own schema and IDs. Matching a row by numeric coincidence is not proof of equivalent move timing.
+7. **CPU logic is character-specific.** The C CPU table records per-character distance/projectile/airborne conditions and coefficients. Pascal `[IA]` scripts are similar in broad shape but not numerically identical in every case. For example, C Chaves special 1 projectile threshold coefficient is 7, while Pascal's expression is `Round(7 * Fator)`; the C project derives its difficulty factor from game level and fight number. These are different representations and require behavioral comparison.
+8. **Sound IDs and effect IDs are implementation-local.** Pascal ROT sound/effect numbers cannot be equated to C sound/effect identifiers without resource mapping.
+
+### Initial duration discrepancy check
+
+The duration tables reveal several exact matches and several meaningful divergences between the two reconstructions. Examples:
+
+- Chaves: special durations align across the common slots (28, 16, 10, 22, 38).
+- Seu Madruga: Pascal has special 3 duration 20; C has 20, but Pascal's special 4 is 45 and C splits move 22 (45) and move 23 (13) as a chained/follow-up path.
+- Chiquinha: Pascal special 3 has weak/strong durations 14/19, while C's move 20/21 setup is 14.
+- Quico: Pascal special 2 is 13/16 while C lists 13 for the paired move ID; this may hide strength-specific handling.
+- Dona Florinda: Pascal special 3 is 38/40, while C lists 38.
+- Sr. Barriga: Pascal special 1 is 17/20, C lists 17.
+- The remaining rows align at the displayed duration level in this first pass, but frame timing, accepted states, meter, and effects still need detailed comparison.
+
+Do not label a mismatch as an original-game bug. It is a difference between two implementations until the original executable is observed.
+
+### Cross-roster validation backlog
+
+- [ ] Inspect all 15 Pascal `[Quadro]` blocks and build a complete frame/timer/event table for every special.
+- [ ] Inspect all 15 Pascal `[IA]` blocks and compare each condition/probability against C `05d-cpu-table.txt`.
+- [ ] Expand every character's Pascal `[Ataque]` rows into structured action/timer/hitbox records; correlate with C generated hit tables only where evidence supports it.
+- [ ] Map sound/effect IDs to resource definitions for both projects.
+- [ ] Resolve C special-move setup IDs for Seu Madruga, Sr. Furtado and Jaiminho without assuming common-slot semantics.
+- [ ] Confirm whether C duration and Pascal action timer advance at the same simulation cadence.
+- [ ] Validate representative and exceptional moves against the original executable.
+- [ ] Add deterministic tests for parser order, sequence timeout, button matching, eligibility, and chained actions.
+
+## Remaining base-roster status
+
+| ID | Fighter | Inventory | Pascal action rules | C setup/AI | Original executable |
+|---:|---|---|---|---|---|
+| 1 | Chaves | Documented | Detailed first pass | Setup/AI cross-reference begun | Pending |
+| 2 | Seu Madruga | Documented | Duration and special chaining noted | Setup/AI table available | Pending |
+| 3 | Chiquinha | Documented | Duration differences noted | Setup/AI table available | Pending |
+| 4 | Quico | Documented | Duration differences noted | Setup/AI table available | Pending |
+| 5 | Dona Florinda | Documented | Duration differences noted | Setup/AI table available | Pending |
+| 6 | Prof. Girafales | Documented | Duration inventory | Setup/AI table available | Pending |
+| 7 | Sr. Barriga | Documented | Duration inventory | Setup/AI table available | Pending |
+| 8 | Bruxa do 71 | Documented | Air-only special noted | Setup/AI table available | Pending |
+| 9 | Paty | Documented | Jump-only special noted | Setup/AI table available | Pending |
+| 10 | Nhonho | Documented | Charge/mash behavior noted | Setup/AI table available | Pending |
+| 11 | Godines | Documented | Duration inventory | Setup/AI table available | Pending |
+| 12 | Sr. Furtado | Documented | Final-like special 4 exception | Setup ID exception noted | Pending |
+| 13 | Jaiminho | Documented | Extra 1/2 and grouped final exception | Move ID 26 exception noted | Pending |
+| 14 | Dona Neves | Documented | Jump-only special noted | Setup/AI table available | Pending |
+| 15 | Glória | Documented | Duration inventory | Setup/AI table available | Pending |
