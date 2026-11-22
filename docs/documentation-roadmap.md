@@ -24,6 +24,8 @@ There are no calendar estimates. Each item advances according to evidence and ex
 | [Evidence register](evidence-and-open-questions.md) | Defines evidence labels and tracks facts and unknowns | Turn broad questions into traceable investigations and validation cases |
 | [Source and data inventory](source-inventory.md) | Pins the three reference revisions and maps code/data ownership | Complete schema, parser and file-level asset inventory |
 | [Data formats](data-formats.md) | Records observed INI/ROT, generated-table and resource pipelines | Test parser edge cases and finish format specifications |
+| [Fighter data deep dive](fighter-data-deep-dive.md) | Compares Pascal INI/ROT execution with the C spec/generated-table model | Expand into per-character move and field matrices |
+| [Fighter roster matrix](fighter-roster-matrix.md) | Records IDs, per-character file presence and optional script sections | Validate all move differences against original executable captures |
 | [Provenance and licenses](provenance-and-licenses.md) | Records declared licenses and blocks unverified asset reuse | Complete per-file rights and dependency audit |
 
 The baseline is useful, but it is not a complete specification. Agreement between two ports does not by itself prove original-game behavior.
@@ -80,17 +82,21 @@ Tasks:
 
 ## Phase 2 — Fighter, move, and animation specification
 
-**Status: Planned**
+**Status: In progress**
 
 Documents:
-- `fighter-roster.md`: roster, IDs, names as represented in source data, availability, and character-specific behavior.
+- `fighter-roster-matrix.md`: roster, IDs, names as represented in source data, availability, and optional script-section coverage.
+- `fighter-data-deep-dive.md`: Pascal INI/ROT semantics compared with the C specification and generated tables.
 - `fighter-data-schema.md`: common/per-fighter fields, defaults, ranges, and validation.
 - `animation-and-frame-selection.md`: frame selection, animation clocks, transitions, frame-associated boxes, and side effects.
 - `moves-and-command-recognition.md`: commands, button rules, priorities, buffering, and cancellation.
 - `fighter-state-machine.md`: state inventory, transitions, timers, and exceptions.
 
 Tasks:
-- Compare every fighter; do not extrapolate the roster from one example.
+- [x] Inventory all 16 Pascal INIs and all 16 character ROT section headers.
+- [x] Establish the 15-character base roster and isolate Pascal C16 Chapolin as an extension.
+- [x] Compare the Pascal data/script representation with the C spec-to-generated-table pipeline.
+- [ ] Compare every fighter's move behavior; do not extrapolate the roster from one example.
 - Trace input recognition through move selection, frame selection, hitbox activation, and reaction.
 - Separate shared behavior from character-specific rules.
 - Preserve source numeric IDs as evidence without assuming IDs match between implementations.
