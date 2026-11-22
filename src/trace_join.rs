@@ -240,8 +240,14 @@ fn parse_control(record: &Value, line: usize) -> Result<RuntimeControl, TraceJoi
         operand_node: optional_u32(record, "operand_node"),
         operand_source_line: optional_u32(record, "operand_source_line"),
         operand_source_column: optional_u32(record, "operand_source_column"),
-        operator: record.get("operator").and_then(Value::as_str).map(str::to_owned),
-        operand: record.get("operand").and_then(Value::as_str).map(str::to_owned),
+        operator: record
+            .get("operator")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        operand: record
+            .get("operand")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
         evaluated: optional_bool(record, "evaluated"),
         boolean_value: optional_bool(record, "boolean_value"),
         short_circuit: optional_bool(record, "short_circuit"),
