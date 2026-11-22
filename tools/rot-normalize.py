@@ -708,7 +708,11 @@ def build_normalization(input_dir, output_dir, source_root, argument_order):
     common_sections = load_sections(common_path)
     pin_path = input_dir / "source-manifest.json"
     pin = json.loads(pin_path.read_text(encoding="utf-8")) if pin_path.exists() else None
-    pinned = {x["file"]: x["blob_sha"] for x in pin["files"]} if pin else {}
+    pinned = {
+        Path(x.get("source_path", x.get("file", x.get("target", "")))).name:
+        x.get("blob_sha", x.get("upstream_blob_sha"))
+        for x in pin["files"]
+    } if pin else {}
 
     def check_pin(path):
         expected, actual = pinned.get(path.name), git_blob_sha1(path)
