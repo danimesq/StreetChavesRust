@@ -83,7 +83,7 @@ Each fighter must be audited and validated independently. Mark an item complete 
 - [x] Test C02's one-draw behavior, C12's ordered draw sequence/movement/effects, and C08/C13 ground-relative movement.
 - [ ] Complete the source audit for all 15 original fighters, recording absent sections and per-character exceptions.
 - [x] Verify the implemented Rust action mapping for pose against the Pascal enum (acPose = 24); other command mappings remain to be audited.
-- [ ] Implement per-character victory-frame behavior (entry and pose command entry are implemented; victory animation and pose [Quadro] frame updates remain pending).
+- [x] Implement per-character victory-frame behavior and C01-C12 pose [Quadro] frame updates; C13-C15 remain unsupported for pose because their ROT files do not define `cmPose`.
 - [ ] Implement specials incrementally, with focused state-diff and RNG tests for every supported branch.
 - [ ] Verify common-action -> character-action -> common-action-end ordering.
 - [ ] Capture and replay at least one Pascal child-script RNG consumption case; prove shared cursor continuity across parent and child.
@@ -151,7 +151,7 @@ The numeric mapping is grounded in the original source/game/ChavesTipos.pas at s
 
 C01-C12 each define cmPose with the same guard (P.Acao in [acParado, acAndando]) and writes (P.Acao := acPose, P.QuadroAcao := 0, P.DuracaoAcao := 20). C13-C15 do not define cmPose. Rust now exposes ACTION_POSE = 24 and CombatState::apply_character_pose, which applies that branch only to C01-C12. Tests cover all 12 eligible character IDs, both allowed starting actions, rejected actions, C13-C15 and invalid fighter indices.
 
-This implements the [Acao] command entry only. The per-character [Quadro] pose frame assignments (frame 12 at action frame 0 and frame 30 at action frame 2 in C01-C12) remain a separate animation-update task.
+This implements the [Acao] command entry only. The per-character [Quadro] pose frame assignments are now implemented by `CombatState::update_pose_animation`: frame `Desloc + 12` at action frame 0 and `Desloc + 30` at action frame 2, retaining the previous sprite frame at other action frames. Tests cover both boundaries and retention for all C01-C12.
 
 
 ## 🌈 Victory animation runtime: state and execution contract
@@ -216,3 +216,16 @@ animation update API, not a full renderer/effect-system integration claim.
 
 
 Validation note: GitHub Actions passed formatting and `cargo test --all-targets` on commit `9f335d9cd23665277081bc17a685b2adac60213d`. The update API preserves the shared RNG cursor; it does not claim renderer integration for C12's returned particle events.
+
+
+## 🌈 Pose animation runtime slice
+
+`CombatState::update_pose_animation(fighter_index, sprite_offset)` now executes the identical C01-C12 `[Quadro]` pose branch found in the pinned Pascal ROT files. It writes `sprite_offset + 12` when `QuadroAcao = 0`, then independently writes `sprite_offset + 30` when `QuadroAcao = 2`; all other action frames retain the previous `P.Quadro`. It rejects non-pose actions, invalid fighter indices, and C13-C15. Tests exercise both writes and the no-write interval for every supported fighter.
+
+## 🌈 Effect integration boundary
+
+The repository currently contains no concrete effect-instance store, effect update loop, or renderer to receive `CriaEfeito` calls. C12 victory still returns five ordered, fully parameterized spawn requests while consuming the source-ordered RNG calls. Converting those requests into a newly invented queue would only create another adapter, not integrate with the game's real effect runtime. Therefore renderer/effect-instance integration remains blocked on adding or locating that runtime; no completion claim is made.
+
+## 🌈 Pascal capture and nested RNG evidence boundary
+
+The existing Pascal runtime fixtures capture AI tick/script records and draw segments, not a victory `[Quadro]` execution with `P.Quadro`, movement, `CriaEfeito` instances, or a real parent action invoking a child action script. The Rust child-script seam already passes the same mutable RNG cursor into the child, but a synthetic child test is not a Pascal capture. Real capture and differential checks remain pending until the Pascal harness records those events from an actual execution.
