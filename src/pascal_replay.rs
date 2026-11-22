@@ -228,4 +228,22 @@ mod tests {
             Err(PascalReplayError::Exhausted { .. })
         ));
     }
+
+    #[test]
+    fn width_specific_longint_entrypoint_is_simulation_friendly() {
+        let mut replay = replay();
+        assert_eq!(replay.random_longint(13), Ok(12));
+        assert_eq!(replay.draws_consumed(), 1);
+    }
+
+    #[test]
+    fn width_specific_int64_entrypoint_replays_two_word_request() {
+        let trace = concat!(
+            "{\\"record_type\\":\\"session\\",\\"schema_version\\":2,\\"session_id\\":\\"int64-test\\"}\\n",
+            "{\\"record_type\\":\\"draw\\",\\"api_call_index\\":0,\\"width\\":\\"Int64\\",\\"range\\":108,\\"result\\":87,\\"raw_mt_words\\":2,\\"source_kind\\":\\"rot_expression\\"}\\n"
+        );
+        let mut replay = PascalDrawReplay::from_reader(Cursor::new(trace)).unwrap();
+        assert_eq!(replay.random_int64(108), Ok(87));
+        assert_eq!(replay.finish(), Ok(()));
+    }
 }
