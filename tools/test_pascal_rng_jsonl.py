@@ -63,6 +63,34 @@ def context(tick: int | None, script_id: int | None, parent: int | None = None) 
     }
 
 
+def boolean_subexpression_record(
+    *, operand: str = "right", evaluated: bool = False, boolean_value: bool | None = None,
+    short_circuit: bool = True, expression_result: bool | None = False,
+    reason: str | None = "and_false",
+) -> dict[str, object]:
+    return {
+        "record_type": "control",
+        "schema_version": 2,
+        "session_id": "gravar-seed-20261026",
+        "control_event_index": 0,
+        "control_type": "boolean_subexpression",
+        "source_line": 18,
+        "source_column": 23,
+        **context(0, 0),
+        "expression_node": 4,
+        "operand_node": 3,
+        "operand_source_line": 18,
+        "operand_source_column": 12,
+        "operator": "and",
+        "operand": operand,
+        "evaluated": evaluated,
+        "boolean_value": boolean_value,
+        "short_circuit": short_circuit,
+        "expression_result": expression_result,
+        "short_circuit_reason": reason,
+    }
+
+
 def script_start(script_id: int = 0, parent: int | None = None) -> dict[str, object]:
     return {
         "record_type": "script_start",
@@ -169,6 +197,26 @@ class PascalRngJsonlTests(unittest.TestCase):
         result = self.run_validator([session, tick_start(), script_start(), draw, script_end(), tick_end()])
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("ROT expression draw requires source_column", result.stderr)
+
+    def test_accepts_boolean_subexpression_short_circuit_record(self) -> None:
+        record = boolean_subexpression_record()
+        result = self.run_validator([
+            session_record(), tick_start(), script_start(), record,
+            script_end(draws=0), tick_end()
+        ])
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_rejects_evaluated_boolean_operand_without_value(self) -> None:
+        record = boolean_subexpression_record(
+            operand="left", evaluated=True, boolean_value=None,
+            short_circuit=False, expression_result=None, reason=None,
+        )
+        result = self.run_validator([
+            session_record(), tick_start(), script_start(), record,
+            script_end(draws=0), tick_end()
+        ])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("boolean_value must match evaluated", result.stderr)
 
     def test_accepts_direct_pascal_draw_with_source_column(self) -> None:
         direct = draw_record(0, 0, 1, "LongInt", script_id=None, script_draw_index=None)
