@@ -96,7 +96,10 @@ Tasks:
 - [x] Inventory all 16 Pascal INIs and all 16 character ROT section headers.
 - [x] Establish the 15-character base roster and isolate Pascal C16 Chapolin as an extension.
 - [x] Compare the Pascal data/script representation with the C spec-to-generated-table pipeline.
-- [ ] Compare every fighter's move behavior; do not extrapolate the roster from one example.\n- [x] Start the move-by-move matrix with Chaves, including Pascal command recognition, special-action behavior, hitbox rows, CPU rules, and validation backlog.\n- [ ] Continue with the other 14 fighters and cross-check C implementation and original executable.
+- [x] Inventory the five named special-move slots and input notation for all 15 fighters from both references.
+- [x] Compare Pascal special-action duration assignments with the C move-setup duration table for all 15 fighters, recording exceptions and mismatches.
+- [ ] Complete per-character frame/timer/effect/sound/hitbox and eligibility comparisons.
+- [ ] Compare every fighter's move behavior beyond the initial inventory; do not extrapolate from duration/name agreement.\n- [x] Start the move-by-move matrix with Chaves, including Pascal command recognition, special-action behavior, hitbox rows, CPU rules, and validation backlog.\n- [ ] Continue with the other 14 fighters and cross-check C implementation and original executable.
 - Trace input recognition through move selection, frame selection, hitbox activation, and reaction.
 - Separate shared behavior from character-specific rules.
 - Preserve source numeric IDs as evidence without assuming IDs match between implementations.
