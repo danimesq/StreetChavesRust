@@ -326,12 +326,12 @@ captured MTwist sequence across the instrumented game-source call sites.
 It does not yet prove that every possible external RTL/library RNG call is
 intercepted, nor does it provide a complete combat/action simulator.
 
-The full source-column artifact is Actions artifact **14764582501**, retained until
-2026-12-22. The compact committed tick-316 sample remains a small fixture,
-not a substitute for the full run. Direct Pascal `.inc` call sites carry source columns: 2,928 draw records
-across 23 distinct call sites exercised in the 3,000-tick capture. The static
-scan found 55 call sites across eight files. The current Pascal branch now also
-tracks tokenizer and AST columns for ROT expressions, targeting 8,415 more
-column-bearing draws. That AST-column expansion is implemented but awaits its
-next full FPC/MTwist validation run. Individual short-circuit subexpression
-values remain open instrumentation work.
+The full source-column artifact is Actions artifact **14765190885**, retained until
+2026-12-22. The expanded run passed in [workflow 45049163298](https://github.com/danimesq/StreetChavesRust/actions/runs/45049163298). The compact committed tick-316 sample remains a small fixture,
+not a substitute for the full run. Direct Pascal `.inc` call sites and ROT expression AST nodes now carry source
+columns. The 3,000-tick capture has **11,343 column-bearing draws across 45
+distinct source sites**: 2,928 direct Pascal draws across 23 exercised call
+sites, plus all 8,415 ROT expression draws across 22 sites. The static scan
+found 55 direct call sites across eight files. The remaining 426 legacy
+Pascal-direct/helper draws still lack an explicit callsite location.
+Individual short-circuit subexpression values remain open instrumentation work.
