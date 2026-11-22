@@ -103,7 +103,7 @@ Tasks:
 - [ ] Complete ordered per-character event timelines, resource-ID mapping, hit metadata, and hurtbox comparison.
 - [ ] Compare every fighter's move behavior beyond the initial inventory; do not extrapolate from duration/name agreement.
 - [x] Start the move-by-move matrix with Chaves, including Pascal command recognition, special-action behavior, hitbox rows, CPU rules, and validation backlog.
-- [ ] Continue with the other 14 fighters and cross-check C implementation and original executable.
+- [x] Complete the first comparative source pass for all 15 fighters; keep detailed event ordering and original-executable checks as separate remaining work.
 - Trace input recognition through move selection, frame selection, hitbox activation, and reaction.
 - Separate shared behavior from character-specific rules.
 - Preserve source numeric IDs as evidence without assuming IDs match between implementations.
@@ -148,9 +148,9 @@ Tasks:
 
 **Exit criteria:** the observable game flow is mapped and platform/presentation responsibilities are clearly separated from simulation.
 
-## Phase 5 — Original-executable validation
+## Phase 5 — Original-executable validation (final compatibility stage)
 
-**Status: Needs validation**
+**Status: Deferred until the first playable Rust baseline exists**
 
 Artifacts:
 - `original-build-and-capture.md`: executable identity, hash, provenance, environment, and repeatable capture method.
