@@ -76,7 +76,9 @@ impl<E: fmt::Display> fmt::Display for RuntimeError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Rng(error) => write!(f, "Pascal RNG replay failed: {error}"),
-            Self::UnsupportedBranch(branch) => write!(f, "runtime branch not implemented: {branch}"),
+            Self::UnsupportedBranch(branch) => {
+                write!(f, "runtime branch not implemented: {branch}")
+            }
         }
     }
 }
@@ -101,7 +103,10 @@ impl CombatState {
 
         // Common.rot [IA], source line 293: if Random(13) = 0 then
         let random_value = rng.draw_longint(13).map_err(RuntimeError::Rng)?;
-        draws.push(RuntimeDraw { range: 13, value: random_value });
+        draws.push(RuntimeDraw {
+            range: 13,
+            value: random_value,
+        });
         if random_value == 0 {
             return Err(RuntimeError::UnsupportedBranch(
                 "Common.rot [IA] line 294: Random(6) distance-target selection",
@@ -124,9 +129,11 @@ impl CombatState {
 
         // Common.rot [IA], four mutually exclusive direction/facing predicates.
         if !fighter.defending && !input.projectile_threat {
-            let command_left = (input.distance < fighter.distance_ai && fighter.facing == SIDE_RIGHT)
+            let command_left = (input.distance < fighter.distance_ai
+                && fighter.facing == SIDE_RIGHT)
                 || (input.distance >= fighter.distance_ai && fighter.facing == SIDE_LEFT);
-            let command_right = (input.distance >= fighter.distance_ai && fighter.facing == SIDE_RIGHT)
+            let command_right = (input.distance >= fighter.distance_ai
+                && fighter.facing == SIDE_RIGHT)
                 || (input.distance < fighter.distance_ai && fighter.facing == SIDE_LEFT);
 
             if command_left {
