@@ -140,7 +140,7 @@ The complete character [Quadro] victory branches were inspected at the pinned Pa
 | C14 | Every third action frame toggles between 33 and 34 based on current sprite frame | Same frame rule as C09, independently confirmed in C14 |
 | C15 | 33 while frame <=10; then 34 at frame 10; 35 at frame 14 | Independent source-ordered ifs mean frame 10 ends on 34 |
 
-The C02 and C12 branches consume RNG from the shared Pascal stream. The C12 branch also has movement, camera-boundary and facing side effects. These are specifically **not** implemented by the pose command or by the existing victory-entry helper. Victory animation runtime work remains pending until the frame-update contract can represent sprite-frame state, position/facing side effects and shared RNG without losing source ordering.
+The C02 and C12 branches consume RNG from the shared Pascal stream. C12 also moves the fighter, changes facing at camera-relative thresholds and requests five particle effects. These effects are now represented by the victory animation runtime API; dispatching them into the renderer/effect system and comparing them against a captured Pascal victory trace remain outstanding.
 
 ## 🌈 Verified pose enum and first runtime implementation
 
@@ -169,7 +169,7 @@ The victory audit is not implemented as a per-character frame-number lookup. The
 | `CameraX` and screen limits | Explicit camera/bounds context, not an assumed constant | C12's horizontal clamp is camera-relative. |
 | Pascal `Random(2)` | The caller's existing mutable `PascalRandomSource` | C02 and C12 must advance the same replay cursor used by the rest of the tick. |
 
-The current replay snapshot does not provide every animation input (notably the ground reference and camera context). Those inputs must be captured or supplied from a source-backed simulation state before the affected branches can claim parity. Do not silently substitute zero or a guessed screen boundary.
+The current AI replay snapshots do not contain `P.Quadro`, `ChaoY` or `CameraX`. The new animation API therefore requires the caller to provide a source-backed `VictoryAnimationContext`; tests supply explicit context values, not values inferred from those AI snapshots. Captured Pascal victory-frame checkpoints are still needed for end-to-end state differential.
 
 ### Ordered update contract
 
@@ -190,9 +190,9 @@ The runtime now receives the explicit context and executes the previously blocke
 
 - C12 particle requests are emitted as ordered data; the renderer/effect-system integration remains pending.
 
-C06, C09 and C14 also require tests that seed the prior sprite frame to both values; testing only the output frame from a default state would miss their read-before-write behavior.
+C06, C09 and C14 are tested with both possible prior sprite frames and with a non-boundary action frame to verify that they neither overwrite the prior value nor consume RNG when the source condition is false.
 
-This section defines the runtime contract, not a claim that victory animation behavior has landed. The victory [Acao] command entry remains implemented separately; all per-character victory [Quadro] execution remains pending until code, tests and replay evidence cover the relevant state and effects.
+The C01-C15 victory [Quadro] branch behavior is now implemented in the runtime and covered by focused tests. Full Pascal parity is not claimed until historical captures include the relevant sprite-frame, movement and effect checkpoints.
 
 
 ## 🌈 Executable victory animation runtime slice
@@ -215,4 +215,4 @@ and assert the opposite frame on each eligible action-frame boundary. This is an
 animation update API, not a full renderer/effect-system integration claim.
 
 
-Validation note: the code and focused tests have been committed, but CI must pass before this slice is considered validated. The update API preserves the shared RNG cursor; it does not claim renderer integration for C12's returned particle events.
+Validation note: GitHub Actions passed formatting and `cargo test --all-targets` on commit `a05fd23c0dcf80e7c20eaaffce475088172f6e06`. The update API preserves the shared RNG cursor; it does not claim renderer integration for C12's returned particle events.
