@@ -1,0 +1,43 @@
+{
+  "scenario": "deterministic-3000-tick-seed-20261026",
+  "capture_run_id": 45049647139,
+  "capture_artifact_id": 14765291483,
+  "tick_count": 3000,
+  "runtime_draws": 11769,
+  "width_counts": {
+    "LongInt": 4726,
+    "Int64": 7043
+  },
+  "fighter_indices": [1, 2],
+  "action_id_count": 24,
+  "script_invocations": 20437,
+  "nested_script_invocations": 5229,
+  "source_site_count": 45,
+  "source_column_draws": 11343,
+  "symbolic_fighter_count": 15,
+  "symbolic_rng_timeline_occurrences": 465,
+  "unique_symbolic_rng_sites": 255,
+  "unique": 8415,
+  "ambiguous": 0,
+  "unmatched": 0,
+  "non_rot_source": 3354,
+  "source_kind_counts": {
+    "rot_expression": 8415,
+    "pascal_helper": 4,
+    "pascal_direct": 3350
+  },
+  "control_records": 1069474,
+  "control_type_counts": {
+    "if_branch": 393784,
+    "boolean_subexpression": 675222,
+    "for_start": 67,
+    "for_iteration": 201,
+    "for_end": 67,
+    "case_arm": 133
+  },
+  "short_circuit_skips": 309092,
+  "short_circuit_reason_counts": {
+    "and_false": 308942,
+    "or_true": 150
+  }
+}
