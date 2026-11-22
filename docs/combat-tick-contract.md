@@ -27,7 +27,7 @@ This document defines the first Rust-facing contracts derived from the research 
 | AttackDeactivated | Sets the attack-active flag false while preserving stored geometry/metadata. |
 | Aabb | Implements strict AABB overlap; edge contact alone is not a collision. |
 
-FixtureRng remains a synthetic deterministic test source. Fpc322Rng now models the pinned Pascal project's FPC 3.2.2 MTwist behavior, preserving the different raw-word costs of Random(LongInt) and Random(Int64). DelphiRng remains an isolated candidate for later original-executable comparison, not a default override.
+FixtureRng remains a synthetic deterministic test source. Fpc322Rng is the normative RNG adapter for this project: it models pinned FPC 3.2.2 MTwist behavior and preserves the different raw-word costs of Random(LongInt) and Random(Int64). DelphiRng is isolated as a comparison candidate only. The static .rot normalizer preserves source ASTs, nested guards, loops, short-circuit behavior, ordered case dispatch, and width-specific RNG sites.
 
 ## 🌈 Hitbox and hurtbox lifecycle: source paths now traced
 
@@ -58,7 +58,7 @@ For each fighter/action, the next research pass must produce one record per logi
 6. Record box-table lookup and lifecycle operations at the exact point they occur in the fight loop.
 7. Attach source path, pinned revision, and line range to every event.
 
-The static normalizer now covers all 15 fighters and the common script, producing 5,091 symbolic events. It preserves guards, loop regions, static Random sites and width-specific MT word costs. The output does not assign concrete tick numbers or runtime RNG word indices. The first complete pass found 255 unique .rot RNG sites (465 composed timeline occurrences) and 71 RNG-related references in Pascal .pas/.inc source. The normalized JSON is uploaded by the `pascal-rot-symbolic-timelines` CI artifact. The existing 1,056-statement frame ledger remains a complementary index, not a substitute for runtime traces.
+The static normalizer now covers all 15 fighters and the common script, producing 5,091 symbolic events. It preserves guards, loop regions, short-circuit rules, ordered case arms, static Random sites and width-specific MT word costs. A separate `symbolic-action-tick-index.json` groups the events into 1,749 guard-context lanes keyed by symbolic P.Acao/P.QuadroAcao predicates. These lanes are navigation aids, not evaluated ticks. The output deliberately does not assign concrete runtime tick numbers or dynamic raw MT word indices. The normalizer found 255 unique .rot RNG sites (160 LongInt, 95 Int64), represented 465 times across the 15 composed fighter timelines (244 LongInt, 221 Int64), plus 71 RNG-related references in Pascal .pas/.inc source. The full bundle is uploaded by the `pascal-rot-symbolic-timelines` CI artifact. The existing 1,056-statement frame ledger remains a complementary source index.
 
 ## 🌈 Fixture policy
 
