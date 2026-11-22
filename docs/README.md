@@ -21,7 +21,7 @@ This directory records the research and engineering decisions for an independent
 - [Combat tick contracts](combat-tick-contract.md): Rust contracts for ordered events, normative FPC 3.2.2 MTwist RNG, collision geometry, and box records.
 - [Box lifecycle deep dive](box-lifecycle-deep-dive.md): exact C selector and Pascal AplicarCaixas behavior, including retain-on-miss, inactive rows, ordered strength variants, and a port divergence.
 - [RNG compatibility](rng-compatibility.md): normative FPC 3.2.2 MTwist implementation, one-word LongInt and two-word Int64 behavior; experimental Delphi LCG candidate remains separate.
-- [Pascal reference trace harness](pascal-reference-trace-harness.md): existing --gravar deterministic regression, ModoDeSorteio recorder/replayer, and old-code/script differential comparison.
+- [Pascal reference trace harness](pascal-reference-trace-harness.md): deterministic --gravar regression, ModoDeSorteio recorder/replayer, experimental wrapper-scoped JSONL export, and old-code/script differential comparison.
 - [Pascal RNG inventory](pascal-rng-inventory.md): 255 unique .rot RNG sites, 465 composed occurrences, and 71 .pas/.inc references.
 - [ROT normalizer](rot-normalizer.md): parser for all 15 fighter scripts, nested guards/loops and symbolic RNG sites.
 - [C RNG call-site inventory](rng-callsite-inventory.md): comparative C shared RNG call sites and fight-tick phase order.
