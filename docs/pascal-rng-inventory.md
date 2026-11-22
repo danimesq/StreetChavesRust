@@ -35,15 +35,15 @@ A static call site therefore carries its width and expected raw-word cost. The n
 
 The existing Pascal `ModoDeSorteio(msGravar/msRepetir)` records and replays requests by range and width. The game also has a deterministic `--gravar` harness that sets `RandSeed := 20261026` and emits `logica.txt`.
 
-An experimental exporter now writes JSONL from `SortearValor` on the upstream
-[research branch](https://github.com/danimesq/OpenStreetChaves/tree/research/sortearvalor-jsonl-v1).
-It captures the request index, LongInt/Int64 width, range/result, record/replay mode,
-RandSeed snapshots and wrapper-local raw-word count. It is not yet a global RNG trace:
-direct `System.Random` sites outside `SortearValor` are excluded, and action/tick,
-source and loop context are not yet attached. The branch is not merged into upstream
-`main`; the normative source pin therefore remains unchanged. See
-[Pascal reference trace harness](pascal-reference-trace-harness.md) for the schema,
-command line and validation gate.
+The Pascal research branch
+[research/sortearvalor-jsonl-v1](https://github.com/danimesq/OpenStreetChaves/tree/research/sortearvalor-jsonl-v1)
+now emits verified schema-v2 JSONL: ticks, nested `.rot` executions, control
+decisions/loop values, source provenance, and `SortearValor` draws. Two
+3,000-step fixed-seed runs compiled with FPC 3.2.2 and produced byte-identical
+JSONL and `logica.txt` checkpoints. Direct `System.Random` calls outside
+`SortearValor` remain excluded, so the word cursor is still wrapper-local.
+The Pascal branch remains unmerged and the normative source pin unchanged.
+See [Pascal reference trace harness](pascal-reference-trace-harness.md).
 
 The latest normalizer CI run #30 passes 7 grammar tests and verifies the 15-fighter bundle. The current source normalizer does not assign dynamic tick or raw-word indices. It preserves the static call graph and symbolic execution guards, including a measured function-argument evaluation profile. The interpreter's own OrdemArgsInversa probe is reproduced by tools/fpc-argument-order-probe.pas; in the FPC 3.2.2 x86_64 Linux CI build, run #42 reported right-to-left (evaluation trace 5431). The normalizer now emits multi-argument call events in that measured order for this build. `symbolic-action-tick-index.json` groups all 5,091 events into 1,749 groups by symbolic P.Acao / P.QuadroAcao guard contexts and preserves all other guards and loop contexts. These are symbolic lanes, not actual executed ticks.
 
@@ -58,14 +58,20 @@ See [RNG compatibility](rng-compatibility.md), [ROT normalizer](rot-normalizer.m
  
 ## 🌈 Dynamic trace status: schema v2
 
-The earlier experimental-exporter paragraph describes schema v1 and is now
-historical. The current Pascal research branch proposes schema v2 with
-logical tick boundaries, nested `.rot` execution IDs, script-local draw
-indices, source origin/line, and concrete `if`/`case`/`for`/`while`/
-`repeat` control records. This links runtime execution to static source
-lanes more closely, but source columns and every short-circuited boolean
-subexpression are not yet emitted.
+The Pascal exporter compiled with FPC 3.2.2 and passed two deterministic
+3,000-step captures. Each contains 3,000 ticks, 20,437 script executions,
+394,252 control records, 8,841 `SortearValor` requests and 14,895
+wrapper-scoped MT words. Both JSONL files and both `logica.txt` outputs
+matched byte for byte; both traces passed the schema-v2 validator.
 
-This is still an uncompiled, unrun experiment. There are no real schema-v2
-fixtures yet. The `SortearValor` MT-word counter remains wrapper-local;
-direct `System.Random` references outside the wrapper are not captured.
+A real tick-316 excerpt is committed as a regression fixture. The Rust
+`trace_join` module joins its first `Comum.rot [IA]` draw (line 293,
+LongInt, range 13) to the static site `Common.IA.L293.C4` as a unique match.
+The joiner preserves ambiguous and unmatched results rather than inventing a
+source column. The full 8,841-draw capture has not yet been reconciled
+end-to-end against all 15 symbolic timelines.
+
+Source columns, every short-circuited boolean subexpression, direct
+`System.Random` calls outside the wrapper, and full game-state snapshots
+remain outside schema v2. The MT-word index is not a global MTwist cursor.
+The experimental Pascal branch remains unmerged.
