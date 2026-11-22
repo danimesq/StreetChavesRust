@@ -4,6 +4,7 @@
 
 use std::env;
 use std::fs::File;
+use std::collections::HashSet;
 use std::io::{self, BufReader, BufWriter, Write};
 use std::process::ExitCode;
 
@@ -26,6 +27,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let symbolic_file = File::open(&args[2])?;
     let symbolic_sites = load_symbolic_rng_sites(BufReader::new(symbolic_file))?;
     let joined = reconcile_capture(&capture, &symbolic_sites);
+    let unique_symbolic_sites: HashSet<_> = symbolic_sites
+        .iter()
+        .map(|site| site.rng_site.as_str())
+        .collect();
 
     let mut unique = 0usize;
     let mut ambiguous = 0usize;
@@ -56,7 +61,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         "session_id": capture.session_id,
         "runtime_schema_version": capture.schema_version,
         "runtime_draws": joined.len(),
-        "symbolic_rng_sites": symbolic_sites.len(),
+        "symbolic_rng_timeline_occurrences": symbolic_sites.len(),
+        "unique_symbolic_rng_sites": unique_symbolic_sites.len(),
         "unique": unique,
         "ambiguous": ambiguous,
         "unmatched": unmatched,
