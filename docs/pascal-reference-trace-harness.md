@@ -241,3 +241,28 @@ passes formatting and all 22 library tests plus both integration tests.
 The full capture/reconciliation evidence is in
 [artifact #14761022549](https://github.com/danimesq/StreetChavesRust/actions/runs/45040091460/artifacts/14761022549);
 the integrated pipeline passed.
+
+
+## 🌈 Rust replay adapter: first real-draw consumer
+
+The Rust crate now exposes `pascal_replay::PascalDrawReplay`. It consumes
+schema-v2 `draw` records in their original `api_call_index` order and returns
+the captured result only when the caller supplies the exact Pascal overload
+(`LongInt` or `Int64`) and range. A mismatch does not advance the cursor.
+The adapter rejects non-sequential API indexes, unknown widths, invalid
+result ranges, and incorrect raw MT-word costs. `finish()` fails when the
+simulator exits while recorded draws remain, making early/extra branch
+divergence observable.
+
+The first regression test uses the committed, verbatim real event sample
+`tests/fixtures/pascal-runtime-schema-v2-tick316.jsonl`: its captured
+`LongInt` request for range 13 must replay as 12. Additional tests verify
+width/range mismatch, cursor preservation, exhaustion, and unconsumed draws.
+
+This is deliberately a **recorded-result replay adapter**, not yet a complete
+Rust game simulation and not a second MTwist implementation. It proves that a
+future simulation can consume real Pascal RNG decisions without inventing
+fixture values. The adapter currently consumes the wrapper-scoped
+`SortearValor` stream; direct `System.Random` calls outside that wrapper are
+still outside the trace contract. Full tick/state transition comparison and
+multi-fighter/action fixtures remain the next integration work.
