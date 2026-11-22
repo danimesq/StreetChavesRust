@@ -42,7 +42,7 @@ Still unverified against the original executable:
 - activation behavior across state transitions, hit-stop, and same-tick victim re-selection;
 - whether the original uses the same strict AABB comparisons in every collision path.
 
-The Rust model therefore exposes Replace, Clear, and Retain as explicit operations. An adapter must map source behavior to one of them only after the relevant update and collision flow is established. Missing data must not silently mean Retain.
+The Rust model exposes Replace, Clear, and Retain as explicit operations. The current source adapters now map a C/Pascal lookup miss to Retain, a matched inactive row to Replace with active=false, and only source-backed explicit clear paths to Clear. These are confirmed port semantics; whether the original executable shares every detail remains an open compatibility check.
 
 ## 🌈 Tick timeline normalization
 
@@ -77,9 +77,10 @@ Recommended fixture groups:
 - [x] Add ordered tick/action event types.
 - [x] Add deterministic sequential fixture RNG.
 - [x] Preserve full hitbox metadata and raw hurtbox coordinates.
-- [x] Represent box lifecycle operations explicitly without choosing an unknown cross-port default.
+- [x] Model explicit replace/clear/retain operations.
 - [x] Add strict AABB overlap geometry from the inspected Pascal/C collision paths.
-- [x] Record the C selector's observed stale-box retention as port-specific evidence.
+- [x] Trace retain-on-miss in both ports, including the distinct Pascal row-order and C last-match behavior.
+- [x] Add the character 11 state 27 timer 1 selector divergence as a documented open original-compatibility question.
 - [ ] Run cargo fmt --check and cargo test in a Rust toolchain environment.
 - [ ] Expand the 15 fighter ledgers into fully evaluated action/tick traces.
 - [ ] Resolve box retention and activation from the combat update path.
