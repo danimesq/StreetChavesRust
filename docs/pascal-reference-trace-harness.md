@@ -303,3 +303,13 @@ records, and 20,437 script invocations. The compact committed tick-316 sample
 remains the only checked-in raw draw fixture at this stage. The full artifact
 is retained at Actions artifact 14761022549 until 2026-12-22; do not treat
 the sample as if it contained the full run.
+
+
+The Pascal capture workflow now runs an additional Rust regression against the
+same freshly generated full JSONL file. It feeds every captured request into
+the independent `Fpc322Rng` implementation and checks the returned value,
+overload width, request range, API call index, first MT-word index, and
+one-versus-two-word cost. The expected totals are 8,841 calls and 14,895 raw
+MT words. This test is stronger than recorded-result replay: it independently
+recalculates the MTwist sequence from the fixed seed. It still validates the
+RNG stream, not the complete combat/action simulation.
