@@ -440,7 +440,9 @@ fn c12_victory_preserves_movement_clamps_rng_and_particle_order() {
         values.push(9 - pair);
     }
     let mut rng = ScriptedRng::with_values(&values);
-    let result = state.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+    let result = state
+        .update_victory_animation(1, victory_context(), &mut rng)
+        .unwrap();
     assert_eq!(state.fighters[1].x, 301.0);
     assert_eq!(state.fighters[1].facing, SIDE_LEFT);
     assert_eq!(state.fighters[1].sprite_frame, 1033);
