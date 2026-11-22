@@ -22,6 +22,9 @@ There are no calendar estimates. Each item advances according to evidence and ex
 | [Fight-loop deep dive](fight-loop-deep-dive.md) | Records source-level tick order, frame selection, combat, effects, and physics | Expand fighter-, move-, and effect-specific evidence |
 | [Rust architecture proposal](rust-architecture.md) | Proposes simulation/platform boundaries and a candidate workspace | Revisit decisions as behavior and data formats become clearer |
 | [Evidence register](evidence-and-open-questions.md) | Defines evidence labels and tracks facts and unknowns | Turn broad questions into traceable investigations and validation cases |
+| [Source and data inventory](source-inventory.md) | Pins the three reference revisions and maps code/data ownership | Complete schema, parser and file-level asset inventory |
+| [Data formats](data-formats.md) | Records observed INI/ROT, generated-table and resource pipelines | Test parser edge cases and finish format specifications |
+| [Provenance and licenses](provenance-and-licenses.md) | Records declared licenses and blocks unverified asset reuse | Complete per-file rights and dependency audit |
 
 The baseline is useful, but it is not a complete specification. Agreement between two ports does not by itself prove original-game behavior.
 
@@ -56,7 +59,7 @@ Pin analyzed repository revisions. A moving `main` branch must not silently chan
 
 ## Phase 1 — Source and data inventory
 
-**Status: Planned**
+**Status: In progress**
 
 Documents:
 - `source-inventory.md`: relevant repositories, pinned revisions, directories, entry points, generated files, and subsystem ownership.
@@ -64,10 +67,14 @@ Documents:
 - `provenance-and-licenses.md`: source and asset origins, licenses, redistribution limits, and external dependencies.
 
 Tasks:
-- Trace how fighter, stage, sound, sprite, and effect data enter each executable.
-- Identify checked-in, generated, extracted, and externally supplied data.
-- Document parser behavior and format edge cases before designing Rust equivalents.
-- Keep SMS-specific findings in a clearly marked supporting section.
+- [x] Trace the documented paths by which fighter, stage, sound, sprite, and effect data enter each SDL implementation.
+- [x] Identify checked-in, generated, extracted, and externally supplied data at repository level.
+- [x] Keep SMS-specific findings in a clearly marked supporting section.
+- [ ] Document parser behavior and format edge cases before designing Rust equivalents.
+- [ ] Complete per-file asset provenance and third-party dependency license review.
+- [ ] Confirm original executable/data archive identities and hashes used by each SDL reference.
+
+**Current result:** repository structure, pinned revisions, major entry points, data roots, generated-table dimensions, and initial licensing boundaries are documented in the three Phase 1 documents. This is a partial inventory, not a completed format or rights audit.
 
 **Exit criteria:** every relevant data source has a known origin, format, consumer, and reuse status. Unknown rights remain explicitly blocked.
 
