@@ -35,6 +35,7 @@ The research and design notes live in [the documentation directory](docs/README.
 - [Fighter data deep dive](docs/fighter-data-deep-dive.md) — INI/ROT semantics, generated C tables, command recognition, and character-specific behavior.
 - [Fighter roster matrix](docs/fighter-roster-matrix.md) — original 15-character roster, Pascal C16 Chapolin extension, and script-section coverage.
 - [Frame, AI and hitbox comparison](docs/frame-ai-hitbox-comparison.md) — all 15 Pascal frame/AI script indexes and the 379-row Pascal/C hitbox coordinate comparison.
+- [Original executable reverse engineering](docs/original-executable-reverse-engineering.md) — preliminary PE inspection, DelphiX/DirectX clues, resource and asset inventory plan, gameplay cross-reference targets, and the later golden-fixture strategy.
 - [Move matrix for the 15 fighters](docs/move-matrix-15-fighters.md) — move-by-move research; first detailed entry is Chaves, with evidence and original-executable validation gaps.
 - [Chapolin bonus plan](docs/chapolin-bonus-2026.md) — preservation/recovery plan for Chapolin as a future optional bonus.
 - [Data formats and resource pipelines](docs/data-formats.md) — fighter scripts, INI resources, generated C tables, and unresolved format semantics.
@@ -65,10 +66,11 @@ The current phase is source research and specification, not feature implementati
 - Compare the two SDL implementations at the source level.
 - Map fighter frame selection and the combat update pipeline.
 - Investigate effect types, collision paths, and timing-sensitive behavior.
+- Perform preliminary static inspection of the original executable and identify code/resource targets.
 - Identify discrepancies that need validation against the original executable.
 - Convert confirmed behavior into Rust-facing specifications and deterministic test cases.
 
-Unverified behavior stays documented as an open question rather than being filled in with invented mechanics.
+Unverified behavior stays documented as an open question rather than being filled in with invented mechanics. Static executable inspection is research groundwork; systematic original-executable pairing and golden differential fixtures remain part of the final compatibility stage after the first playable Rust baseline.
 
 ## Contributing and development
 
