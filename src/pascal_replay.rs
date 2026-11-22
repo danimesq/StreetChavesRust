@@ -122,6 +122,7 @@ impl PascalDrawReplay {
         Ok(expected.result)
     }
 
+    #[rustfmt::skip]
     /// Replay one Pascal Random(LongInt) request from the captured stream.
     /// The simulator should call this at the original source call site.
     pub fn random_longint(&mut self, range: i32) -> Result<i32, PascalReplayError> {
@@ -132,6 +133,7 @@ impl PascalDrawReplay {
         })
     }
 
+    #[rustfmt::skip]
     /// Replay one Pascal Random(Int64) request from the captured stream.
     pub fn random_int64(&mut self, range: i64) -> Result<i64, PascalReplayError> {
         self.draw(PascalReplayWidth::Int64, range)
@@ -230,6 +232,7 @@ mod tests {
     }
 
     #[test]
+    #[rustfmt::skip]
     fn width_specific_longint_entrypoint_is_simulation_friendly() {
         let mut replay = replay();
         assert_eq!(replay.random_longint(13), Ok(12));
@@ -237,6 +240,7 @@ mod tests {
     }
 
     #[test]
+    #[rustfmt::skip]
     fn width_specific_int64_entrypoint_replays_two_word_request() {
         let trace = concat!(
             "{\\"record_type\\":\\"session\\",\\"schema_version\\":2,\\"session_id\\":\\"int64-test\\"}\\n",
