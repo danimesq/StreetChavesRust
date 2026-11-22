@@ -62,7 +62,7 @@ Exit criteria:
 
 Goals:
 - Pin the exact commits of reference projects used for each investigation.
-- Prepare to identify and hash the original executable for the final compatibility stage; this does not block the first playable Rust baseline.
+- Inventory and hash the supplied original executable as a preliminary static-research artifact; deeper runtime pairing and differential validation remain reserved for the final compatibility stage and do not block the first playable Rust baseline.
 - Inventory fighter, move, stage, effect, sprite, sound, configuration, and save data.
 - Determine which values are static, decompiled, runtime-observed, cross-project, inferred, or unknown.
 - Audit source and asset licenses and redistribution constraints.
@@ -70,7 +70,7 @@ Goals:
 Deliverables:
 - Source inventory and pinned revision manifest.
 - Data-format and resource catalog.
-- Original executable identity and repeatable capture procedure.
+- Preliminary original executable identity and PE inspection report; repeatable runtime capture procedure for the later compatibility stage.
 - Provenance/license notes.
 - Initial differential-test matrix.
 
@@ -192,6 +192,8 @@ Exit criteria:
 ## Phase 8 — Final original-executable compatibility, regression, and platform hardening
 
 **Status: Deferred until the first playable Rust baseline exists**
+
+The preliminary static-inspection plan and its investigation sequence are tracked in [original executable reverse engineering](original-executable-reverse-engineering.md). Static PE/resource inspection can proceed during research, but pairing the original executable with Rust for behavioral compatibility remains deferred.
 
 Goals:
 - Begin systematic differential testing against the original executable only after the first playable Rust baseline exists.
