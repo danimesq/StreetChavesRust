@@ -1,5 +1,3 @@
-#![rustfmt::skip]
-
 //! Compare Rust-emitted tick checkpoint JSONL against the Pascal schema-v2 trace.
 //!
 //! Usage: cargo run --bin pascal-diff -- pascal-rng.jsonl rust-checkpoints.jsonl
@@ -10,6 +8,7 @@ use std::io::BufReader;
 use std::process::ExitCode;
 use street_chaves::pascal_differential::{first_divergence, load_tick_checkpoints};
 
+#[rustfmt::skip]
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
     if args.len() != 3 {
