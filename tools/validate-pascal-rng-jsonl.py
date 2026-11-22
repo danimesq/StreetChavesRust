@@ -46,6 +46,7 @@ def validate_trace(path: Path) -> dict[str, Any]:
     """Validate ordering, nested script contexts, controls and RNG cursor semantics."""
     session: dict[str, Any] | None = None
     next_api_call = next_mt_word = next_tick = next_script_id = next_control_id = 0
+    api_call_index_start = first_mt_word_index_start = 0
     system_random_calls = replay_calls = control_records = script_records = 0
     active_tick: int | None = None
     script_stack: list[int] = []
@@ -103,8 +104,10 @@ def validate_trace(path: Path) -> dict[str, Any]:
                     elif counter_name == "control":
                         next_control_id = offset
                     elif counter_name == "api":
+                        api_call_index_start = offset
                         next_api_call = offset
                     elif counter_name == "mt":
+                        first_mt_word_index_start = offset
                         next_mt_word = offset
                 if record.get("record_scope", "full_trace") not in (
                     "full_trace", "consecutive_tick_window", "event_sample"
@@ -422,10 +425,12 @@ def validate_trace(path: Path) -> dict[str, Any]:
         "ticks": tick_count,
         "script_executions": script_records,
         "control_records": control_records,
-        "api_calls": next_api_call,
+        # Window fixtures retain absolute cursors, but summary counts describe only
+        # the records present in this JSONL excerpt.
+        "api_calls": next_api_call - api_call_index_start,
         "system_random_calls": system_random_calls,
         "replay_calls": replay_calls,
-        "raw_mt_words": next_mt_word,
+        "raw_mt_words": next_mt_word - first_mt_word_index_start,
         "rng_scope": "SortearValor",
     }
 
