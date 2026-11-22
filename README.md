@@ -5,7 +5,7 @@
 An independent Rust reimplementation project inspired by **Street Chaves — O Lutador da Vila**. The goal is to understand the game’s behavior, compare existing reconstructions, and build a clean Rust implementation with a testable game core and a separate SDL3 presentation layer.
 
 > **Project status: research plus foundational Rust contracts.**
-> The repository now contains a dependency-free Rust library for ordered combat timelines, Delphi 5 RNG compatibility with an injected seed, and source-specific hitbox/hurtbox lifecycle contracts. It is not yet a playable game. The crate can be tested with `cargo test`; gameplay behavior and original-executable parity remain incomplete.
+> The repository now contains a dependency-free Rust library for ordered combat timelines, Delphi 5 RNG compatibility with an injected seed, strict AABB geometry, and source-specific hitbox/hurtbox lifecycle contracts, including explicit attack deactivation. GitHub Actions run #30 passed `cargo fmt --all -- --check` and all 16 contract tests (14 unit, 2 integration). It is not yet a playable game; original-executable parity remains incomplete.
 
 ## Project goals
 
