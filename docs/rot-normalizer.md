@@ -98,9 +98,17 @@ available. The first captured `Comum.rot [IA]` draw uniquely matches
 `Common.IA.L293.C4`; tests also preserve an intentionally ambiguous
 same-line candidate and reject mapping Pascal-helper draws to `.rot` sites.
 
-This is a conservative first join, not yet a full 8,841-draw reconciliation.
-Runtime source columns are still absent, so some same-line sites remain
-ambiguous. The joiner carries symbolic guards/loops and control records from
-the same script invocation but does not claim that each runtime decision has
-been proven equivalent to a particular boolean subexpression. Static
-normalization remains a source model, not execution.
+The end-to-end pipeline now reconciles all 8,841 calls from each deterministic
+capture against the regenerated 15-fighter index. The observed result is
+8,415 unique .rot source matches, zero ambiguous, zero unmatched, and 426
+non-.rot contexts (422 direct wrapper calls plus 4 Pascal-helper calls).
+The report also preserves the matched site's symbolic action/tick guards,
+source location, RNG width/range and the IDs of control observations from
+the same script invocation.
+
+This proves the draw-to-static-site join for this 3,000-step Pascal scenario.
+It does not prove that each runtime branch observation is the evaluation of
+one particular symbolic boolean subexpression. Runtime source columns are
+still absent, and direct System.Random calls outside SortearValor plus
+full game-state snapshots remain outside schema v2. Static normalization
+remains a source model; the runtime JSONL is the execution evidence.
