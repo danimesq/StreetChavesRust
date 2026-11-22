@@ -97,9 +97,9 @@ The SMS project is based on a Master System fighting-game hack and imports Chave
 - [x] Run two fixed-seed 3,000-step `--gravar` captures and require byte-identical JSONL plus matching `logica.txt` checkpoints.
 - [x] Validate both real schema-v2 captures and commit a compact tick-316 excerpt as a Rust regression fixture.
 - [x] Implement the first Rust reconciliation path and test a unique real draw match, an ambiguous same-line match, and a Pascal-helper non-match.
-- [x] Reconcile all 8,841 runtime RNG draws against all 15 fighter timelines; preserve unique, ambiguous, unmatched and non-.rot classifications.
+- [x] Reconcile all 8,841 runtime RNG draws against all 15 fighter timelines; preserve unique, ambiguous, unmatched and non-.rot classifications.\n- [x] Add a strict Rust consumer for schema-v2 recorded draws: preserve API order, validate overload width/range/raw-word cost, reject divergent requests without advancing, and detect leftover draws.
 - [x] Validate real LongInt/Int64 draws and script helper/direct-call provenance in the full deterministic capture.
-- [ ] Expand compact committed regression fixtures across action sections, nested scripts, loop branches, Int64 draws, helper/direct calls and more fighters.
+- [ ] Expand compact committed regression fixtures across action sections, nested scripts, loop branches, Int64 draws, helper/direct calls and more fighters. The current tick-316 sample is a real event excerpt, not broad scenario coverage.
 - [ ] Decide whether to extend runtime attribution with source columns, direct `System.Random` call sites and fuller game-state snapshots; these remain outside schema v2.
 - [ ] Capture the original executable's initial RNG state and algorithm in the later compatibility phase; the C LCG remains comparative only.
 - [x] Trace retain-on-miss behavior in Pascal AplicarCaixas and C sel_boxes.
