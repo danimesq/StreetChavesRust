@@ -8,7 +8,10 @@
     "LongInt": 4726,
     "Int64": 7043
   },
-  "fighter_indices": [1, 2],
+  "fighter_indices": [
+    1,
+    2
+  ],
   "fighter_count": 2,
   "action_id_count": 24,
   "script_invocations": 20437,
@@ -40,5 +43,6 @@
   "short_circuit_reason_counts": {
     "and_false": 308942,
     "or_true": 150
-  }
+  },
+  "boolean_subexpression_records": 675222
 }
