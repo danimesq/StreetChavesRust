@@ -77,6 +77,12 @@ pub struct VictoryAnimationContext {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VictoryParticle {
+    /// Pascal CriaEfeito type (C12 victory uses type 2).
+    pub effect_type: u8,
+    /// Empty Pascal effect variant string for this particle.
+    pub variant: &'static str,
+    /// Pascal effect owner/player argument (0 for C12 victory particles).
+    pub owner: u8,
     pub x: f64,
     pub y: f64,
 }
@@ -461,6 +467,9 @@ impl CombatState {
                     let dx = rng.draw_longint(40).map_err(RuntimeError::Rng)?;
                     let dy = rng.draw_longint(10).map_err(RuntimeError::Rng)?;
                     particles.push(VictoryParticle {
+                        effect_type: 2,
+                        variant: "",
+                        owner: 0,
                         x: fighter.x - 30.0 + dx as f64,
                         y: fighter.y + dy as f64,
                     });
