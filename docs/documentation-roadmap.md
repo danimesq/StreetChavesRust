@@ -98,7 +98,7 @@ Tasks:
 - [x] Compare the Pascal data/script representation with the C spec-to-generated-table pipeline.
 - [x] Inventory the five named special-move slots and input notation for all 15 fighters from both references.
 - [x] Compare Pascal special-action duration assignments with the C move-setup duration table for all 15 fighters, recording exceptions and mismatches.
-- [ ] Complete per-character frame/timer/effect/sound/hitbox and eligibility comparisons.
+- [x] Complete the first cross-roster [Quadro] event index and compare all 379 Pascal/C hitbox rectangles by action/timer key and coordinates.\n- [x] Compare all 15 character-specific Pascal [IA] blocks with the C CPU table; retain difficulty-scale and shared-AI caveats.\n- [ ] Complete ordered per-character event timelines, resource-ID mapping, hit metadata, and hurtbox comparison.
 - [ ] Compare every fighter's move behavior beyond the initial inventory; do not extrapolate from duration/name agreement.\n- [x] Start the move-by-move matrix with Chaves, including Pascal command recognition, special-action behavior, hitbox rows, CPU rules, and validation backlog.\n- [ ] Continue with the other 14 fighters and cross-check C implementation and original executable.
 - Trace input recognition through move selection, frame selection, hitbox activation, and reaction.
 - Separate shared behavior from character-specific rules.
@@ -160,9 +160,9 @@ Priority scenarios:
 - Projectile spawn, clash, reflection, fighter collision, and expiration.
 - Pause/focus behavior, timer boundaries, and RNG sequences.
 
-Each observation should record executable hash, environment, initial conditions, input sequence, tick/frame reference, and expected result. Screenshots alone cannot prove hidden logical state.
+This phase begins after the first playable Rust baseline. It is not a gate for reaching the first playable build. Each observation should record executable hash, environment, initial conditions, input sequence, tick/frame reference, and expected result. Screenshots alone cannot prove hidden logical state.
 
-**Exit criteria:** high-impact mechanics have reproducible original-game observations or remain explicitly unverified.
+**Exit criteria:** high-impact mechanics have reproducible original-game observations or remain explicitly unverified; Rust divergences are recorded as compatibility decisions rather than silently patched.
 
 ## Phase 6 — Asset and resource pipeline
 
