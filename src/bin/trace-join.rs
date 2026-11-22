@@ -74,7 +74,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         },
         "match_policy": "fighter+character+section+source_line+width+literal_range_when_available",
         "source_column_available_at_runtime": false,
-        "wrapper_rng_scope_only": true
+        "instrumented_game_source_rng_scope": true,
+        "external_rtl_library_rng_intercepted": false
     });
 
     let output: Box<dyn Write> = if args.len() == 4 {
