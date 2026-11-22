@@ -9,6 +9,8 @@ This directory records the research and engineering decisions for an independent
 
 ## Research documents
 
+- [Original executable reverse engineering](original-executable-reverse-engineering.md): preliminary PE/toolchain findings and the investigation plan for embedded resources, external assets, gameplay cross-references, and final compatibility fixtures.
+
 - [Comparative analysis of the SDL implementations](comparative-analysis.md): the Pascal/SDL2 and C17/SDL3 projects, their architectures, strengths, differences, and limitations.
 - [Fight-loop deep dive](fight-loop-deep-dive.md): source-level comparison of the fight tick, fighter frame selection, hit resolution, effects, and physics.
 - [Source and data inventory](source-inventory.md): pinned reference revisions, repository structure, runtime entry points, data roots, generated tables, and subsystem ownership.
