@@ -77,18 +77,21 @@ The character-specific Pascal `[IA]` blocks were compared with C `05d-cpu-table.
 - The order of sequential random checks matters. A table of probabilities does not capture RNG consumption order or interactions when more than one branch can fire in the same tick.
 - C move IDs are mapped through per-character button/sequence tables. The move ID alone does not prove a named special slot for exceptions.
 
-## 🌈 Hitbox normalization: 379 of 379 rows
+## 🌈 Hitbox and hurtbox normalization: 379 + 305 exact matches
 
-**Result: all 379 Pascal `[Ataque]` records match all 379 C `hit` records by action/timer key and four box coordinates in the pinned snapshots.**
+**Result: all 379 Pascal `[Ataque]` records match all 379 C `hit` rows, including every non-coordinate metadata field. All 305 Pascal `[Corpo]` hurtbox records also match all 305 C `hurt frame` rows after coordinate normalization.**
+
+### 🌈 Hitbox comparison
 
 Normalization used:
 
-1. Pascal keys are `action.timer`, optionally suffixed with `.f1` or `.f2`. For cross-reference, the strength suffix is retained as metadata but removed from the common action/timer join key.
-2. Pascal coordinate order is `x1,y1,x2,y2`.
-3. The C `hit` record stores the same rectangle coordinates in the order `y2,x2,y1,x1`; reorder those four fields before comparing.
-4. Compare as a multiset, not a map: repeated action/timer rows are valid and must not overwrite one another.
+1. Pascal keys are `action.timer`, optionally suffixed with `.f1` or `.f2`. The suffix is retained as strength-variant metadata; the shared join key is `action.timer`.
+2. Pascal `[Ataque]` values are `x1,y1,x2,y2,active,strength,damage,guardDamage`.
+3. C `hit` rows encode `state,timer,guardDamage,damage,strength,active,bottom,right,top,left`. The last four coordinates are reordered to compare with Pascal's `x1,y1,x2,y2`.
+4. The metadata mapping is exact: Pascal `active,strength,damage,guardDamage` equals C `active,strength,damage,guardDamage` after selecting C columns 6, 5, 4, 3 respectively (1-based columns after the `hit` label).
+5. Compare as a multiset, not a map: repeated action/timer rows are valid and must not overwrite one another. Strength suffixes must not be discarded before validating variant metadata.
 
-| ID | Fighter | Pascal rows | C rows | Exact action/timer + coordinate matches |
+| ID | Fighter | Pascal rows | C rows | Exact geometry + metadata |
 |---:|---|---:|---:|---:|
 | 1 | Chaves | 21 | 21 | 21 |
 | 2 | Seu Madruga | 21 | 21 | 21 |
@@ -107,13 +110,41 @@ Normalization used:
 | 15 | Glória | 21 | 21 | 21 |
 | | **Total** | **379** | **379** | **379** |
 
-This is strong cross-port evidence that the rectangle geometry and action/timer addressing were carried across consistently in these snapshots. It does **not** prove that the rows activate on the same original-game tick, that the remaining hit metadata has identical meaning, or that the original executable uses these rectangles.
+### 🌈 Hurtbox comparison
 
-Still required:
-- Decode and compare the non-coordinate C hit fields against Pascal active/strength/damage/guard-damage fields.
+Pascal `[Corpo]` records use `frame=x1,y1,x2,y2`. C `hurt frame` rows use `left,bottom,right,top`. Reordering C to `left,top,right,bottom` yields an exact match with Pascal's `x1,y1,x2,y2`.
+
+| ID | Fighter | Pascal [Corpo] | C hurt rows | Exact matches |
+|---:|---|---:|---:|---:|
+| 1 | Chaves | 23 | 23 | 23 |
+| 2 | Seu Madruga | 21 | 21 | 21 |
+| 3 | Chiquinha | 23 | 23 | 23 |
+| 4 | Quico | 21 | 21 | 21 |
+| 5 | Dona Florinda | 21 | 21 | 21 |
+| 6 | Prof. Girafales | 22 | 22 | 22 |
+| 7 | Sr. Barriga | 18 | 18 | 18 |
+| 8 | Bruxa do 71 | 18 | 18 | 18 |
+| 9 | Paty | 22 | 22 | 22 |
+| 10 | Nhonho | 18 | 18 | 18 |
+| 11 | Godines | 16 | 16 | 16 |
+| 12 | Sr. Furtado | 20 | 20 | 20 |
+| 13 | Jaiminho | 22 | 22 | 22 |
+| 14 | Dona Neves | 18 | 18 | 18 |
+| 15 | Glória | 22 | 22 | 22 |
+| | **Total** | **305** | **305** | **305** |
+
+### 🌈 Interpretation and limits
+
+This is unusually strong cross-port evidence: in the pinned snapshots, both projects agree on every listed hitbox coordinate and metadata field, and on every listed hurtbox coordinate. The comparison includes active state, strength/level, damage, and guard/chip damage, not just rectangles.
+
+It still does **not** prove the original executable activates every row on the same tick or uses identical runtime semantics. It also does not establish facing/mirroring behavior, edge-overlap semantics, stale-box retention when a frame has no new row, or the exact interaction with effects and the fight-loop order. Those require code-path tracing and later controlled original-executable observations.
+
+Remaining:
 - Correlate action IDs with named normal/special moves and frame selection.
-- Compare hurtboxes separately; Pascal `[Corpo]` is not the same schema as C's per-frame hurt table.
-- Confirm facing/mirroring, edge overlap, and hit activation timing in the Rust simulation and later against the original executable.
+- Verify coordinate mirroring and world-space conversion in the Rust core.
+- Verify hit activation/deactivation and empty/inactive rows against the selector and collision loop.
+- Add deterministic fixtures for representative rows, duplicate rows, strength-specific variants, and absent-frame hurtbox retention.
+- Reserve original-executable parity checks for the final compatibility stage after the first playable Rust baseline.
 
 ## 🌈 Exceptional move-ID resolution
 
@@ -148,10 +179,10 @@ Still required:
 
 ## 🌈 Remaining work
 
-- [ ] Expand each fighter's frame/timer predicates into full ordered event timelines, including branch conditions and RNG call order.
+- [x] Expand all 15 character `[Quadro]` blocks into a source-ordered event ledger; full guard-path and RNG expansion remains pending.
 - [ ] Map every Pascal sound/effect ID to resource definitions and compare with C resource tables.
-- [ ] Decode all C hit metadata and compare active/strength/damage/guard semantics with Pascal.
-- [ ] Normalize Pascal `[Corpo]` hurtboxes against C hurtbox rows.
+- [x] Compare all 379 C hit metadata tuples (active/strength/damage/guard) with Pascal: exact multiset match.
+- [x] Normalize all 305 Pascal `[Corpo]` hurtboxes against C hurt rows: exact match.
 - [ ] Map all action IDs to normal attacks and named moves without numeric-coincidence assumptions.
 - [ ] Resolve Jaiminho C move IDs 24/25 from the hand-coded C path or mark them unknown with a source-backed explanation.
 - [ ] Compare Pascal `Comum.rot` CPU behavior with C's shared CPU prelude.
