@@ -162,8 +162,7 @@ impl CombatState {
         let fighter = &mut self.fighters[fighter_index];
         fighter.action_id = ACTION_WALKING;
         fighter.action_duration = 99;
-        fighter.action_frame = fighter.action_frame;
-        fighter.facing = fighter.facing;
+        // Facing is unchanged by the common walking command.
         fighter.defending = false;
 
         // Common.rot [AcaoFim]: increment walk animation phase and wrap after 16.
