@@ -17,6 +17,9 @@ pub mod pascal_replay;
 #[rustfmt::skip]
 pub mod pascal_differential;
 
+/// First executable Pascal-derived AI movement slice (not a full .rot interpreter).
+pub mod combat_runtime;
+
 /// Stable fighter identifier from the researched roster.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FighterId(pub u8);
