@@ -353,6 +353,7 @@ class PascalRngJsonlTests(unittest.TestCase):
         self.assertIn("1 instrumented MT word(s)", result.stdout)
 
     def test_accepts_captured_ai_branch_window_fixtures(self) -> None:
+        # These selected event samples preserve their original global cursor offsets.
         fixtures = [
             ("pascal-runtime-ai-target-tick317.jsonl", 2, 2),
             ("pascal-runtime-ai-close-range-tick381.jsonl", 10, 19),
