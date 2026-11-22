@@ -688,17 +688,26 @@ fn pose_animation_writes_audited_frames_for_c01_through_c12() {
         let mut at_start = victory_state(character_id, 0, 777);
         at_start.fighters[1].action_id = ACTION_POSE;
         assert!(at_start.update_pose_animation(1, 1000));
-        assert_eq!(at_start.fighters[1].sprite_frame, 1012, "C{character_id:02} frame 0");
+        assert_eq!(
+            at_start.fighters[1].sprite_frame, 1012,
+            "C{character_id:02} frame 0"
+        );
 
         let mut at_second_boundary = victory_state(character_id, 2, 777);
         at_second_boundary.fighters[1].action_id = ACTION_POSE;
         assert!(at_second_boundary.update_pose_animation(1, 1000));
-        assert_eq!(at_second_boundary.fighters[1].sprite_frame, 1030, "C{character_id:02} frame 2");
+        assert_eq!(
+            at_second_boundary.fighters[1].sprite_frame, 1030,
+            "C{character_id:02} frame 2"
+        );
 
         let mut between_boundaries = victory_state(character_id, 1, 777);
         between_boundaries.fighters[1].action_id = ACTION_POSE;
         assert!(between_boundaries.update_pose_animation(1, 1000));
-        assert_eq!(between_boundaries.fighters[1].sprite_frame, 777, "C{character_id:02} frame 1 retains P.Quadro");
+        assert_eq!(
+            between_boundaries.fighters[1].sprite_frame, 777,
+            "C{character_id:02} frame 1 retains P.Quadro"
+        );
     }
 }
 
