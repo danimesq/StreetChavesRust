@@ -446,7 +446,6 @@ impl RandomSource for FixtureRng {
     }
 }
 
-
 /// FPC 3.2.2 System.Random compatibility layer used by the normative Pascal source.
 ///
 /// The pinned FPC 3.2.2 RTL implements MTwist (MT19937, 624-word state).
@@ -589,7 +588,11 @@ impl Fpc322Rng {
         let call_index = self.calls;
         let first_word_index = self.words;
         let word = self.next_u32();
-        let adjusted_range = if range < 0 { range.wrapping_add(1) } else { range };
+        let adjusted_range = if range < 0 {
+            range.wrapping_add(1)
+        } else {
+            range
+        };
         let product_bits = (word as i64).wrapping_mul(adjusted_range as i64) as u64;
         let value = (product_bits >> 32) as i32 as i64;
         self.calls = self.calls.saturating_add(1);
@@ -610,7 +613,11 @@ impl Fpc322Rng {
         let low = self.next_u32() as u64;
         let high = self.next_u32() as u64;
         let assembled = low | ((high << 32) & i64::MAX as u64);
-        let value = if range == 0 { 0 } else { (assembled as i64) % range };
+        let value = if range == 0 {
+            0
+        } else {
+            (assembled as i64) % range
+        };
         self.calls = self.calls.saturating_add(1);
         PascalRandomSample {
             call_index,
