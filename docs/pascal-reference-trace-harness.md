@@ -56,11 +56,11 @@ It is not an original-executable oracle. The comparison is between two implement
 
 ## 🌈 Experimental JSONL exporter (schema v1 history; superseded by v2 below)
 
-A first opt-in exporter has been implemented on the experimental
-[OpenStreetChaves branch](https://github.com/danimesq/OpenStreetChaves/tree/research/sortearvalor-jsonl-v1),
-based on the exact Pascal source revision pinned above:
-`e1b025c35ecbc2b14d8635564aafd23c2107d3d1`. It is not merged into upstream `main`,
-and this Rust research branch does not change the normative source pin yet.
+The schema-v1 exporter description in this section is historical. The current
+schema-v2 implementation and its validation results are documented below. The
+Pascal research branch remains separate from upstream `main`; this Rust research
+branch does not change the pinned normative source revision:
+`e1b025c35ecbc2b14d8635564aafd23c2107d3d1`.
 
 Run the existing deterministic harness with the added option:
 
@@ -99,6 +99,10 @@ LongInt/Int64 overload choice intact. It does not draw extra random values, rese
 RNG, split streams, or change record/replay order. File I/O errors disable the trace
 and are reported through a `.error.txt` sidecar; they are not allowed to replace a
 game result.
+
+The schema-v1 Python validator and regression tests remain developer tooling
+in this Rust branch. A Rust library joiner is also provided in
+`src/trace_join.rs`; the Python validator has not yet been ported to Rust.
 
 The schema validator and regression tests live in this Rust branch:
 
@@ -144,11 +148,12 @@ For repeated loops, the dynamic trace should attach each iteration's loop variab
 - [Pinned FPC 3.2.2 MTwist implementation](https://github.com/fpc/FPCSource/blob/release_3_2_2/rtl/inc/system.inc)
 
  
-## 🌈 Schema v2: concrete runtime context (experimental, not yet verified)
+## 🌈 Schema v2: concrete runtime context (verified Pascal capture)
 
-The schema-v1 description above is historical. The current experimental
-`research/sortearvalor-jsonl-v1` branch upgrades the exporter to schema v2 and
-supersedes the v1 context limitation.
+The schema-v1 description above is historical. The Pascal research branch
+`research/sortearvalor-jsonl-v1` implements schema v2. It compiles and runs
+against the pinned Pascal project with FPC 3.2.2 and SDL2; it remains an
+unmerged experiment, not a change to upstream `main`.
 
 The v2 stream contains:
 
@@ -166,9 +171,10 @@ Three sequence counters are deliberately separate:
 invocation. Nested `.rot` invocations have their own IDs and local draw counters.
 
 The runtime source line joins a concrete draw/control event to a static
-normalizer event's file, section and line. The Pascal interpreter does not yet
-emit source columns, so same-line events may be ambiguous. Any future joiner
-must retain explicit `unique`, `ambiguous` and `unmatched` outcomes. Control
+normalizer event's file, section and line. The Rust joiner is implemented and
+preserves `unique`, `ambiguous`, `unmatched` and `non-ROT source` outcomes.
+The Pascal interpreter does not yet emit source columns, so same-line events
+may be ambiguous. Control
 records expose branch decisions and loop values at interpreter control nodes;
 they do not expose every short-circuited boolean subexpression. Tick snapshots
 cover selected action/timer fields, not every byte of game memory.
@@ -177,8 +183,30 @@ The wrapper-scoped MT-word counter remains unchanged: direct `System.Random`
 calls outside `SortearValor` are still excluded. It is not a global MTwist
 position.
 
-**Verification gate remains open.** These Pascal edits have not yet been
-compiled with Lazarus 4.8/FPC 3.2.2 or run through the deterministic harness.
-No schema-v2 Pascal JSONL capture exists yet. Do not build committed Rust
-reference fixtures from synthetic records; wait for two real, byte-identical
-fixed-seed runs with matching `logica.txt` checkpoints.
+**Verified capture:** GitHub Actions run
+[Pascal runtime trace #45038010844](https://github.com/danimesq/StreetChavesRust/actions/runs/45038010844)
+compiled the Pascal branch with FPC 3.2.2 and SDL2, ran the fixed-seed
+`--gravar` scenario twice (3,000 steps each), compared both JSONL files and
+both `logica.txt` checkpoints byte for byte, validated both schema-v2 traces,
+and uploaded artifact `pascal-runtime-trace-schema-v2`.
+
+Each run contains 3,000 tick records, 20,437 script invocations, 394,252
+control records, 8,841 `SortearValor` calls, and 14,895 wrapper-scoped MT words.
+The two runs are identical. The artifact is retained by Actions until
+2026-12-22. A compact, selected real-event excerpt is committed at
+`tests/fixtures/pascal-runtime-schema-v2-tick316.jsonl`; it is clearly marked
+as an event sample rather than a complete tick trace.
+
+The Rust library module `src/trace_join.rs` now loads schema-v2 Pascal JSONL
+and `symbolic-action-tick-index/v1`, then reconciles concrete draws to static
+RNG sites. It emits `Unique`, `Ambiguous`, `Unmatched` or `NonRotSource`
+instead of forcing a match when source columns are unavailable. Its real
+tick-316 fixture joins the first runtime draw to
+`Common.IA.L293.C4` (fighter 1, line 293, LongInt, range 13) and retains the
+actual branch event from the same script invocation. The tests also prove that
+a second same-line candidate remains ambiguous and a Pascal-helper draw is
+not mislabelled as a `.rot` source.
+
+Rust CI run
+[contract tests #45038903679](https://github.com/danimesq/StreetChavesRust/actions/runs/45038903679)
+passes formatting and all 22 library tests plus both integration tests.
