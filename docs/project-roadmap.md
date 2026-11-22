@@ -6,7 +6,7 @@ Build an independent Rust implementation of **Street Chaves — O Lutador da Vil
 
 This roadmap describes the whole project: research, architecture, implementation, validation, packaging, and release. It is not a claim that any listed feature is already implemented. The repository is currently in the research and architecture stage.
 
-There are no calendar estimates. Each phase advances when its exit criteria are met. The original game executable and its data are treated as evidence and compatibility references, not as permission to redistribute copyrighted material.
+There are no calendar estimates. Each phase advances when its exit criteria are met. Delivery is deliberately split into two stages: (1) build a complete, independently playable Rust baseline from the best documented evidence available; (2) after that baseline exists, run the final compatibility stage by pairing it with the original executable. Original-executable parity is not a prerequisite for the first playable milestone. The original game executable and its data are treated as evidence and compatibility references, not as permission to redistribute copyrighted material.
 
 ## Guiding constraints
 
@@ -62,7 +62,7 @@ Exit criteria:
 
 Goals:
 - Pin the exact commits of reference projects used for each investigation.
-- Identify the canonical original executable build for compatibility testing, recording its hash and provenance.
+- Prepare to identify and hash the original executable for the final compatibility stage; this does not block the first playable Rust baseline.
 - Inventory fighter, move, stage, effect, sprite, sound, configuration, and save data.
 - Determine which values are static, decompiled, runtime-observed, cross-project, inferred, or unknown.
 - Audit source and asset licenses and redistribution constraints.
@@ -194,7 +194,7 @@ Exit criteria:
 **Status: Planned**
 
 Goals:
-- Expand differential testing against the original executable.
+- Begin systematic differential testing against the original executable only after the first playable Rust baseline exists.
 - Run deterministic replay and logical-state regression suites.
 - Maintain golden rendering tests separately from gameplay tests.
 - Test timing, RNG, focus loss, pause, resize, audio-device loss, and save/config edge cases.
@@ -238,7 +238,7 @@ These apply throughout the roadmap:
 
 ## What is deliberately not promised yet
 
-- A playable build or a release date.
+- A playable build or a release date; the first playable milestone and the later original-executable parity milestone are separate deliverables.
 - Exact compatibility for mechanics that have not been validated against the original executable.
 - Redistribution of original game assets or executable data.
 - Browser/mobile support before desktop architecture and packaging are proven.
