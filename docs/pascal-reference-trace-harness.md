@@ -312,7 +312,8 @@ The expanded 3,000-tick capture now contains:
 - **11,769 instrumented game-source RNG calls**: 8,415 `rot_expression`,
   3,350 `pascal_direct`, and 4 `pascal_helper`.
 - **18,812 raw MT words**: 4,726 LongInt calls and 7,043 Int64 calls.
-- 394,252 control records and 20,437 script invocations.
+- 1,069,474 control records, including 675,222 boolean-subexpression operand records, and 20,437 script invocations.
+- **309,092 short-circuit skips**: 308,942 `and_false` and 150 `or_true` right operands.
 - Two byte-identical RNG traces and identical `logica.txt` output, including
   the trace-off comparison.
 
@@ -321,17 +322,19 @@ The expanded 3,000-tick capture now contains:
 The Pascal capture workflow fed every one of the 11,769 calls through the
 independent Rust `Fpc322Rng` and matched the result, overload width, range,
 API call index, first MT-word index, and raw-word cost. The source-column
-capture also validated 2,928 direct Pascal draw locations. This confirms the
+capture validated 11,343 draw locations across direct Pascal and ROT AST sites.
+The boolean trace recorded each evaluated operand and each skipped right side.
+This confirms the
 captured MTwist sequence across the instrumented game-source call sites.
 It does not yet prove that every possible external RTL/library RNG call is
 intercepted, nor does it provide a complete combat/action simulator.
 
-The full source-column artifact is Actions artifact **14765190885**, retained until
-2026-12-22. The expanded run passed in [workflow 45049163298](https://github.com/danimesq/StreetChavesRust/actions/runs/45049163298). The compact committed tick-316 sample remains a small fixture,
+The full source-column and boolean artifact is Actions artifact **14765291483**, retained until
+2026-12-22. The expanded run passed in [workflow 45049647139](https://github.com/danimesq/StreetChavesRust/actions/runs/45049647139). The compact committed tick-316 sample remains a small fixture,
 not a substitute for the full run. Direct Pascal `.inc` call sites and ROT expression AST nodes now carry source
 columns. The 3,000-tick capture has **11,343 column-bearing draws across 45
 distinct source sites**: 2,928 direct Pascal draws across 23 exercised call
 sites, plus all 8,415 ROT expression draws across 22 sites. The static scan
 found 55 direct call sites across eight files. The remaining 426 legacy
 Pascal-direct/helper draws still lack an explicit callsite location.
-Individual short-circuit subexpression values remain open instrumentation work.
+Logical `and/or/xor` operand values and short-circuit outcomes are now traced. Unary `not` and other boolean constructs remain open instrumentation work.
