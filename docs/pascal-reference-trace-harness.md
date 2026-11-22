@@ -297,19 +297,35 @@ first unexpected width/range, exhausted stream, or leftover draw at
 a complete action runner that drives the existing combat state model through
 all 3,000 captured ticks.
 
-The recovered Actions artifact contains the complete 3,000-tick trace:
-8,841 wrapper draws (2,787 LongInt and 6,054 Int64), 394,252 control
-records, and 20,437 script invocations. The compact committed tick-316 sample
-remains the only checked-in raw draw fixture at this stage. The full artifact
-is retained at Actions artifact 14761022549 until 2026-12-22; do not treat
-the sample as if it contained the full run.
+## Full game-source RNG capture and independent MTwist result
 
+The original wrapper-only capture contained 8,841 draws. Its first draw did not
+match the independent Rust MTwist stream: the Rust result was 0 while Pascal
+returned 12. The session seed was 20261026, but the first wrapper draw occurred
+after an unrecorded direct `System.Random` call. A source scan found 55 direct
+`Random(...)` call sites in eight game `.inc` files. They are now routed
+through overloaded `SortearDireto(LongInt/Int64)` entrypoints, preserving the
+selected Pascal overload and recording source filename and line.
 
-The Pascal capture workflow now runs an additional Rust regression against the
-same freshly generated full JSONL file. It feeds every captured request into
-the independent `Fpc322Rng` implementation and checks the returned value,
-overload width, request range, API call index, first MT-word index, and
-one-versus-two-word cost. The expected totals are 8,841 calls and 14,895 raw
-MT words. This test is stronger than recorded-result replay: it independently
-recalculates the MTwist sequence from the fixed seed. It still validates the
-RNG stream, not the complete combat/action simulation.
+The expanded 3,000-tick capture now contains:
+
+- **11,769 instrumented game-source RNG calls**: 8,415 `rot_expression`,
+  3,350 `pascal_direct`, and 4 `pascal_helper`.
+- **18,812 raw MT words**: 4,726 LongInt calls and 7,043 Int64 calls.
+- 394,252 control records and 20,437 script invocations.
+- Two byte-identical RNG traces and identical `logica.txt` output, including
+  the trace-off comparison.
+
+<badge color="success">Full MTwist regression passed</badge>
+
+The Pascal capture workflow fed every one of the 11,769 calls through the
+independent Rust `Fpc322Rng` and matched the result, overload width, range,
+API call index, first MT-word index, and raw-word cost. This confirms the
+captured MTwist sequence across the instrumented game-source call sites.
+It does not yet prove that every possible external RTL/library RNG call is
+intercepted, nor does it provide a complete combat/action simulator.
+
+The full artifact is Actions artifact **14764162752**, retained until
+2026-12-22. The compact committed tick-316 sample remains a small fixture,
+not a substitute for the full run. Runtime source columns and individual
+short-circuit subexpression values remain open instrumentation work.
