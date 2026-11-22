@@ -22,7 +22,7 @@ def session_record() -> dict[str, object]:
         "rng_scope": "SortearValor",
         "rand_seed_initial": 20261026,
         "raw_word_index_scope": (
-            "SortearValor-only; direct System.Random calls outside this wrapper are excluded"
+            "all instrumented game-source System.Random calls routed through SortearValor"
         ),
         "context_status": "logical_tick_and_nested_script_context_attached",
     }
@@ -153,6 +153,22 @@ class PascalRngJsonlTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("1 ticks, 1 script executions, 1 branch/loop records", result.stdout)
         self.assertIn("1 instrumented game RNG calls", result.stdout)
+
+    def test_accepts_direct_pascal_draw_with_source_column(self) -> None:
+        direct = draw_record(0, 0, 1, "LongInt", script_id=None, script_draw_index=None)
+        direct["source_origin"] = "Estado4_Selecao.inc"
+        direct["source_line"] = 22
+        direct["source_column"] = 12
+        result = self.run_validator([session_record(), tick_start(), direct, tick_end()])
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_rejects_direct_inc_draw_without_source_column(self) -> None:
+        direct = draw_record(0, 0, 1, "LongInt", script_id=None, script_draw_index=None)
+        direct["source_origin"] = "Estado4_Selecao.inc"
+        direct["source_line"] = 22
+        result = self.run_validator([session_record(), tick_start(), direct, tick_end()])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("direct .inc draw must include source_column", result.stderr)
 
     def test_accepts_nested_script_frames(self) -> None:
         records = [
