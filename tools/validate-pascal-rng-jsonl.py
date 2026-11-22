@@ -108,17 +108,24 @@ def validate_trace(path: Path) -> dict[str, Any]:
                     elif counter_name == "mt":
                         next_mt_word = offset
                 if record.get("record_scope", "full_trace") not in (
-                    "full_trace", "consecutive_tick_window"
+                    "full_trace", "consecutive_tick_window", "event_sample"
                 ):
                     raise TraceValidationError(f"line {line_number}: unsupported record_scope")
-                if record.get("record_scope") == "consecutive_tick_window":
+                if record.get("record_scope") in ("consecutive_tick_window", "event_sample"):
                     required_offsets = (
                         "tick_index_start", "script_execution_id_start",
                         "control_event_index_start",
                     )
                     if any(key not in record for key in required_offsets):
                         raise TraceValidationError(
-                            f"line {line_number}: consecutive tick window is missing cursor offsets"
+                            f"line {line_number}: trace excerpt is missing cursor offsets"
+                        )
+                    sample_description = record.get("sample_description")
+                    if record.get("record_scope") == "event_sample" and not isinstance(
+                        sample_description, str
+                    ):
+                        raise TraceValidationError(
+                            f"line {line_number}: event_sample requires a sample_description"
                         )
                 scope = record.get("raw_word_index_scope")
                 if not isinstance(scope, str) or "SortearValor-only" not in scope:
