@@ -1,9 +1,9 @@
 //! Conservative join between concrete Pascal schema-v2 traces and the
 //! normalizer's static symbolic RNG/action-tick index.
 //!
-//! Runtime traces currently expose source lines but not source columns. This
-//! module therefore preserves ambiguity instead of choosing a static AST site
-//! based on event order or a guessed column.
+//! Direct Pascal .inc RNG call sites expose source columns; ROT expression
+//! columns are still absent. This module preserves ambiguity instead of
+//! choosing a static AST site based on event order or a guessed column.
 
 use serde_json::Value;
 use std::collections::HashMap;
@@ -52,6 +52,7 @@ pub struct RuntimeDraw {
     pub source_kind: String,
     pub source_origin: Option<String>,
     pub source_line: Option<u32>,
+    pub source_column: Option<u32>,
     pub width: String,
     pub range: i64,
     pub result: i64,
