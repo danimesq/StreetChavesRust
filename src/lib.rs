@@ -17,7 +17,7 @@ pub mod pascal_replay;
 #[rustfmt::skip]
 pub mod pascal_differential;
 
-/// First executable Pascal-derived AI movement slice (not a full .rot interpreter).
+/// Bounded Pascal-derived AI runtime: target selection, movement, close-range attacks and child RNG.
 pub mod combat_runtime;
 
 /// Stable fighter identifier from the researched roster.
