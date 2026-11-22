@@ -26,7 +26,7 @@ impl PascalReplayWidth {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PascalReplayError {
     Trace(String),
-    Exhausted { expected_width: PascalReplayWidth, expected_range: i64 },
+    Exhausted {\n        expected_width: PascalReplayWidth,\n        expected_range: i64,\n    },
     RequestMismatch {
         api_call_index: u64,
         expected_width: String,
@@ -34,8 +34,8 @@ pub enum PascalReplayError {
         expected_range: i64,
         actual_range: i64,
     },
-    InvalidRecordedDraw { api_call_index: u64, reason: String },
-    Unconsumed { remaining: usize, next_api_call_index: u64 },
+    InvalidRecordedDraw {\n        api_call_index: u64,\n        reason: String,\n    },
+    Unconsumed {\n        remaining: usize,\n        next_api_call_index: u64,\n    },
 }
 
 impl fmt::Display for PascalReplayError {
@@ -79,10 +79,12 @@ impl PascalDrawReplay {
             let expected_words = match draw.width.as_str() {
                 "LongInt" => 1,
                 "Int64" => 2,
-                other => return Err(PascalReplayError::InvalidRecordedDraw {
-                    api_call_index: draw.api_call_index,
-                    reason: format!("unknown Pascal Random width {other}"),
-                }),
+                other => {
+                    return Err(PascalReplayError::InvalidRecordedDraw {
+                        api_call_index: draw.api_call_index,
+                        reason: format!("unknown Pascal Random width {other}"),
+                    })
+                }
             };
             if draw.range <= 0 || draw.result < 0 || draw.result >= draw.range {
                 return Err(PascalReplayError::InvalidRecordedDraw {
@@ -93,7 +95,10 @@ impl PascalDrawReplay {
             if draw.raw_mt_words != expected_words {
                 return Err(PascalReplayError::InvalidRecordedDraw {
                     api_call_index: draw.api_call_index,
-                    reason: format!("{} requires {expected_words} raw MT words, trace says {}", draw.width, draw.raw_mt_words),
+                    reason: format!(
+                        "{} requires {expected_words} raw MT words, trace says {}",
+                        draw.width, draw.raw_mt_words
+                    ),
                 });
             }
         }
@@ -226,7 +231,10 @@ mod tests {
         let mut replay = replay();
         assert!(matches!(
             replay.draw(PascalReplayWidth::LongInt, 12),
-            Err(PascalReplayError::RequestMismatch { api_call_index: 0, .. })
+            Err(PascalReplayError::RequestMismatch {
+                api_call_index: 0,
+                ..
+            })
         ));
         assert_eq!(replay.draws_consumed(), 0);
         assert_eq!(replay.draw(PascalReplayWidth::LongInt, 13), Ok(12));
