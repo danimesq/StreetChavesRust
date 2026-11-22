@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for validate-pascal-rng-jsonl.py."""
+"""Unit tests for the schema-v2 Pascal runtime trace validator."""
 
 from __future__ import annotations
 
@@ -17,14 +17,68 @@ VALIDATOR = Path(__file__).with_name("validate-pascal-rng-jsonl.py")
 def session_record() -> dict[str, object]:
     return {
         "record_type": "session",
-        "schema_version": 1,
+        "schema_version": 2,
         "session_id": "gravar-seed-20261026",
         "rng_scope": "SortearValor",
         "rand_seed_initial": 20261026,
         "raw_word_index_scope": (
             "SortearValor-only; direct System.Random calls outside this wrapper are excluded"
         ),
-        "context_status": "action/tick context not attached yet",
+        "context_status": "logical_tick_and_nested_script_context_attached",
+    }
+
+
+def tick_start() -> dict[str, object]:
+    return {
+        "record_type": "tick_start",
+        "schema_version": 2,
+        "session_id": "gravar-seed-20261026",
+        "tick_index": 0,
+        "executed": True,
+        "game_state": 7,
+    }
+
+
+def tick_end() -> dict[str, object]:
+    return {
+        "record_type": "tick_end",
+        "schema_version": 2,
+        "session_id": "gravar-seed-20261026",
+        "tick_index": 0,
+        "game_state": 7,
+    }
+
+
+def context(tick: int | None, script_id: int | None, parent: int | None = None) -> dict[str, object]:
+    return {
+        "tick_index": tick,
+        "script_execution_id": script_id,
+        "parent_script_execution_id": parent,
+        "script_origin": "C01.rot [Acao]" if script_id is not None else None,
+        "fighter_index": 1 if script_id is not None else None,
+        "character_id": 1 if script_id is not None else None,
+        "action_id": 3 if script_id is not None else None,
+        "action_frame": 4 if script_id is not None else None,
+        "command_code": 3 if script_id is not None else None,
+    }
+
+
+def script_start(script_id: int = 0, parent: int | None = None) -> dict[str, object]:
+    return {
+        "record_type": "script_start",
+        "schema_version": 2,
+        "session_id": "gravar-seed-20261026",
+        **context(0, script_id, parent),
+    }
+
+
+def script_end(script_id: int = 0, draws: int = 1, parent: int | None = None) -> dict[str, object]:
+    return {
+        "record_type": "script_end",
+        "schema_version": 2,
+        "session_id": "gravar-seed-20261026",
+        **context(0, script_id, parent),
+        "script_draw_count": draws,
     }
 
 
@@ -35,10 +89,13 @@ def draw_record(
     width: str,
     source: str = "System.Random",
     mode: str = "normal",
+    script_id: int | None = 0,
+    script_draw_index: int | None = 0,
 ) -> dict[str, object]:
+    is_script = script_id is not None
     return {
         "record_type": "draw",
-        "schema_version": 1,
+        "schema_version": 2,
         "session_id": "gravar-seed-20261026",
         "rng_scope": "SortearValor",
         "api_call_index": api_index,
@@ -51,6 +108,23 @@ def draw_record(
         "draw_source": source,
         "rand_seed_before": 20261026,
         "rand_seed_after": 20261026,
+        "source_origin": "C01.rot [Acao]" if is_script else None,
+        "source_line": 25 if is_script else None,
+        "script_draw_index": script_draw_index if is_script else None,
+        **context(0, script_id),
+    }
+
+
+def control_record() -> dict[str, object]:
+    return {
+        "record_type": "control",
+        "schema_version": 2,
+        "session_id": "gravar-seed-20261026",
+        "control_event_index": 0,
+        "control_type": "if_branch",
+        "source_line": 20,
+        **context(0, 0),
+        "branch_taken": True,
     }
 
 
@@ -69,23 +143,47 @@ class PascalRngJsonlTests(unittest.TestCase):
                 text=True,
             )
 
-    def test_accepts_longint_int64_and_replay_without_advancing_word_cursor(self) -> None:
+    def test_accepts_tick_script_control_and_rng_records(self) -> None:
         records = [
-            session_record(),
-            draw_record(0, 0, 1, "LongInt", mode="record"),
-            draw_record(1, 1, 2, "Int64"),
-            draw_record(2, None, 0, "LongInt", source="recorder_replay", mode="replay"),
-            draw_record(3, 3, 1, "LongInt"),
+            session_record(), tick_start(), script_start(), control_record(),
+            draw_record(0, 0, 1, "LongInt"), script_end(), tick_end(),
         ]
         result = self.run_validator(records)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("4 SortearValor calls", result.stdout)
-        self.assertIn("4 wrapper-scoped MT word(s)", result.stdout)
+        self.assertIn("1 ticks, 1 script executions, 1 branch/loop records", result.stdout)
+        self.assertIn("1 SortearValor calls", result.stdout)
+
+    def test_accepts_nested_script_frames(self) -> None:
+        records = [
+            session_record(), tick_start(), script_start(0),
+            script_start(1, 0),
+            draw_record(0, 0, 1, "LongInt", script_id=1, script_draw_index=0),
+            script_end(1, draws=1, parent=0),
+            script_end(0, draws=0),
+            tick_end(),
+        ]
+        result = self.run_validator(records)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("2 script executions", result.stdout)
+
+    def test_accepts_replay_without_advancing_word_cursor(self) -> None:
+        records = [
+            session_record(), tick_start(),
+            draw_record(
+                0, None, 0, "LongInt", source="recorder_replay",
+                mode="replay", script_id=None,
+            ),
+            tick_end(),
+        ]
+        result = self.run_validator(records)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("1 replay", result.stdout)
+        self.assertIn("0 wrapper-scoped MT word(s)", result.stdout)
 
     def test_rejects_wrong_width_consumption(self) -> None:
         records = [
-            session_record(),
-            draw_record(0, 0, 2, "LongInt"),
+            session_record(), tick_start(), script_start(),
+            draw_record(0, 0, 2, "LongInt"), script_end(), tick_end(),
         ]
         result = self.run_validator(records)
         self.assertEqual(result.returncode, 1)
@@ -93,8 +191,8 @@ class PascalRngJsonlTests(unittest.TestCase):
 
     def test_rejects_noncontiguous_api_call_index(self) -> None:
         records = [
-            session_record(),
-            draw_record(1, 0, 1, "LongInt"),
+            session_record(), tick_start(), script_start(),
+            draw_record(1, 0, 1, "LongInt"), script_end(), tick_end(),
         ]
         result = self.run_validator(records)
         self.assertEqual(result.returncode, 1)
@@ -102,17 +200,45 @@ class PascalRngJsonlTests(unittest.TestCase):
 
     def test_rejects_replay_that_claims_raw_words(self) -> None:
         records = [
-            session_record(),
-            draw_record(0, 0, 1, "LongInt", source="recorder_replay", mode="replay"),
+            session_record(), tick_start(),
+            draw_record(
+                0, 0, 1, "LongInt", source="recorder_replay",
+                mode="replay", script_id=None,
+            ),
+            tick_end(),
         ]
         result = self.run_validator(records)
         self.assertEqual(result.returncode, 1)
         self.assertIn("replay must not claim MT-word consumption", result.stderr)
 
-    def test_rejects_missing_session_header(self) -> None:
-        result = self.run_validator([draw_record(0, 0, 1, "LongInt")])
+    def test_rejects_unclosed_tick(self) -> None:
+        result = self.run_validator([session_record(), tick_start()])
         self.assertEqual(result.returncode, 1)
-        self.assertIn("draw appeared before session header", result.stderr)
+        self.assertIn("tick 0 still open", result.stderr)
+
+    def test_rejects_script_end_out_of_nesting_order(self) -> None:
+        records = [
+            session_record(), tick_start(), script_start(0),
+            script_start(1, 0), script_end(0, draws=0), tick_end(),
+        ]
+        result = self.run_validator(records)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("does not close the active script", result.stderr)
+
+    def test_rejects_draw_with_wrong_script_local_index(self) -> None:
+        records = [
+            session_record(), tick_start(), script_start(),
+            draw_record(0, 0, 1, "LongInt", script_draw_index=2),
+            script_end(), tick_end(),
+        ]
+        result = self.run_validator(records)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("script_draw_index", result.stderr)
+
+    def test_rejects_missing_session_header(self) -> None:
+        result = self.run_validator([tick_start()])
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("event appeared before session header", result.stderr)
 
 
 if __name__ == "__main__":
