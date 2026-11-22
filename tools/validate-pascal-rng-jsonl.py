@@ -221,9 +221,12 @@ def validate_trace(path: Path) -> dict[str, Any]:
             first_word = record.get("first_mt_word_index")
             script_draw_index = record.get("script_draw_index")
 
+            source_kind = record.get("source_kind")
             if script_id is None:
                 if script_draw_index is not None:
                     raise TraceValidationError(f"line {line_number}: draw without script has script_draw_index")
+                if source_kind != "pascal_direct":
+                    raise TraceValidationError(f"line {line_number}: draw without script must be pascal_direct")
                 if record.get("source_origin") is not None or record.get("source_line") is not None:
                     raise TraceValidationError(f"line {line_number}: direct draw must not claim .rot source")
             else:
@@ -234,8 +237,19 @@ def validate_trace(path: Path) -> dict[str, Any]:
                         f"!= expected {expected_draw_index}"
                     )
                 if not isinstance(record.get("source_origin"), str):
-                    raise TraceValidationError(f"line {line_number}: .rot draw must include source_origin")
-                _integer(record, "source_line", line_number)
+                    raise TraceValidationError(f"line {line_number}: script-context draw must include source_origin")
+                if source_kind == "rot_expression":
+                    _integer(record, "source_line", line_number)
+                elif source_kind == "pascal_helper":
+                    if record.get("source_line") is not None:
+                        raise TraceValidationError(
+                            f"line {line_number}: pascal_helper draw must not claim a .rot source line"
+                        )
+                else:
+                    raise TraceValidationError(
+                        f"line {line_number}: script-context draw source_kind must be "
+                        "'rot_expression' or 'pascal_helper'"
+                    )
                 script_draw_counts[script_id] += 1
 
             if draw_source == "recorder_replay":
