@@ -205,6 +205,7 @@ fn parse_draw(record: &Value, line: usize) -> Result<RuntimeDraw, TraceJoinError
             .and_then(Value::as_str)
             .map(ToOwned::to_owned),
         source_line,
+        source_column,
         width: required_string(record, "width", line)?,
         range: required_i64(record, "range", line)?,
         result: required_i64(record, "result", line)?,
