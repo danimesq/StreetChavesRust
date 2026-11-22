@@ -18,7 +18,7 @@ This document defines the first Rust-facing contracts derived from the research 
 | ActionTimeline | One fighter/action timeline has strictly increasing logical ticks. |
 | TickEvents | Events retain insertion/source order; they are not sorted by event category. |
 | FixtureRng | Tests consume a supplied sequence in exact call order and fail on exhaustion or invalid range. |
-| DelphiRng | Implements the Delphi 5 32-bit LCG transition and multiply-high range reduction for an injected seed. |
+| DelphiRng | Implements the Delphi 5 32-bit LCG transition and multiply-high range reduction for an injected seed; trace indices are 64-bit and ranges are restricted to non-negative LongInt. |
 | PascalAttackState | Preserves INI row order and separates strength selector conditions from row force assignments. |
 | HitboxRecord | Retains selector key (Pascal action / C state), timer, raw coordinates, active, strength, damage, and guard damage. |
 | HurtboxRecord | Retains frame and raw coordinates. |
