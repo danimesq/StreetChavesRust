@@ -178,6 +178,17 @@ This phase begins after the first playable Rust baseline. It is not a gate for r
 
 **Exit criteria:** high-impact mechanics have reproducible original-game observations or remain explicitly unverified; Rust divergences are recorded as compatibility decisions rather than silently patched.
 
+## Long-term research — Delphi source reconstruction and byte-identical rebuild
+
+**Status: Planned; separate from the first playable Rust milestone.**
+
+Track two distinct challenges in [the dedicated research plan](delphi-source-and-reproducible-binary.md):
+
+1. **Delphi source reconstruction:** recover the original program's source-level structure and semantics using PE metadata, RTTI, resources, disassembly/decompiler evidence and runtime observations. Clearly distinguish recovered facts from inferred or newly recreated source. A reconstructed source tree is not automatically the original source.
+2. **Byte-for-byte executable reproduction:** determine whether a rebuilt executable can match the original file exactly. The strict acceptance criterion is `SHA256(rebuilt.exe) == SHA256(original.exe)`. This may require the exact Delphi compiler/linker, RTL/VCL/DelphiX versions, build options, resources, object/link order, alignment, timestamps and PE metadata.
+
+Source-level fidelity, behavioral equivalence, PE similarity and whole-file identity are different levels of achievement. Track evidence and exit criteria separately; do not claim binary reproduction from matching gameplay or structure. Neither track blocks the first playable Rust baseline.
+
 ## Phase 6 — Asset and resource pipeline
 
 **Status: Planned**
