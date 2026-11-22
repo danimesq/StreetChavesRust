@@ -152,7 +152,7 @@ class PascalRngJsonlTests(unittest.TestCase):
         result = self.run_validator(records)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("1 ticks, 1 script executions, 1 branch/loop records", result.stdout)
-        self.assertIn("1 SortearValor calls", result.stdout)
+        self.assertIn("1 instrumented game RNG calls", result.stdout)
 
     def test_accepts_nested_script_frames(self) -> None:
         records = [
@@ -179,7 +179,7 @@ class PascalRngJsonlTests(unittest.TestCase):
         result = self.run_validator(records)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("1 replay", result.stdout)
-        self.assertIn("0 wrapper-scoped MT word(s)", result.stdout)
+        self.assertIn("0 instrumented MT word(s)", result.stdout)
 
     def test_accepts_pascal_helper_draw_inside_script_context(self) -> None:
         helper_draw = draw_record(0, 0, 1, "LongInt")
@@ -270,7 +270,7 @@ class PascalRngJsonlTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("1 ticks, 1 script executions, 1 branch/loop records", result.stdout)
         self.assertIn("1 SortearValor calls", result.stdout)
-        self.assertIn("1 wrapper-scoped MT word(s)", result.stdout)
+        self.assertIn("1 instrumented MT word(s)", result.stdout)
 
     def test_rejects_missing_session_header(self) -> None:
         result = self.run_validator([tick_start()])
