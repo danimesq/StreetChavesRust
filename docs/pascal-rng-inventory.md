@@ -35,14 +35,15 @@ A static call site therefore carries its width and expected raw-word cost. The n
 
 The existing Pascal `ModoDeSorteio(msGravar/msRepetir)` records and replays requests by range and width. The game also has a deterministic `--gravar` harness that sets `RandSeed := 20261026` and emits `logica.txt`.
 
-Next work should use that harness to capture a reproducible stream with:
-- phase/system identifier;
-- fighter and section;
-- source line and call site;
-- LongInt vs Int64 overload;
-- raw MT word start index and number of words consumed;
-- requested range and returned value;
-- branch and loop context.
+An experimental exporter now writes JSONL from `SortearValor` on the upstream
+[research branch](https://github.com/danimesq/OpenStreetChaves/tree/research/sortearvalor-jsonl-v1).
+It captures the request index, LongInt/Int64 width, range/result, record/replay mode,
+RandSeed snapshots and wrapper-local raw-word count. It is not yet a global RNG trace:
+direct `System.Random` sites outside `SortearValor` are excluded, and action/tick,
+source and loop context are not yet attached. The branch is not merged into upstream
+`main`; the normative source pin therefore remains unchanged. See
+[Pascal reference trace harness](pascal-reference-trace-harness.md) for the schema,
+command line and validation gate.
 
 The latest normalizer CI run #30 passes 7 grammar tests and verifies the 15-fighter bundle. The current source normalizer does not assign dynamic tick or raw-word indices. It preserves the static call graph and symbolic execution guards, including a measured function-argument evaluation profile. The interpreter's own OrdemArgsInversa probe is reproduced by tools/fpc-argument-order-probe.pas; in the FPC 3.2.2 x86_64 Linux CI build, run #42 reported right-to-left (evaluation trace 5431). The normalizer now emits multi-argument call events in that measured order for this build. `symbolic-action-tick-index.json` groups all 5,091 events into 1,749 groups by symbolic P.Acao / P.QuadroAcao guard contexts and preserves all other guards and loop contexts. These are symbolic lanes, not actual executed ticks.
 
