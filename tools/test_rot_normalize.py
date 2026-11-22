@@ -59,6 +59,16 @@ end;
         self.assertEqual(extractor.events[0]["body_event_count"], 1)
         self.assertEqual(extractor.events[1]["target"], "P.Quadro")
 
+    def test_multi_argument_random_calls_follow_measured_right_to_left_profile(self):
+        ast = self.parse("CriaEfeito(1, 'A', Jog, Random(10), Random(20));")
+        extractor = mod.EventExtractor("C01", "Quadro", "right-to-left")
+        extractor.statement(ast["body"])
+        draws = [e for e in extractor.events if e["kind"] == "rng_draw"]
+        self.assertEqual([e["range_expression"] for e in draws], ["20", "10"])
+        self.assertTrue(all(e["argument_evaluation"] == "right-to-left" for e in draws))
+        self.assertIn("arg[4]", draws[0]["argument_context"])
+        self.assertIn("arg[3]", draws[1]["argument_context"])
+
     def test_case_later_arms_require_prior_arms_not_to_match(self):
         source = """
 case P.Acao of
