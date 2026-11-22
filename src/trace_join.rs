@@ -427,8 +427,8 @@ pub fn load_symbolic_rng_sites<R: Read>(reader: R) -> Result<Vec<SymbolicRngSite
                             .and_then(Value::as_str)
                             .unwrap_or_default()
                             .to_owned(),
-                        symbolic_action_guards,
-                        symbolic_tick_guards,
+                        symbolic_action_guards: symbolic_action_guards.clone(),
+                        symbolic_tick_guards: symbolic_tick_guards.clone(),
                         guards: string_array(event.get("guards")),
                         loop_context: string_array(event.get("loop_context")),
                     });
