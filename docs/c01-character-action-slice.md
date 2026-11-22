@@ -78,8 +78,8 @@ Each fighter must be audited and validated independently. Mark an item complete 
 ## 🌈 Validation gates
 
 - [ ] Complete the source audit for all 15 original fighters, recording absent sections and per-character exceptions.
-- [ ] Verify Rust action/command identifiers and mappings against the Pascal enums.
-- [ ] Implement victory and pose per source-defined fighter behavior; test eligible and ineligible states.
+- [x] Verify the implemented Rust action mapping for pose against the Pascal enum (acPose = 24); other command mappings remain to be audited.
+- [ ] Implement per-character victory-frame behavior (entry and pose command entry are implemented; victory animation and pose [Quadro] frame updates remain pending).
 - [ ] Implement specials incrementally, with focused state-diff and RNG tests for every supported branch.
 - [ ] Verify common-action -> character-action -> common-action-end ordering.
 - [ ] Capture and replay at least one Pascal child-script RNG consumption case; prove shared cursor continuity across parent and child.
