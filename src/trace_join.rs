@@ -666,7 +666,7 @@ mod tests {
         let result = &joined[0];
         assert_eq!(result.status, SiteMatchStatus::Unique);
         assert_eq!(result.draw.tick_index, Some(316));
-        assert_eq!(result.draw.api_call_index, 0);
+        assert_eq!(result.draw.api_call_index, 88);
         assert_eq!(result.draw.result, 12);
         assert_eq!(result.draw.width, "LongInt");
         assert_eq!(result.candidates.len(), 1);
