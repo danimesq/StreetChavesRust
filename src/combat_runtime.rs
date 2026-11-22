@@ -242,10 +242,15 @@ fn pascal_round(value: f64) -> i32 {
     // Delphi/Pascal Round uses ties-to-even; preserve that at exact half values.
     let floor = value.floor();
     let fraction = value - floor;
-    if fraction < 0.5 { floor as i32 }
-    else if fraction > 0.5 { (floor + 1.0) as i32 }
-    else if (floor as i64).rem_euclid(2) == 0 { floor as i32 }
-    else { (floor + 1.0) as i32 }
+    if fraction < 0.5 {
+        floor as i32
+    } else if fraction > 0.5 {
+        (floor + 1.0) as i32
+    } else if (floor as i64).rem_euclid(2) == 0 {
+        floor as i32
+    } else {
+        (floor + 1.0) as i32
+    }
 }
 
 impl CombatState {
@@ -288,9 +293,12 @@ impl CombatState {
     {
         let mut rng = RecordingRandomSource::new(rng);
         let mut particles = Vec::new();
-        let fighter = self.fighters.get_mut(fighter_index).ok_or(
-            RuntimeError::UnsupportedBranch("victory animation: invalid fighter index"),
-        )?;
+        let fighter =
+            self.fighters
+                .get_mut(fighter_index)
+                .ok_or(RuntimeError::UnsupportedBranch(
+                    "victory animation: invalid fighter index",
+                ))?;
         if fighter.action_id != ACTION_VICTORY {
             return Err(RuntimeError::UnsupportedBranch(
                 "victory animation requires ACTION_VICTORY",
@@ -428,9 +436,11 @@ impl CombatState {
                 if frame == 10 { fighter.sprite_frame = offset + 34; }
                 if frame == 14 { fighter.sprite_frame = offset + 35; }
             }
-            _ => return Err(RuntimeError::UnsupportedBranch(
-                "victory animation: character ID outside audited C01-C15 roster",
-            )),
+            _ => {
+                return Err(RuntimeError::UnsupportedBranch(
+                    "victory animation: character ID outside audited C01-C15 roster",
+                ))
+            }
         }
 
         Ok(VictoryAnimationResult {
