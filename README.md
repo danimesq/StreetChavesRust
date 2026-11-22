@@ -39,6 +39,7 @@ The research and design notes live in [the documentation directory](docs/README.
 - [Combat tick contracts](docs/combat-tick-contract.md) — Rust event ordering, Delphi 5 RNG, hitbox/hurtbox records, and strict collision geometry.
 - [Box lifecycle deep dive](docs/box-lifecycle-deep-dive.md) — C selector and Pascal AplicarCaixas update order, stale-box retention, strength variants, and the fighter 11 discrepancy.
 - [Pascal RNG compatibility](docs/rng-compatibility.md) — FPC 3.2.2 MTwist semantics, LongInt/Int64 raw-word costs, deterministic seed and the optional Delphi candidate.
+- [Pascal reference trace harness](docs/pascal-reference-trace-harness.md) — existing deterministic --gravar, RNG record/replay, and old-code/script differential harness.
 - [Pascal RNG inventory](docs/pascal-rng-inventory.md) — 255 unique `.rot` sites, 465 composed occurrences and 71 Pascal source references.
 - [ROT normalizer](docs/rot-normalizer.md) — parser, source pins, symbolic timeline output and CI artifact.
 - [C RNG call-site comparison](docs/rng-callsite-inventory.md) — shared C RNG call sites, tick-phase order and variable draw-count traps.
