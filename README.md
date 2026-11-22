@@ -34,6 +34,8 @@ The research and design notes live in [the documentation directory](docs/README.
 - [Fight-loop deep dive](docs/fight-loop-deep-dive.md) — source-level analysis of tick order, frame selection, hit resolution, effects, and physics.
 - [Rust architecture proposal](docs/rust-architecture.md) — proposed boundaries between the simulation core and SDL3/platform services.
 - [Evidence register and open questions](docs/evidence-and-open-questions.md) — evidence, confidence levels, provenance, unknowns, and validation priorities.
+- [Project roadmap](docs/project-roadmap.md) — the full path from research through implementation, compatibility, packaging, and release.
+- [Documentation and research roadmap](docs/documentation-roadmap.md) — the research documents and evidence needed to support each project phase.
 
 Start with the [documentation index](docs/README.md) for the full research map.
 
