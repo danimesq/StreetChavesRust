@@ -1,104 +1,119 @@
-# 🌈 Delphi 5 RNG compatibility
+# 🌈 Pascal RNG compatibility: FPC 3.2.2 is normative
 
-## 🌈 The 32-bit transition
+## 🌈 Source-of-truth policy
 
-The C reference implements the Delphi 5 integer random transition in src/fight/fight.c:
+For this Rust reconstruction, **the pinned Pascal project is the normative implementation**. The Rust runtime must reproduce the semantics of its interpreter and its compiler runtime first.
 
-    next_seed = (seed * 0x08088405 + 1) modulo 2^32
-    result = high_32_bits(next_seed * range)
+The C17/SDL3 implementation is a comparative source only. Its Delphi-style LCG is retained as a separately named candidate adapter, not the default RNG. If C and Pascal disagree, record the discrepancy and keep Pascal behavior until reverse engineering of the original `Chaves.exe` supplies evidence that justifies a documented change.
 
-This is a 32-bit state recurrence followed by a multiply-high range reduction. The implementation uses an unsigned 32-bit state and a 64-bit product, which preserves the low 32-bit state transition and extracts the upper 32 bits of the product.
+This is a project precedence rule. It does not claim that the Pascal port is itself the original game.
 
-The Delphi 5 assembly form reproduced in the historical Borland discussion uses IMUL against RandSeed, increments the result, stores RandSeed, then uses MUL with the requested range. The seed update occurs before the multiply. A zero range therefore still advances the state and returns zero.
+## 🌈 The actual compiler version is pinned
 
-Delphi 5's integer Random takes a signed LongInt range; the valid compatibility domain is 0 through 2^31-1, returning values in [0, range). The C reconstruction's interface is signed int. Rust currently stores the non-negative range as u32, but compatibility callers must keep it within i32::MAX. Negative ranges are deliberately outside the Rust API's contract.
+The pinned OpenStreetChaves README requires:
 
-## 🌈 Rust implementation
+- Lazarus 4.8
+- Free Pascal 3.2.2
 
-DelphiRng now provides:
+This lets us inspect the matching RTL revision rather than relying on current FPC documentation. The reference implementation is `fpc/FPCSource` at tag `release_3_2_2`, especially `rtl/inc/system.inc`.
 
-- A caller-supplied 32-bit RandSeed.
-- Wrapping multiplication and addition, explicitly modulo 2^32.
-- Multiply-high range reduction.
-- A 64-bit sequential draw counter, so trace indices do not saturate at a 32-bit boundary.
-- A RandomSource implementation, allowing the same trace interface as FixtureRng.
-- A range guard enforcing Delphi's non-negative signed LongInt domain (`0..=i32::MAX`).
-- State advancement even when the requested range is zero.
+## 🌈 How the Pascal interpreter dispatches Random
 
-Tests pin a known sequence from seed zero:
+In `ChavesRoteiro.pas`, all script random calls go through `SortearValor(N, Largo)`:
 
-| Draw | Range | New RandSeed | Result |
-|---:|---:|---:|---:|
-| 0 | 10 | 0x00000001 | 0 |
-| 1 | 100 | 0x08088406 | 3 |
-| 2 | 2 | 0xDC6DAC1F | 1 |
-| 3 | 120 | 0x33DC589C | 24 |
+- `Largo = false`: call `System.Random(LongInt(N))`.
+- `Largo = true`: call `System.Random(N)` using the Int64 overload.
 
-These vectors validate the implementation of the recovered transition and range transform. They do not establish the original executable's initial seed or the full per-frame order of random calls.
+The value-width bit is preserved by the expression evaluator. `Round` and `Trunc` produce Int64 values in this interpreter, so expressions such as `Random(Round(8 * Fator))` select the Int64 overload. An explicit `ShortInt(...)` cast converts back to the narrow integer path.
 
-## 🌈 The seed is a separate compatibility problem
+The existing replay recorder in `ChavesRoteiro.pas` stores each request as the tuple `(N, Largo, R)`. In replay mode it checks both the requested range and the width before returning the recorded result. A mismatch sets `SorteioDivergiu` and returns to normal RNG operation. This is an existing, valuable differential-testing mechanism.
 
-The recurrence can be exact while the full sequence still diverges because the initial seed differs.
+## 🌈 FPC 3.2.2 System.Random: MTwist and two different consumption costs
 
-- Pascal port: Comum_Inicio.inc calls Randomize once during game initialization.
-- C port: osc_game_init seeds fight.rng from SDL_GetTicksNS, truncated to 32 bits.
-- C deterministic harness: --frames overrides that with 0x5EED1234.
-- Original Delphi build: the exact RandSeed produced by its Randomize call at startup has not been captured.
+The pinned RTL contains a Pascal translation of libmtwist, with a 624-word state and the 397 offset used by MT19937.
 
-The game does not reset the C RNG in osc_fight_start; the state persists across fights. Pascal's RandSeed is process-global and Randomize is called from TJogo.Iniciar, not once per fighter or once per round.
+| Overload | Raw MT words per API call | Range reduction |
+|---|---:|---|
+| `Random(LongInt)` | 1 | Multiply-high: high 32 bits of word × range |
+| `Random(Int64)` | 2 | Compose a non-negative 63-bit value, then modulo range |
 
-For differential fixtures, inject the same known seed into both the original capture harness and Rust. Do not compare runs that merely started at similar wall-clock times.
+The Int64 implementation does not merely widen the LongInt result. It consumes two independent 32-bit MT words:
 
-## 🌈 Important: the Pascal port's System.Random is not the Delphi 5 oracle
+1. The first word becomes the low 32 bits.
+2. The second contributes 31 high bits.
+3. The resulting non-negative 63-bit value is reduced with modulo.
 
-The OpenStreetChaves repository is a Free Pascal/Lazarus port, not a Delphi 5 build. ChavesRoteiro.pas routes script Random calls through SortearValor, which ultimately calls System.Random.
+This distinction matters to the global stream. One `Random(Round(...))` call consumes two MT words, while `Random(8)` consumes one.
 
-The current Free Pascal RTL documentation describes its System.Random implementation as Mersenne Twister. That is different from the Delphi 5 32-bit LCG described above. The Pascal port also dispatches wide-valued arguments to its Int64 System.Random overload when the interpreter marks the argument as wide. The pinned OpenStreetChaves revision does not record the exact FPC compiler/RTL build used to produce a particular binary, so the precise MT implementation/version is not yet pinned.
+A zero range still advances the generator:
+- `Random(LongInt(0))` consumes one MT word and returns zero.
+- `Random(Int64(0))` consumes two MT words and returns zero.
 
-Therefore:
+The Rust implementation `Fpc322Rng` exposes both overloads, counts API calls separately from raw MT words, preserves the FPC seed-reset marker behavior, and accepts an injected `RandSeed`.
 
-- Pascal .rot files remain valuable for recovering branch order, call sites, and game-state effects.
-- The current FPC RTL documentation says its System.Random uses Mersenne Twister, but the reference repository does not pin the exact compiler/RTL build. Treat this as the port's documented RTL behavior, and pin the build version before making a binary-level claim.
-- A random sequence observed while running the Free Pascal port is not evidence of the original Delphi 5 sequence.
-- C's osc_random transition is the stronger current implementation reference for the Delphi 5 integer generator.
-- The original executable and the exact RandSeed/call stream remain the final authority.
+## 🌈 Deterministic Pascal reference seed
 
-Do not retrofit the Delphi LCG into the Pascal source and then call that a recovered original behavior. Keep the original port's runtime semantics separate from the Rust compatibility implementation.
+The Pascal SDL harness has a deterministic logic-recording mode:
 
-## 🌈 Shared stream and call-order sensitivity
+- `ChavesSDL.pas` assigns `RandSeed := 20261026`.
+- It runs a scripted sequence of inputs without waiting for real time.
+- It writes the logical state trace to `logica.txt` at configured intervals.
 
-The fight engine uses one RandSeed field, and calls to osc_random occur in more than CPU decision logic. They also appear in frame selection, special throws, camera shake, hit-stop, effects, stage events, and presentation-related choices.
+That fixed seed is a useful reproducible test seed. It is not the normal production startup seed and must not be confused with the original executable's startup state.
 
-The Pascal application has a process-global RandSeed and random calls outside the fighter scripts as well: stage selection, camera shake, background objects, bonus effects, HUD jitter, round transitions, and victory presentation.
+Normal initialization calls `Randomize` in `Comum_Inicio.inc`. The exact seed source is platform-specific. The pinned FPC Linux RTL implementation assigns `RandSeed := LongInt(Fptime(nil))`; the deterministic harness bypasses that startup variability by setting the seed explicitly. Do not infer the Windows build's exact startup value from the Linux RTL path.
 
-A Rust implementation that uses a separate RNG for cosmetic effects can change later gameplay outcomes if the original shared stream was consumed by those operations. Keep one ordered stream until a captured original trace proves a split is behaviorally safe.
+## 🌈 Rust implementation status
 
-The [RNG call-site inventory](rng-callsite-inventory.md) now records the C call groups and the pinned fight-tick phase order. It is still a source inventory, not a normalized per-tick dynamic trace. A loop that tries again until a frame differs consumes a variable number of draws; nested effect spawning and short-circuit branches also shift subsequent draw indices.
+`src/lib.rs` now contains:
 
-## 🌈 What is confirmed and what remains open
+- `Fpc322Rng`: normative Pascal-compatible MTwist stream for Rust.
+- `random_longint`: one-word LongInt overload.
+- `random_int64`: two-word Int64 overload.
+- Separate counters for System.Random calls and raw MT words.
+- `PascalRandomSample`: range, result, width, first raw-word index and consumption count.
+- `DelphiRng`: experimental comparison adapter based on the Delphi 5 LCG evidence from the C project. It is not the default Rust source.
 
-- [x] Delphi 5 integer LCG multiplier and increment captured from the cited assembly form.
-- [x] 32-bit wrapping transition implemented in Rust.
-- [x] Multiply-high range transform implemented in Rust.
-- [x] Zero-range call consumes one state transition in Rust.
-- [x] C implementation uses the same transition and range transform for positive int ranges.
-- [x] Pascal port's wrapper calls Free Pascal System.Random rather than implementing the Delphi 5 transition.
-- [ ] Capture the original executable's startup RandSeed or a reproducible way to set it.
-- [ ] Verify the range edge cases against the original executable.
-- [x] Inventory C fight RNG call sites and phase order, including camera, stage, effect, defense, melee, and round-end code.
-- [ ] Expand every per-fighter and common-script RNG call into exact tick order.
-- [ ] Inventory every Pascal RNG call, including draw-time UI/stage behavior, in Pascal fight-loop order.
-- [ ] Compare the C port's consumption order with an original-executable capture.
-- [ ] Add original-executable golden RNG traces after the playable Rust baseline.
+Tests use the reference MT19937 seed 5489 and assert:
+- raw words 3499211612, 581869302 and 3890346734;
+- `Random(LongInt(8)) = 6` using one word;
+- `Random(Int64(1000)) = 4` using two words;
+- zero-range calls still consume the width-specific number of words.
 
-## 🌈 References
+## 🌈 Inventory from the pinned Pascal project
 
-- [Delphi 5 integer RNG assembly discussed in the Borland language newsgroup](https://groups.google.com/g/borland.public.delphi.language.objectpascal/c/_3BBDQ0X5H0): includes the 0x08088405 multiplier, increment, RandSeed store, and multiply-high implementation.
-- [Embarcadero System.Random documentation](https://docwiki.embarcadero.com/Libraries/Athens/en/System.Random): documents the non-negative range behavior and warns that implementation details may vary by compiler version.
-- [Free Pascal System.Random documentation](https://www.freepascal.org/docs-html/rtl/system/random.html): documents the FPC Mersenne Twister implementation.
-- [Free Pascal Randomize documentation](https://www.freepascal.org/docs-html/rtl/system/randomize.html): states that FPC seeds its generator from the system clock.
-- [C fight.c at the pinned revision](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6842ff6618ecdb8f425bba61c9183/src/fight/fight.c)
-- [C RNG call-site inventory and fight-tick ordering](rng-callsite-inventory.md)
-- [C game.c at the pinned revision](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6842ff6618ecdb8f425bba61c9183/src/game.c)
-- [Pascal ChavesRoteiro.pas at the pinned revision](https://github.com/danimesq/OpenStreetChaves/blob/e1b025c35ecbc2b14d8635564aafd23c2107d3d1/source/game/ChavesRoteiro.pas)
-- [Pascal Comum_Inicio.inc at the pinned revision](https://github.com/danimesq/OpenStreetChaves/blob/e1b025c35ecbc2b14d8635564aafd23c2107d3d1/source/game/Comum_Inicio.inc)
+The normalizer's first complete run found:
+
+- **255 unique static Random sites** across `Comum.rot` and `C01.rot` through `C15.rot`.
+- **465 appearances** after composing the common sections into all 15 fighter timelines.
+- **244 LongInt-width** and **221 Int64-width** occurrences in those composed timelines.
+- **71 static RNG-related references/calls** in Pascal `.pas` and `.inc` files, including `Randomize`, `RandSeed`, direct `Random`, and the interpreter's `Sortear` wrappers.
+
+The 465 count intentionally includes repeated use of `Comum.rot`; the 255 count deduplicates by source path, section and source coordinates. Neither is a dynamic draw count. Branches and loops decide which sites actually execute and how many raw MT words are consumed.
+
+See:
+- [Pascal RNG call-site inventory](pascal-rng-inventory.md)
+- [Symbolic ROT normalizer](rot-normalizer.md)
+- [C-port shared RNG call-site comparison](rng-callsite-inventory.md)
+
+## 🌈 Original executable verification remains separate
+
+The original program is Delphi 5 + DelphiX. The C project uses a Delphi-style 32-bit LCG, but that is not a reason to replace the Pascal-first behavior in Rust. The optional `DelphiRng` remains available for differential experiments when REA/Ghidra reveals the original binary's RNG path.
+
+Still open:
+- Capture the original executable's initial random state and seed source.
+- Determine whether it uses the same MTwist or another Delphi 5 implementation.
+- Compare a controlled original draw trace with Pascal/FPC and Rust.
+- Preserve all call sites across fighter AI, frames, stage, camera, effects, HUD and victory presentation.
+
+Until that comparison exists, the Rust default follows Pascal/FPC 3.2.2.
+
+## 🌈 Pinned references
+
+- [OpenStreetChaves README at pinned commit](https://github.com/danimesq/OpenStreetChaves/blob/e1b025c35ecbc2b14d8635564aafd23c2107d3d1/README.md): Lazarus 4.8 and FPC 3.2.2 build requirement.
+- [Pascal interpreter](https://github.com/danimesq/OpenStreetChaves/blob/e1b025c35ecbc2b14d8635564aafd23c2107d3d1/source/game/ChavesRoteiro.pas): Random width dispatch and request record/replay.
+- [Deterministic harness](https://github.com/danimesq/OpenStreetChaves/blob/e1b025c35ecbc2b14d8635564aafd23c2107d3d1/source/ChavesSDL.pas): fixed `RandSeed := 20261026`.
+- [Pascal initialization](https://github.com/danimesq/OpenStreetChaves/blob/e1b025c35ecbc2b14d8635564aafd23c2107d3d1/source/game/Comum_Inicio.inc): `Randomize`.
+- [FPC 3.2.2 MTwist and Random overloads](https://github.com/fpc/FPCSource/blob/release_3_2_2/rtl/inc/system.inc): exact generator, word consumption, reduction.
+- [FPC 3.2.2 Linux Randomize implementation](https://github.com/fpc/FPCSource/blob/release_3_2_2/rtl/linux/system.pp): Linux-specific `Fptime(nil)` seed source.
+- [C fight RNG](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6842ff6618ecdb8f425bba61c9183/src/fight/fight.c): comparison-port Delphi-style LCG, not the normative Rust default.
