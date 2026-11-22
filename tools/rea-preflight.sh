@@ -76,6 +76,7 @@ OUT=$(cd -- "$OUT" && pwd -P)
 SNAPSHOT="$OUT/input/$BASENAME"
 
 # 🌈 Preserve the exact input bytes in the bundle and make the copy read-only.
+[[ ! -e "$SNAPSHOT" ]] || die "Snapshot already exists: $SNAPSHOT (choose a fresh output directory)."
 cp -- "$INPUT" "$SNAPSHOT"
 chmod a-w "$SNAPSHOT"
 SNAPSHOT_SHA=$(sha256_file "$SNAPSHOT")
