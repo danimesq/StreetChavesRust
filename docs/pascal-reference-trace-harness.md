@@ -184,7 +184,7 @@ calls outside `SortearValor` are still excluded. It is not a global MTwist
 position.
 
 **Verified capture:** GitHub Actions run
-[Pascal runtime trace #45038010844](https://github.com/danimesq/StreetChavesRust/actions/runs/45038010844)
+[Pascal runtime trace #45040091460](https://github.com/danimesq/StreetChavesRust/actions/runs/45040091460)
 compiled the Pascal branch with FPC 3.2.2 and SDL2, ran the fixed-seed
 `--gravar` scenario twice (3,000 steps each), compared both JSONL files and
 both `logica.txt` checkpoints byte for byte, validated both schema-v2 traces,
@@ -194,7 +194,11 @@ Each run contains 3,000 ticks, 20,437 script invocations, 394,252 control
 records, 8,841 `SortearValor` calls (8,841 `System.Random`, 0 replay), and
 14,895 wrapper-scoped MT words. The overload distribution is 2,787 LongInt
 draws and 6,054 Int64 draws, matching the observed 14,895-word total. Both
-runs are identical. The full trace artifact is retained by Actions until
+trace-enabled runs are identical. Their `logica.txt` files also match the
+third fixed-seed `--gravar` baseline run with JSONL tracing disabled. This
+establishes that enabling the logger did not alter recorded logic checkpoints
+in this scenario; it is not a full memory-state comparison or original-game
+parity proof. The full trace artifact is retained by Actions until
 2026-12-22. A compact, selected real-event excerpt is committed at
 `tests/fixtures/pascal-runtime-schema-v2-tick316.jsonl`; it is marked as an
 event sample, not a complete tick trace.
@@ -207,7 +211,7 @@ cargo run --release --bin trace-join -- trace/rng.jsonl symbolic-action-tick-ind
 ```
 
 The end-to-end pipeline in
-[Pascal runtime trace #45039791310](https://github.com/danimesq/StreetChavesRust/actions/runs/45039791310)
+[Pascal runtime trace #45040091460](https://github.com/danimesq/StreetChavesRust/actions/runs/45040091460)
 recompiled Pascal, repeated both fixed-seed captures, regenerated the 15
 fighter symbolic index from the pinned Pascal source, reconciled every draw
 in both traces, and confirmed byte-identical reports. The full-capture result:
@@ -235,5 +239,5 @@ Rust CI run
 [contract tests #45038903679](https://github.com/danimesq/StreetChavesRust/actions/runs/45038903679)
 passes formatting and all 22 library tests plus both integration tests.
 The full capture/reconciliation evidence is in
-[artifact #14761108046](https://github.com/danimesq/StreetChavesRust/actions/runs/45039791310/artifacts/14761108046);
+[artifact #14761022549](https://github.com/danimesq/StreetChavesRust/actions/runs/45040091460/artifacts/14761022549);
 the integrated pipeline passed.
