@@ -324,7 +324,6 @@ fn replay_and_pascal_diff_clis_round_trip_tick_316() {
     );
 }
 
-
 #[derive(Default)]
 struct ScriptedRng {
     values: Vec<i32>,
@@ -333,7 +332,10 @@ struct ScriptedRng {
 
 impl ScriptedRng {
     fn with_values(values: &[i32]) -> Self {
-        Self { values: values.to_vec(), cursor: 0 }
+        Self {
+            values: values.to_vec(),
+            cursor: 0,
+        }
     }
 }
 
@@ -341,7 +343,9 @@ impl PascalRandomSource for ScriptedRng {
     type Error = String;
 
     fn draw_longint(&mut self, range: i32) -> Result<i32, Self::Error> {
-        let value = *self.values.get(self.cursor)
+        let value = *self
+            .values
+            .get(self.cursor)
             .ok_or_else(|| format!("missing scripted draw at {}", self.cursor))?;
         self.cursor += 1;
         if value < 0 || value >= range {
@@ -384,7 +388,9 @@ fn victory_toggle_characters_read_both_prior_sprite_frames() {
         for previous in [1033, 1034] {
             let mut state = victory_state(character_id, boundary, previous);
             let mut rng = ScriptedRng::default();
-            let result = state.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+            let result = state
+                .update_victory_animation(1, victory_context(), &mut rng)
+                .unwrap();
             assert_eq!(result.draws.len(), 0);
             assert_eq!(rng.cursor, 0);
             assert_eq!(
@@ -401,7 +407,9 @@ fn victory_toggle_characters_preserve_sprite_frame_off_boundary() {
     for character_id in [6, 9, 14] {
         let mut state = victory_state(character_id, 2, 1047);
         let mut rng = ScriptedRng::default();
-        state.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+        state
+            .update_victory_animation(1, victory_context(), &mut rng)
+            .unwrap();
         assert_eq!(state.fighters[1].sprite_frame, 1047);
         assert_eq!(rng.cursor, 0);
     }
@@ -411,7 +419,9 @@ fn victory_toggle_characters_preserve_sprite_frame_off_boundary() {
 fn c02_victory_consumes_exactly_one_shared_random_two_draw() {
     let mut state = victory_state(2, 17, 0);
     let mut rng = ScriptedRng::with_values(&[0]);
-    let result = state.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+    let result = state
+        .update_victory_animation(1, victory_context(), &mut rng)
+        .unwrap();
     assert_eq!(state.fighters[1].sprite_frame, 1034);
     assert_eq!(rng.cursor, 1);
     assert_eq!(result.draws.len(), 1);
@@ -435,8 +445,14 @@ fn c12_victory_preserves_movement_clamps_rng_and_particle_order() {
     assert_eq!(state.fighters[1].facing, SIDE_LEFT);
     assert_eq!(state.fighters[1].sprite_frame, 1033);
     assert_eq!(rng.cursor, 11);
-    assert_eq!(result.draws.iter().map(|draw| draw.range).collect::<Vec<_>>(),
-        vec![2, 40, 10, 40, 10, 40, 10, 40, 10, 40, 10]);
+    assert_eq!(
+        result
+            .draws
+            .iter()
+            .map(|draw| draw.range)
+            .collect::<Vec<_>>(),
+        vec![2, 40, 10, 40, 10, 40, 10, 40, 10, 40, 10]
+    );
     assert_eq!(result.particles.len(), 5);
     assert_eq!(result.particles[0].x, 271.0);
     assert_eq!(result.particles[0].y, 299.0);
@@ -447,12 +463,14 @@ fn c08_and_c13_apply_ground_relative_vertical_motion() {
     let mut c08 = victory_state(8, 0, 0);
     c08.fighters[1].y = 299.0;
     let mut rng = ScriptedRng::default();
-    c08.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+    c08.update_victory_animation(1, victory_context(), &mut rng)
+        .unwrap();
     assert_eq!(c08.fighters[1].y, 295.0);
 
     let mut c13 = victory_state(13, 0, 0);
     c13.fighters[1].y = 299.0;
-    c13.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+    c13.update_victory_animation(1, victory_context(), &mut rng)
+        .unwrap();
     assert_eq!(c13.fighters[1].y, 290.0);
 }
 
@@ -460,7 +478,9 @@ fn c08_and_c13_apply_ground_relative_vertical_motion() {
 fn c15_frame_ten_keeps_the_later_independent_assignment() {
     let mut state = victory_state(15, 10, 0);
     let mut rng = ScriptedRng::default();
-    state.update_victory_animation(1, victory_context(), &mut rng).unwrap();
+    state
+        .update_victory_animation(1, victory_context(), &mut rng)
+        .unwrap();
     assert_eq!(state.fighters[1].sprite_frame, 1034);
 }
 
