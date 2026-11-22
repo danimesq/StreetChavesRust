@@ -5,8 +5,8 @@ use std::io::Cursor;
 use serde_json::Value;
 use street_chaves::combat_runtime::{
     AiCommand, AiTickInputs, BodyBox, CharacterActionScript, CombatState, FighterState,
-    RuntimeDrawWidth, RuntimeError, ACTION_CROUCHING, ACTION_IDLE, ACTION_POSE, ACTION_VICTORY, ACTION_WALKING,
-    SIDE_LEFT, SIDE_RIGHT,
+    RuntimeDrawWidth, RuntimeError, ACTION_CROUCHING, ACTION_IDLE, ACTION_POSE, ACTION_VICTORY,
+    ACTION_WALKING, SIDE_LEFT, SIDE_RIGHT,
 };
 use street_chaves::pascal_differential::{first_divergence, load_tick_checkpoints};
 use street_chaves::pascal_replay::{PascalDrawReplay, PascalRandomSource};
@@ -323,7 +323,6 @@ fn replay_and_pascal_diff_clis_round_trip_tick_316() {
     );
 }
 
-
 #[test]
 fn victory_command_matches_the_shared_pascal_contract_for_all_original_fighters() {
     // C01-C15 each define the same [Acao] victory guard and state writes.
@@ -374,7 +373,6 @@ fn victory_command_rejects_an_invalid_fighter_index_without_mutation() {
     assert_eq!(state, before);
 }
 
-
 #[test]
 fn pose_command_matches_pascal_contract_for_fighters_that_define_it() {
     // C01-C12 all accept idle/walking and write acPose, frame 0, duration 20.
@@ -387,7 +385,10 @@ fn pose_command_matches_pascal_contract_for_fighters_that_define_it() {
             fighter.action_frame = 9;
             fighter.action_duration = 17;
 
-            assert!(state.apply_character_pose(1), "C{character_id:02} should accept pose");
+            assert!(
+                state.apply_character_pose(1),
+                "C{character_id:02} should accept pose"
+            );
             assert_eq!(state.fighters[1].action_id, ACTION_POSE);
             assert_eq!(state.fighters[1].action_frame, 0);
             assert_eq!(state.fighters[1].action_duration, 20);
@@ -407,18 +408,7 @@ fn pose_command_rejects_fighters_without_cm_pose_and_ineligible_actions() {
         assert_eq!(state.fighters[1], before);
     }
 
-    for action_id in [
-        ACTION_CROUCHING,
-        ACTION_VICTORY,
-        3,
-        4,
-        5,
-        6,
-        8,
-        12,
-        21,
-        22,
-    ] {
+    for action_id in [ACTION_CROUCHING, ACTION_VICTORY, 3, 4, 5, 6, 8, 12, 21, 22] {
         let (mut state, _) = ai_scenario(PASCAL_TICK_316, 316);
         state.fighters[1].character_id = 1;
         state.fighters[1].action_id = action_id;
