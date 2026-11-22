@@ -140,6 +140,16 @@ impl<T: Clone> BoxState<T> {
     }
 }
 
+impl BoxState<HitboxRecord> {
+    /// Mirror the explicit active-flag clear used after guard/hit/state changes.
+    /// Geometry, force, damage, and guard-damage metadata remain stored.
+    pub fn deactivate_attack(&mut self) {
+        for row in &mut self.rows {
+            row.active = false;
+        }
+    }
+}
+
 /// One Pascal [Ataque] row, retaining its two distinct strength concepts:
 /// the optional strength selector condition and the row's optional force assignment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -231,6 +241,8 @@ pub enum CombatEvent {
         value: u32,
         draw_index: u32,
     },
+    /// Explicitly disables a stored attack without erasing its coordinates.
+    AttackDeactivated,
     Hitboxes(BoxUpdate<HitboxRecord>),
     Hurtboxes(BoxUpdate<HurtboxRecord>),
 }
@@ -523,6 +535,38 @@ mod tests {
         assert_eq!(rng.random_range(0), 0);
         assert_eq!(rng.rand_seed(), 1);
         assert_eq!(rng.draws_consumed(), 1);
+    }
+
+    #[test]
+    fn explicit_attack_deactivation_preserves_geometry_and_damage_metadata() {
+        let active = HitboxRecord {
+            selector: 27,
+            timer: 1,
+            bounds: RawBounds {
+                x1: 10,
+                y1: 130,
+                x2: 82,
+                y2: 158,
+            },
+            active: true,
+            strength: 2,
+            damage: 18,
+            guard_damage: 3,
+        };
+        let deactivated = HitboxRecord {
+            active: false,
+            ..active
+        };
+        let mut state = BoxState::default();
+
+        assert!(state.apply_last_match_or_retain([active]));
+        state.deactivate_attack();
+
+        assert_eq!(state.rows(), &[deactivated]);
+        assert_eq!(state.rows()[0].bounds, active.bounds);
+        assert_eq!(state.rows()[0].damage, active.damage);
+        assert_eq!(state.rows()[0].guard_damage, active.guard_damage);
+        assert_eq!(state.rows()[0].strength, active.strength);
     }
 
     #[test]
