@@ -48,7 +48,7 @@ The optional `--pascal-source-root` scan finds `Randomize`, `RandSeed`, `Random`
 
 The scan is static. It does not assign execution order across camera, fighter, stage, effects, HUD or round-state systems. The unique `.rot` RNG inventory is kept separately from the `.pas/.inc` call-site inventory, and shared `Comum.rot` sites are deduplicated even though they occur in each fighter's composed timeline.
 
-An important existing mechanism is already present in `ChavesRoteiro.pas`: `ModoDeSorteio(msGravar/msRepetir)` can record and replay requests, checking both range and 32/64-bit mode. An experimental [upstream branch](https://github.com/danimesq/OpenStreetChaves/tree/research/sortearvalor-jsonl-v1) now adds opt-in JSONL output at `SortearValor`, using the deterministic `--gravar` harness (fixed `RandSeed := 20261026`). The exporter reports actual wrapper requests, including record/replay mode and width-aware word cost, but its MT-word index is local to this wrapper: direct `System.Random` calls elsewhere remain outside it. It does not yet assign action/tick context or dynamic branch/loop values. The upstream branch is not merged, and the normalizer's source pin remains unchanged. See [Pascal reference trace harness](pascal-reference-trace-harness.md) for usage and the validation gate.
+An important existing mechanism is already present in `ChavesRoteiro.pas`: `ModoDeSorteio(msGravar/msRepetir)` can record and replay requests, checking both range and 32/64-bit mode. The experimental [upstream branch](https://github.com/danimesq/OpenStreetChaves/tree/research/sortearvalor-jsonl-v1) adds schema-v2 JSONL for ticks, nested script executions, control decisions/loop values, and RNG requests. It compiled under FPC 3.2.2 and produced two byte-identical fixed-seed 3,000-step captures, including matching `logica.txt` checkpoints. The MT-word index is local to `SortearValor`; direct `System.Random` calls elsewhere remain outside it. The branch remains unmerged and the normalizer's source pin unchanged. See [Pascal reference trace harness](pascal-reference-trace-harness.md) for the artifact and validation evidence.
 
 ## 🌈 Run locally
 
@@ -90,15 +90,17 @@ The `Pascal .rot normalization` workflow installs and verifies FPC 3.2.2, runs t
  
 ## 🌈 Concrete Pascal trace integration status
 
-The experimental Pascal branch now proposes schema-v2 records for logical
-ticks, nested script invocations, concrete branch decisions, loop iterations
-and RNG draws with script-local order and source line. Those records can be
-matched conservatively to the normalizer's static events by pinned source,
-script origin/section, fighter, source line, RNG width and range, while the
-static event retains its symbolic guards and loop structure.
+The schema-v2 Pascal capture is now compiled, repeatable and represented by a
+real tick-316 fixture. Rust's `src/trace_join.rs` loads the concrete JSONL and
+the static symbolic action/tick index, then joins by fighter/character,
+script file and section, source line, RNG width, and literal range where
+available. The first captured `Comum.rot [IA]` draw uniquely matches
+`Common.IA.L293.C4`; tests also preserve an intentionally ambiguous
+same-line candidate and reject mapping Pascal-helper draws to `.rot` sites.
 
-This is a design/implementation stage only: the Pascal exporter has not been
-compiled or run, so there are no captured runtime fixtures and no proven
-end-to-end join. Same-line source sites may be ambiguous because runtime source
-columns are not emitted. The normalizer remains a static model and must not
-invent a concrete path from its symbolic guards.
+This is a conservative first join, not yet a full 8,841-draw reconciliation.
+Runtime source columns are still absent, so some same-line sites remain
+ambiguous. The joiner carries symbolic guards/loops and control records from
+the same script invocation but does not claim that each runtime decision has
+been proven equivalent to a particular boolean subexpression. Static
+normalization remains a source model, not execution.
