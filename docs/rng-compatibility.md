@@ -52,11 +52,12 @@ For differential fixtures, inject the same known seed into both the original cap
 
 The OpenStreetChaves repository is a Free Pascal/Lazarus port, not a Delphi 5 build. ChavesRoteiro.pas routes script Random calls through SortearValor, which ultimately calls System.Random.
 
-The Free Pascal RTL documentation describes its System.Random implementation as Mersenne Twister. That is different from the Delphi 5 32-bit LCG described above. The Pascal port also dispatches wide-valued arguments to its Int64 System.Random overload when the interpreter marks the argument as wide.
+The current Free Pascal RTL documentation describes its System.Random implementation as Mersenne Twister. That is different from the Delphi 5 32-bit LCG described above. The Pascal port also dispatches wide-valued arguments to its Int64 System.Random overload when the interpreter marks the argument as wide. The pinned OpenStreetChaves revision does not record the exact FPC compiler/RTL build used to produce a particular binary, so the precise MT implementation/version is not yet pinned.
 
 Therefore:
 
 - Pascal .rot files remain valuable for recovering branch order, call sites, and game-state effects.
+- The current FPC RTL documentation says its System.Random uses Mersenne Twister, but the reference repository does not pin the exact compiler/RTL build. Treat this as the port's documented RTL behavior, and pin the build version before making a binary-level claim.
 - A random sequence observed while running the Free Pascal port is not evidence of the original Delphi 5 sequence.
 - C's osc_random transition is the stronger current implementation reference for the Delphi 5 integer generator.
 - The original executable and the exact RandSeed/call stream remain the final authority.
