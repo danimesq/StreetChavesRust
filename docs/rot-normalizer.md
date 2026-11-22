@@ -86,3 +86,19 @@ The `Pascal .rot normalization` workflow installs and verifies FPC 3.2.2, runs t
 - No assumption that source-order AST order alone determines runtime FPC argument evaluation order.
 - No C-port rule promotion when it conflicts with Pascal.
 - No original-executable compatibility claim before the later REA/Ghidra stage.
+
+ 
+## 🌈 Concrete Pascal trace integration status
+
+The experimental Pascal branch now proposes schema-v2 records for logical
+ticks, nested script invocations, concrete branch decisions, loop iterations
+and RNG draws with script-local order and source line. Those records can be
+matched conservatively to the normalizer's static events by pinned source,
+script origin/section, fighter, source line, RNG width and range, while the
+static event retains its symbolic guards and loop structure.
+
+This is a design/implementation stage only: the Pascal exporter has not been
+compiled or run, so there are no captured runtime fixtures and no proven
+end-to-end join. Same-line source sites may be ambiguous because runtime source
+columns are not emitted. The normalizer remains a static model and must not
+invent a concrete path from its symbolic guards.
