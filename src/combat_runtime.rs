@@ -43,6 +43,8 @@ pub struct BodyBox {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FighterState {
+    /// Pascal P.Quadro, independent from the action timer.
+    pub sprite_frame: i32,
     pub character_id: u8,
     pub action_id: u16,
     pub action_frame: u16,
@@ -57,6 +59,32 @@ pub struct FighterState {
     pub distance_ai: i32,
     pub health: i32,
     pub body: BodyBox,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct VictoryAnimationContext {
+    /// Character sprite-sheet displacement (Pascal Desloc).
+    pub sprite_offset: i32,
+    /// Ground Y coordinate (Pascal ChaoY).
+    pub ground_y: f64,
+    /// Camera origin (Pascal CameraX).
+    pub camera_x: f64,
+    /// Camera-relative left turn threshold used by C12.
+    pub camera_left_limit: f64,
+    /// Camera-relative right turn threshold used by C12.
+    pub camera_right_limit: f64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct VictoryParticle {
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct VictoryAnimationResult {
+    pub draws: Vec<RuntimeDraw>,
+    pub particles: Vec<VictoryParticle>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -210,6 +238,16 @@ impl<R: PascalRandomSource> PascalRandomSource for RecordingRandomSource<'_, R> 
     }
 }
 
+fn pascal_round(value: f64) -> i32 {
+    // Delphi/Pascal Round uses ties-to-even; preserve that at exact half values.
+    let floor = value.floor();
+    let fraction = value - floor;
+    if fraction < 0.5 { floor as i32 }
+    else if fraction > 0.5 { (floor + 1.0) as i32 }
+    else if (floor as i64).rem_euclid(2) == 0 { floor as i32 }
+    else { (floor + 1.0) as i32 }
+}
+
 impl CombatState {
     /// Apply the shared C01-C15 Pascal [Acao] victory-command branch.
     ///
@@ -232,6 +270,173 @@ impl CombatState {
         fighter.action_frame = 0;
         fighter.action_duration = 250;
         true
+    }
+
+    /// Execute one character's Pascal [Quadro] victory branch in source order.
+    ///
+    /// The caller supplies the same RNG cursor used by the enclosing game tick.
+    /// Particle requests are returned as ordered effects because the renderer/effect
+    /// system is outside this runtime slice; their RNG consumption is still replayed.
+    pub fn update_victory_animation<R: PascalRandomSource>(
+        &mut self,
+        fighter_index: usize,
+        context: VictoryAnimationContext,
+        rng: &mut R,
+    ) -> Result<VictoryAnimationResult, RuntimeError<R::Error>>
+    where
+        R::Error: fmt::Display,
+    {
+        let mut rng = RecordingRandomSource::new(rng);
+        let mut particles = Vec::new();
+        let fighter = self.fighters.get_mut(fighter_index).ok_or(
+            RuntimeError::UnsupportedBranch("victory animation: invalid fighter index"),
+        )?;
+        if fighter.action_id != ACTION_VICTORY {
+            return Err(RuntimeError::UnsupportedBranch(
+                "victory animation requires ACTION_VICTORY",
+            ));
+        }
+
+        let frame = fighter.action_frame;
+        let offset = context.sprite_offset;
+        match fighter.character_id {
+            // C01: independent frame-boundary writes, including the frame-28 reset.
+            1 => {
+                if frame == 0 { fighter.sprite_frame = offset + 33; }
+                if frame == 7 { fighter.sprite_frame = offset + 34; }
+                if frame == 14 { fighter.sprite_frame = offset + 35; }
+                if frame == 21 { fighter.sprite_frame = offset + 34; }
+                if frame == 28 {
+                    fighter.sprite_frame = offset + 33;
+                    fighter.action_frame = 0;
+                }
+            }
+            // C02: the unconditional base write precedes Random(2).
+            2 => {
+                fighter.sprite_frame = offset + 33;
+                if rng.draw_longint(2).map_err(RuntimeError::Rng)? == 0 {
+                    fighter.sprite_frame = offset + 34;
+                }
+            }
+            3 => {
+                if frame == 0 { fighter.sprite_frame = offset + 33; }
+                if frame == 5 { fighter.sprite_frame = offset + 34; }
+                if frame == 10 { fighter.sprite_frame = offset + 35; }
+                if frame == 15 { fighter.sprite_frame = offset + 34; }
+                if frame == 20 { fighter.sprite_frame = offset + 33; }
+                if frame == 25 { fighter.sprite_frame = offset + 34; }
+                if frame == 30 { fighter.sprite_frame = offset + 35; }
+                if frame == 35 { fighter.sprite_frame = offset + 34; }
+            }
+            4 => {
+                if frame < 13 { fighter.sprite_frame = offset + 33; }
+                if frame == 13 { fighter.sprite_frame = offset + 34; }
+            }
+            5 => {
+                if frame < 5 { fighter.sprite_frame = offset + 33; }
+                if frame == 9 || frame == 17 || frame == 25 || frame == 33 {
+                    fighter.sprite_frame = offset + 34;
+                }
+                if frame == 13 || frame == 21 || frame == 29 || frame == 37 {
+                    fighter.sprite_frame = offset + 33;
+                }
+                if frame == 41 { fighter.sprite_frame = offset + 35; }
+            }
+            6 => {
+                if frame % 4 == 0 {
+                    fighter.sprite_frame = if fighter.sprite_frame == offset + 33 {
+                        offset + 34
+                    } else {
+                        offset + 33
+                    };
+                }
+            }
+            7 => {
+                fighter.sprite_frame = offset + if frame % 2 == 0 { 33 } else { 34 };
+            }
+            8 => {
+                fighter.sprite_frame = offset + 33;
+                if frame % 2 == 0 { fighter.y -= 4.0; }
+                if frame % 2 != 0 { fighter.y += 4.0; }
+                if context.ground_y < fighter.y { fighter.y = context.ground_y; }
+            }
+            9 => {
+                if frame % 3 == 0 {
+                    fighter.sprite_frame = if fighter.sprite_frame == offset + 33 {
+                        offset + 34
+                    } else {
+                        offset + 33
+                    };
+                }
+            }
+            10 => {
+                if frame < 12 { fighter.sprite_frame = offset + 33; }
+                if frame == 12 { fighter.sprite_frame = offset + 34; }
+            }
+            11 => {
+                fighter.sprite_frame = offset + 33;
+            }
+            12 => {
+                if frame % 2 == 0 { fighter.sprite_frame = offset + 33; }
+                else { fighter.sprite_frame = offset + 34; }
+
+                if fighter.facing == SIDE_RIGHT { fighter.x += 12.0; }
+                if fighter.facing == SIDE_LEFT { fighter.x -= 12.0; }
+
+                let camera_relative_x = fighter.x - context.camera_x;
+                if camera_relative_x <= context.camera_left_limit {
+                    fighter.facing = SIDE_RIGHT;
+                }
+                if camera_relative_x >= context.camera_right_limit {
+                    fighter.facing = SIDE_LEFT;
+                }
+
+                if frame % 8 == 0 && rng.draw_longint(2).map_err(RuntimeError::Rng)? == 0 {
+                    if fighter.facing == SIDE_RIGHT { fighter.facing = SIDE_LEFT; }
+                    else if fighter.facing == SIDE_LEFT { fighter.facing = SIDE_RIGHT; }
+                }
+
+                // Pascal evaluates the two Random expressions for each effect in order.
+                for _ in 0..5 {
+                    let dx = rng.draw_longint(40).map_err(RuntimeError::Rng)?;
+                    let dy = rng.draw_longint(10).map_err(RuntimeError::Rng)?;
+                    particles.push(VictoryParticle {
+                        x: fighter.x - 30.0 + dx as f64,
+                        y: fighter.y + dy as f64,
+                    });
+                }
+            }
+            13 => {
+                fighter.sprite_frame = offset + 33;
+                let displacement = pascal_round((f64::from(frame) / 3.0).cos() * 6.0);
+                fighter.y -= displacement;
+                if context.ground_y - 10.0 < fighter.y {
+                    fighter.y = context.ground_y - 10.0;
+                }
+            }
+            14 => {
+                if frame % 3 == 0 {
+                    fighter.sprite_frame = if fighter.sprite_frame == offset + 33 {
+                        offset + 34
+                    } else {
+                        offset + 33
+                    };
+                }
+            }
+            15 => {
+                if frame <= 10 { fighter.sprite_frame = offset + 33; }
+                if frame == 10 { fighter.sprite_frame = offset + 34; }
+                if frame == 14 { fighter.sprite_frame = offset + 35; }
+            }
+            _ => return Err(RuntimeError::UnsupportedBranch(
+                "victory animation: character ID outside audited C01-C15 roster",
+            )),
+        }
+
+        Ok(VictoryAnimationResult {
+            draws: rng.into_draws(),
+            particles,
+        })
     }
 
     /// Apply Pascal `cmPose` for C01-C12.
