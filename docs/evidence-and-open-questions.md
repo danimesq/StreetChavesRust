@@ -26,8 +26,8 @@ A fact may carry more than one label. Record the exact file, section, commit, bi
 | Player record | Reconstructed 176-byte record with position, state, frame, hit/hurt boxes, health, meter, etc. | [original-decomp], SDL3 `docs/spec/02-player-record.md` | Use typed Rust fields; preserve raw offsets only in research notes |
 | Fight update order | The original tick has a specific order for input, AI, stage, hit detection, timers, and physics | [original-decomp], SDL3 `docs/spec/05-fight-engine.md` | Encode order explicitly and test it |
 | Fighter scripts | Pascal project uses INI + `.rot` data and an interpreter | [port-specific], OpenStreetChaves README and `source/LEIAME.md` | Data-driven design is promising; format is not binding |
-| Hitbox metadata | 379/379 Pascal/C hitbox rows match in action/timer, geometry, active, strength, damage, and guard damage | [cross-project], pinned Pascal `C01.ini`–`C15.ini` and C `05a-anim-tables.txt` | Preserve complete metadata and duplicate/strength-specific rows |
-| Hurtboxes | 305/305 Pascal `[Corpo]` and C `hurt frame` rows match after coordinate reordering | [cross-project], same pinned snapshots | Preserve per-frame hurtbox state and investigate absent-frame retention separately |
+| Hitbox metadata | 379/379 Pascal/C hitbox rows match in action/timer, geometry, active, strength, damage, and guard damage; C `sel_boxes` writes fields only on a matching state/timer row and does not clear them first | [cross-project] for rows; [port-specific] for C retention | Preserve complete metadata and duplicate/strength-specific rows; verify stale-field behavior against Pascal and original executable |
+| Hurtboxes | 305/305 Pascal `[Corpo]` and C `hurt frame` rows match after coordinate reordering; C `sel_boxes` only writes a hurtbox on a matching frame and does not clear the previous values first | [cross-project] for rows; [port-specific] for C retention | Preserve per-frame hurtbox state; model lifecycle explicitly and verify Pascal/original behavior |
 | Logic comparison | Pascal project has `--gravar` and legacy-vs-script comparison support | [port-specific], OpenStreetChaves README and migration notes | Adopt deterministic trace comparison as a development practice |
 | Golden screenshots | C17 project documents fixed-seed headless scenarios and SHA-256 screenshot checks | [port-specific], open-street-chaves README | Keep logical-state hashes and render hashes separate |
 | Asset licensing | C17 project explicitly excludes original game assets from its source license | Project README | Keep original game data external; audit every asset source |
@@ -71,7 +71,8 @@ The SMS project is based on a Master System fighting-game hack and imports Chave
 ### Simulation and numeric behavior
 
 - [ ] Which fields require exact floating-point behavior, and which can use fixed-point safely?
-- [ ] Can we reproduce Delphi's RNG sequence exactly for a given seed?
+- [ ] Can we reproduce Delphi's RNG sequence exactly for a given seed? The C port documents a Delphi-style LCG, but it still needs validation against the original executable.
+- [ ] Does the Pascal frame/data update clear or retain prior hitbox and hurtbox fields when no row matches the current frame?
 - [ ] What is the exact ordering of all fight-tick side effects?
 - [ ] Are timer edge cases and pause behavior covered by original-game traces?
 - [ ] How should draw-time side effects in the original be represented without making rendering mutate simulation state?
