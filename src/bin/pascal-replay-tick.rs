@@ -63,6 +63,8 @@ fn main() -> ExitCode {
                 y: 0.0,
                 speed: 3.0,
                 distance_ai: 250,
+                vertical_velocity: 0,
+                in_air: false,
                 health: 100,
                 body,
             },
@@ -85,10 +87,11 @@ fn main() -> ExitCode {
     // Make the initial values explicit: fighter 1's facing is not used by this AI pass.
     state.fighters[0].facing = SIDE_LEFT;
 
-    let tick = match state.tick_common_ai_walk(
+    let tick = match state.tick_common_ai(
         AiTickInputs {
             distance: 150,
             projectile_threat: false,
+            difficulty_factor: 3.6,
         },
         &mut replay,
     ) {
