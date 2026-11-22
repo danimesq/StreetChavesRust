@@ -66,13 +66,24 @@ positive-range results. It does not make the capture a global MTwist trace:
 direct `System.Random` calls outside `SortearValor` remain outside the
 captured RNG cursor.
 
-The Rust library module `src/trace_join.rs` loads schema-v2 JSONL and the
-static symbolic action/tick index. It matches by fighter/character, script
-origin/section, source line, RNG width and literal range when available, while
-preserving `Unique`, `Ambiguous`, `Unmatched`, and `NonRotSource`
-outcomes. A real tick-316 draw fixture exercises the unique match against
-`Common.IA.L293.C4`. The Python validator remains a developer-only helper;
-the project's Rust-only policy for tooling is still an open design decision.
+Use the Rust CLI to reconcile a complete trace with the normalizer's static
+index and write one JSONL result per draw:
+
+```bash
+cargo run --release --bin trace-join -- \
+  ./saida/rng.jsonl \
+  ./normalized/symbolic-action-tick-index.json \
+  ./saida/reconciliation.jsonl
+```
+
+The report begins with aggregate counts and then lists every draw's candidate
+static sites, symbolic action/tick guards, loop context, and IDs of control
+observations from its script invocation. Match statuses are `Unique`,
+`Ambiguous`, `Unmatched`, and `NonRotSource`. The full deterministic
+scenario is covered by the CI workflow in
+[Pascal runtime trace #45039290385](https://github.com/danimesq/StreetChavesRust/actions/runs/45039290385).
+The Python validator remains a developer-only helper; the project's Rust-only
+policy for tooling is still an open design decision.
 
 See [the Pascal reference trace harness](../docs/pascal-reference-trace-harness.md)
 for compile/capture evidence and known limits.
