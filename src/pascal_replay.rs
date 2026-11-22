@@ -82,8 +82,7 @@ impl PascalDrawReplay {
             // A tick-scoped fixture may begin in the middle of the process-wide stream.
             // Preserve the original absolute API index, but require every subsequent
             // selected draw to remain contiguous so a fixture cannot silently skip calls.
-            if position > 0
-                && draw.api_call_index != capture.draws[position - 1].api_call_index + 1
+            if position > 0 && draw.api_call_index != capture.draws[position - 1].api_call_index + 1
             {
                 return Err(PascalReplayError::InvalidRecordedDraw {
                     api_call_index: draw.api_call_index,
