@@ -13,7 +13,8 @@ This directory records the research and engineering decisions for an independent
 - [Fight-loop deep dive](fight-loop-deep-dive.md): source-level comparison of the fight tick, fighter frame selection, hit resolution, effects, and physics.
 - [Source and data inventory](source-inventory.md): pinned reference revisions, repository structure, runtime entry points, data roots, generated tables, and subsystem ownership.
 - [Fighter data deep dive](fighter-data-deep-dive.md): INI/ROT semantics, the C specification-to-table pipeline, roster boundaries, and fighter-data differences.
-- [Fighter roster matrix](fighter-roster-matrix.md): character IDs, Pascal/C coverage, optional sections, and the Chapolin extension.\n- [Frame, AI and hitbox comparison](frame-ai-hitbox-comparison.md): all 15 Pascal [Quadro]/[IA] blocks, C CPU comparison, 379 normalized hitbox rows, and exceptional move-ID findings.
+- [Fighter roster matrix](fighter-roster-matrix.md): character IDs, Pascal/C coverage, optional sections, and the Chapolin extension.
+- [Frame, AI and hitbox comparison](frame-ai-hitbox-comparison.md): all 15 Pascal [Quadro]/[IA] blocks, C CPU comparison, 379 normalized hitbox rows, and exceptional move-ID findings.
 - [Chapolin bonus plan](chapolin-bonus-2026.md): keep Chapolin recoverable as an optional 2026 bonus, separate from the base roster.
 - [Data formats and resource pipelines](data-formats.md): INI/ROT data, fighter/stage/effect resources, generated C tables, asset loading and unresolved parser semantics.
 - [Provenance and licensing review](provenance-and-licenses.md): declared project licenses, third-party material classes, asset rights risks, and current reuse decisions.
