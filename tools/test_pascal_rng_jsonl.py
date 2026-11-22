@@ -159,14 +159,14 @@ class PascalRngJsonlTests(unittest.TestCase):
         session["source_column_scope"] = "direct_pascal_inc+rot_ast"
         draw = draw_record(0, 0, 1, "LongInt")
         draw["source_column"] = 17
-        result = self.run_validator([session, tick_start(), draw, tick_end()])
+        result = self.run_validator([session, tick_start(), script_start(), draw, script_end(), tick_end()])
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_rejects_rot_expression_without_column_when_declared(self) -> None:
         session = session_record()
         session["source_column_scope"] = "direct_pascal_inc+rot_ast"
         draw = draw_record(0, 0, 1, "LongInt")
-        result = self.run_validator([session, tick_start(), draw, tick_end()])
+        result = self.run_validator([session, tick_start(), script_start(), draw, script_end(), tick_end()])
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("ROT expression draw requires source_column", result.stderr)
 
