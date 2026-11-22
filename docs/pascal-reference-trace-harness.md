@@ -266,3 +266,40 @@ fixture values. The adapter currently consumes the wrapper-scoped
 `SortearValor` stream; direct `System.Random` calls outside that wrapper are
 still outside the trace contract. Full tick/state transition comparison and
 multi-fighter/action fixtures remain the next integration work.
+
+
+## 🌈 Executable tick differential: first-divergence comparator
+
+The Rust crate now exposes `pascal_differential::load_tick_checkpoints` and
+`first_divergence`. They parse the Pascal harness's concrete `tick_start`
+and `tick_end` records and compare the selected fighter/action/frame fields
+in ascending tick order. A missing checkpoint is itself a divergence. The
+comparator reports the first differing tick, phase, field, and both values.
+
+A CLI is available for a Rust simulator that emits the same checkpoint JSONL
+shape:
+
+```sh
+cargo run --release --bin pascal-diff -- trace/rng.jsonl rust-checkpoints.jsonl
+```
+
+The first version compares only fields actually present in the Pascal
+schema-v2 snapshots. In particular, `tick_end` does not currently carry
+action-duration fields, and neither phase is a full memory dump. A matching
+report therefore means equality of these emitted checkpoint fields, not
+complete game-state parity.
+
+The replay adapter also exposes width-specific
+`random_longint(i32)` and `random_int64(i64)` entrypoints. A simulator can
+call these at the corresponding RNG sites and gets a strict error on the
+first unexpected width/range, exhausted stream, or leftover draw at
+`finish()`. This is the execution seam; the repository does not yet contain
+a complete action runner that drives the existing combat state model through
+all 3,000 captured ticks.
+
+The recovered Actions artifact contains the complete 3,000-tick trace:
+8,841 wrapper draws (2,787 LongInt and 6,054 Int64), 394,252 control
+records, and 20,437 script invocations. The compact committed tick-316 sample
+remains the only checked-in raw draw fixture at this stage. The full artifact
+is retained at Actions artifact 14761022549 until 2026-12-22; do not treat
+the sample as if it contained the full run.
