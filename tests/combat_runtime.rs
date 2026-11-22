@@ -382,6 +382,56 @@ fn victory_state(character_id: u8, action_frame: u16, sprite_frame: i32) -> Comb
     state
 }
 
+
+#[test]
+fn frame_only_victory_sequences_match_audited_boundaries() {
+    let cases = [
+        (1, 0, 1033),
+        (1, 7, 1034),
+        (1, 14, 1035),
+        (1, 21, 1034),
+        (1, 28, 1033),
+        (3, 0, 1033),
+        (3, 5, 1034),
+        (3, 10, 1035),
+        (3, 15, 1034),
+        (3, 20, 1033),
+        (3, 25, 1034),
+        (3, 30, 1035),
+        (3, 35, 1034),
+        (4, 12, 1033),
+        (4, 13, 1034),
+        (5, 4, 1033),
+        (5, 9, 1034),
+        (5, 13, 1033),
+        (5, 41, 1035),
+        (7, 0, 1033),
+        (7, 1, 1034),
+        (10, 11, 1033),
+        (10, 12, 1034),
+        (11, 200, 1033),
+    ];
+
+    for (character_id, frame, expected) in cases {
+        let mut state = victory_state(character_id, frame, 0);
+        let mut rng = ScriptedRng::default();
+        state
+            .update_victory_animation(1, victory_context(), &mut rng)
+            .unwrap();
+        assert_eq!(
+            state.fighters[1].sprite_frame,
+            expected,
+            "C{character_id:02} at action frame {frame}"
+        );
+        assert_eq!(rng.cursor, 0);
+        if character_id == 1 && frame == 28 {
+            assert_eq!(state.fighters[1].action_frame, 0);
+        } else {
+            assert_eq!(state.fighters[1].action_frame, frame);
+        }
+    }
+}
+
 #[test]
 fn victory_toggle_characters_read_both_prior_sprite_frames() {
     for (character_id, boundary) in [(6, 4), (9, 3), (14, 3)] {
