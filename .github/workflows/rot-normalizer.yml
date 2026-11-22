@@ -5,6 +5,7 @@ on:
     paths:
       - "tools/rot-normalize.py"
       - "tools/test_rot_normalize.py"
+      - "tools/fpc-argument-order-probe.pas"
       - "research/pascal-rot/**"
       - ".github/workflows/rot-normalizer.yml"
   pull_request:
@@ -29,6 +30,76 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Install Free Pascal 3.2.2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fp-compiler
+          fpc -iV
+          test "$(fpc -iV)" = "3.2.2"
+
+      - name: Probe Pascal argument evaluation order
+        run: |
+          mkdir -p build/bin
+          fpc -FEbuild/bin -FUbuild/bin tools/fpc-argument-order-probe.pas
+          build/bin/fpc-argument-order-probe | tee build/argument-order.txt
+          grep -Eq '^argument-order=(left-to-right|right-to-left)
+        uses: actions/checkout@v4
+        with:
+          repository: danimesq/OpenStreetChaves
+          ref: e1b025c35ecbc2b14d8635564aafd23c2107d3d1
+          path: external/OpenStreetChaves
+          persist-credentials: false
+
+      - name: Normalize all 15 fighter scripts
+        run: |
+          ARGUMENT_ORDER="$(sed -n 's/^argument-order=//p' build/argument-order.txt)"
+          python tools/rot-normalize.py \
+            --input-dir research/pascal-rot \
+            --output-dir build/rot-normalized \
+            --pascal-source-root external/OpenStreetChaves/source \
+            --argument-order "$ARGUMENT_ORDER"
+
+      - name: Verify generated roster and evidence boundaries
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("build/rot-normalized")
+          data = json.loads((root / "normalized-timelines.json").read_text())
+          assert len(data["fighters"]) == 15, len(data["fighters"])
+          assert data["reference_policy"]["normative_source"].startswith("Pascal/")
+          assert data["timeline_semantics"]["kind"] == "symbolic_static_trace"
+          assert data["timeline_semantics"]["runtime_rng_draw_indices_are_not_assigned"] is True
+          assert data["pascal_rng_inventory"]["site_count"] > 0
+          assert data["rot_rng_inventory"]["unique_static_sites"] > 0
+          assert data["rot_rng_inventory"]["composed_timeline_occurrences"] >= data["rot_rng_inventory"]["unique_static_sites"]
+          index = json.loads((root / "symbolic-action-tick-index.json").read_text())
+          assert index["events_preserved"] > 0
+          assert index["symbolic_groups"] > 0
+          assert index["runtime_ticks_assigned"] is False
+          assert index["runtime_rng_word_indices_assigned"] is False
+          assert data["reference_policy"]["rng_semantics"].startswith("FPC 3.2.2 MTwist")
+          profile = data["reference_policy"]["argument_evaluation_profile"]
+          assert profile in {"left-to-right", "right-to-left"}
+          probe = Path("build/argument-order.txt").read_text()
+          assert f"argument-order={profile}" in probe
+          for fighter in data["fighters"]:
+              assert set(fighter["sections"]) == {"acao", "quadro", "ia", "acerto"}
+          print("verified 15 fighter timelines and", data["pascal_rng_inventory"]["site_count"], "Pascal RNG sites")
+          PY
+
+      - name: Upload normalized evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: pascal-rot-symbolic-timelines
+          path: |
+            build/rot-normalized/
+            build/argument-order.txt
+          if-no-files-found: error
+          retention-days: 30
+ build/argument-order.txt
 
       - name: Test the normalizer grammar
         run: python -m unittest discover -s tools -p 'test_*.py' -v
