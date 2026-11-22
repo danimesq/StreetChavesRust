@@ -170,7 +170,10 @@ Direct Pascal `.inc` and ROT AST RNG call sites now include source columns:
 11,343 runtime draw records across 45 distinct sites (2,928 direct calls and
 8,415 ROT expressions). The 426 legacy Pascal-direct/helper draws still lack
 explicit source locations. The full capture, schema validation, symbolic
-reconciliation, and independent MTwist comparison passed in workflow run
-45049163298 (artifact 14765190885). Still open: per-subexpression boolean
-values and short-circuit evaluation traces, and a complete executable action
+reconciliation, independent MTwist comparison, and boolean subexpression
+validation passed in workflow run 45049647139 (artifact 14765291483). The trace now contains 675,222 logical boolean operand records and 309,092
+right-side short-circuit skips (308,942 `and_false`, 150 `or_true`). The
+records carry expression/operand node IDs, source line/column, evaluated/value
+flags, final expression result, and short-circuit reason. Still open: unary
+`not` and other boolean constructs, and a complete executable action
 interpreter with per-tick state comparison.
