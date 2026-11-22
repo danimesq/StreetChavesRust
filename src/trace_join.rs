@@ -127,11 +127,7 @@ fn invalid_record(line: usize, message: impl Into<String>) -> TraceJoinError {
     }
 }
 
-fn required_string(
-    record: &Value,
-    key: &str,
-    line: usize,
-) -> Result<String, TraceJoinError> {
+fn required_string(record: &Value, key: &str, line: usize) -> Result<String, TraceJoinError> {
     record
         .get(key)
         .and_then(Value::as_str)
@@ -220,8 +216,9 @@ fn parse_control(record: &Value, line: usize) -> Result<RuntimeControl, TraceJoi
         control_event_index: required_u64(record, "control_event_index", line)?,
         tick_index: optional_u64(record, "tick_index"),
         script_execution_id: optional_u64(record, "script_execution_id"),
-        source_line: optional_u32(record, "source_line")
-            .ok_or_else(|| invalid_record(line, "control source_line must be a non-negative integer"))?,
+        source_line: optional_u32(record, "source_line").ok_or_else(|| {
+            invalid_record(line, "control source_line must be a non-negative integer")
+        })?,
         control_type: required_string(record, "control_type", line)?,
         branch_taken: optional_bool(record, "branch_taken"),
         iteration_index: optional_u64(record, "iteration_index"),
@@ -245,7 +242,10 @@ pub fn load_runtime_capture<R: BufRead>(reader: R) -> Result<RuntimeCapture, Tra
         let line_number = index + 1;
         let raw_line = raw_line.map_err(|error| TraceJoinError::Io(error.to_string()))?;
         if raw_line.trim().is_empty() {
-            return Err(invalid_record(line_number, "blank JSONL lines are not allowed"));
+            return Err(invalid_record(
+                line_number,
+                "blank JSONL lines are not allowed",
+            ));
         }
         let record: Value =
             serde_json::from_str(&raw_line).map_err(|error| TraceJoinError::Json {
@@ -332,7 +332,9 @@ pub fn load_symbolic_rng_sites<R: Read>(reader: R) -> Result<Vec<SymbolicRngSite
             .get("sections")
             .and_then(Value::as_object)
             .ok_or_else(|| {
-                TraceJoinError::InvalidSymbolicIndex("fighter sections must be an object".to_owned())
+                TraceJoinError::InvalidSymbolicIndex(
+                    "fighter sections must be an object".to_owned(),
+                )
             })?;
 
         for (section_name, section) in sections {
@@ -351,10 +353,11 @@ pub fn load_symbolic_rng_sites<R: Read>(reader: R) -> Result<Vec<SymbolicRngSite
                     .and_then(Value::as_u64)
                     .and_then(|value| u32::try_from(value).ok())
                     .ok_or_else(|| {
-                        TraceJoinError::InvalidSymbolicIndex("group_index must fit in u32".to_owned())
+                        TraceJoinError::InvalidSymbolicIndex(
+                            "group_index must fit in u32".to_owned(),
+                        )
                     })?;
-                let symbolic_action_guards =
-                    string_array(group.get("symbolic_action_guards"));
+                let symbolic_action_guards = string_array(group.get("symbolic_action_guards"));
                 let symbolic_tick_guards = string_array(group.get("symbolic_tick_guards"));
                 let events = group
                     .get("events")
@@ -369,14 +372,15 @@ pub fn load_symbolic_rng_sites<R: Read>(reader: R) -> Result<Vec<SymbolicRngSite
                     if event.get("kind").and_then(Value::as_str) != Some("rng_draw") {
                         continue;
                     }
-                    let event_sequence = event
-                        .get("sequence")
-                        .and_then(Value::as_u64)
-                        .ok_or_else(|| {
-                            TraceJoinError::InvalidSymbolicIndex(
-                                "RNG event sequence must be an integer".to_owned(),
-                            )
-                        })?;
+                    let event_sequence =
+                        event
+                            .get("sequence")
+                            .and_then(Value::as_u64)
+                            .ok_or_else(|| {
+                                TraceJoinError::InvalidSymbolicIndex(
+                                    "RNG event sequence must be an integer".to_owned(),
+                                )
+                            })?;
                     let source_line = event
                         .get("source_line")
                         .and_then(Value::as_u64)
@@ -440,7 +444,9 @@ fn parse_origin(origin: &str) -> Option<(String, String)> {
     let (file_name, section_with_bracket) = origin.rsplit_once(" [")?;
     let section = section_with_bracket.strip_suffix(']')?;
     let file_name = file_name.rsplit('/').next()?;
-    let stem = file_name.rsplit_once('.').map_or(file_name, |(stem, _)| stem);
+    let stem = file_name
+        .rsplit_once('.')
+        .map_or(file_name, |(stem, _)| stem);
     let character = if stem.eq_ignore_ascii_case("Comum") {
         "Common"
     } else {
@@ -588,10 +594,7 @@ mod tests {
         assert!(result.candidates[0].loop_context.is_empty());
         assert_eq!(result.invocation_controls.len(), 1);
         assert_eq!(result.invocation_controls[0].source_line, 293);
-        assert_eq!(
-            result.invocation_controls[0].branch_taken,
-            Some(false)
-        );
+        assert_eq!(result.invocation_controls[0].branch_taken, Some(false));
     }
 
     #[test]
