@@ -81,13 +81,15 @@ A decomposição atual do trace tem 3.354 draws fora da categoria simbólica ROT
 
 ### Último estado conhecido em 2026-11-22
 
-- [Rust contracts, run 45062424178](https://github.com/danimesq/StreetChavesRust/actions/runs/45062424178): **success** no HEAD `52437bd`.
-- [Pascal .rot normalization, run 45062424238](https://github.com/danimesq/StreetChavesRust/actions/runs/45062424238): **success** no HEAD `52437bd`.
-- [Pascal runtime trace, run 45062417259](https://github.com/danimesq/StreetChavesRust/actions/runs/45062417259): **in_progress** na última consulta.
+- [Rust contracts, run 45062424178](https://github.com/danimesq/StreetChavesRust/actions/runs/45062424178): **success** no commit `52437bd59184a368c245753b9c0dca4a54cb53aa`.
+- [Pascal .rot normalization, run 45062424238](https://github.com/danimesq/StreetChavesRust/actions/runs/45062424238): **success** no mesmo commit.
+- [Pascal runtime trace, run 45062417259](https://github.com/danimesq/StreetChavesRust/actions/runs/45062417259): **success**, run #70, concluído em 2026-11-22 19:49 UTC, no mesmo commit.
 
-Uma execução anterior, [45050708746](https://github.com/danimesq/StreetChavesRust/actions/runs/45050708746), falhou durante a validação do fixture porque faltavam campos de resumo. Os campos `fighter_count` e `boolean_subexpression_records` foram adicionados depois. O workflow foi atualizado para comparar a saída contra o fixture dourado e verificar também larguras, lutadores, ações, scripts aninhados, loops, colunas de origem e razões de short-circuit.
+A falha anterior [45050708746](https://github.com/danimesq/StreetChavesRust/actions/runs/45050708746) foi corrigida: os campos `fighter_count` e `boolean_subexpression_records` foram adicionados ao fixture dourado. A execução completa posterior confirmou a correção. O workflow compara a saída contra o fixture e verifica larguras, lutadores, ações, scripts aninhados, loops, colunas de origem e razões de short-circuit.
 
-Não declarar a runtime CI verde até a execução 45062417259 (ou uma execução posterior do HEAD) terminar com sucesso. O workflow compila FPC 3.2.2, faz duas capturas determinísticas de 3.000 ticks, compara os JSONL e `logica.txt`, valida schema, reconcilia os draws e recalcula cada resultado com o MTwist Rust.
+**Validação do fixture encerrada: os três workflows acima estão verdes.** A execução runtime compila FPC 3.2.2, faz duas capturas determinísticas de 3.000 ticks, compara os JSONL e `logica.txt`, valida schema, reconcilia os draws e recalcula cada resultado com o MTwist Rust.
+
+O commit validado pela CI é o commit de implementação `52437bd`; o HEAD atual do PR #9 avançou depois com documentação/handoff. Não confundir o SHA testado pela execução com o HEAD atual do PR.
 
 Artifact anterior validado: [run 45049647139](https://github.com/danimesq/StreetChavesRust/actions/runs/45049647139), artifact ID `14765291483`. É evidência histórica útil, mas não substitui a execução do HEAD atual.
 
