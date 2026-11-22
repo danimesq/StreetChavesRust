@@ -21,14 +21,22 @@ This document defines the first Rust-facing contracts derived from the research 
 | HitboxRecord | Retains frame, timer, raw coordinates, active, strength, damage, and guard damage. |
 | HurtboxRecord | Retains frame and raw coordinates. |
 | BoxUpdate | Makes replace, clear, and retain explicit operations. |
+| Aabb | Implements strict AABB overlap; edge contact alone is not a collision. |
 
 The fixture RNG is **not** a Delphi RNG implementation. It is a deterministic injection point for tests. The exact original RNG algorithm, seed initialization, and call sequence remain separate research tasks.
 
 ## 🌈 Hitbox and hurtbox lifecycle: unresolved on purpose
 
-The current cross-port table comparison proves row agreement, not lifecycle semantics. It does not prove:
+The current cross-port table comparison proves row agreement, not a shared lifecycle implementation. The pinned C selector gives one concrete port-specific rule: `sel_boxes` scans rows for the selected frame/state/timer and writes matching fields, but does not clear the previous box fields before scanning. Its fighter initialization supplies a fallback hurtbox. Therefore, in this C snapshot, a lookup with no matching row leaves the previous box values in place. This is **[port-specific]**, not yet promoted to original-game behavior or assumed for the Pascal port.
 
-- whether a frame with no row clears or retains a previous box;
+The Pascal `desenhalutador` calls `AtualizaQuadro` from its draw path, and the fight loop later checks `GolpeAtivo` and the current attack/body coordinates. The exact per-frame assignment/clear behavior inside the script/data update path still needs its own source trace.
+
+The C melee path also uses strict AABB comparisons (`left < other.right`, `right > other.left`, `top < other.bottom`, `bottom > other.top`). The Pascal fight/object/effect paths inspected use the same strict edge-overlap pattern. The Rust crate now exposes this as a pure geometry contract; it does not yet implement hit resolution.
+
+It does not prove:
+
+- whether the Pascal port clears or retains a previous box when a frame has no row;
+- whether the C port's observed stale-box retention matches the original executable;
 - whether active=false removes a hitbox or leaves a disabled row in place;
 - when attack boxes are sampled relative to action timers and collision detection;
 - whether facing changes mirror coordinates before or after collision checks;
@@ -70,7 +78,9 @@ Recommended fixture groups:
 - [x] Add ordered tick/action event types.
 - [x] Add deterministic sequential fixture RNG.
 - [x] Preserve full hitbox metadata and raw hurtbox coordinates.
-- [x] Represent box lifecycle operations explicitly without choosing an unknown default.
+- [x] Represent box lifecycle operations explicitly without choosing an unknown cross-port default.
+- [x] Add strict AABB overlap geometry from the inspected Pascal/C collision paths.
+- [x] Record the C selector's observed stale-box retention as port-specific evidence.
 - [ ] Run cargo fmt --check and cargo test in a Rust toolchain environment.
 - [ ] Expand the 15 fighter ledgers into fully evaluated action/tick traces.
 - [ ] Resolve box retention and activation from the combat update path.
