@@ -1,0 +1,45 @@
+{
+  "schema": "street-chaves-symbolic-action-tick-index/v1",
+  "normative_source": "Pascal/FPC 3.2.2",
+  "kind": "static_guard_grouping_not_dynamic_execution",
+  "runtime_ticks_assigned": false,
+  "runtime_rng_word_indices_assigned": false,
+  "events_preserved": 5091,
+  "fighters": [
+    {
+      "fighter_id": 1,
+      "sections": {
+        "ia": {
+          "group_count": 1,
+          "groups": [
+            {
+              "group_index": 0,
+              "symbolic_action_guards": [],
+              "symbolic_tick_guards": [],
+              "events": [
+                {
+                  "sequence": 0,
+                  "component_order": 0,
+                  "character": "Common",
+                  "kind": "rng_draw",
+                  "source_line": 293,
+                  "source_column": 4,
+                  "guards": [],
+                  "loop_context": [],
+                  "rng_site": "Common.IA.L293.C4",
+                  "function": "Random",
+                  "range_expression": "13",
+                  "random_width": "int32",
+                  "raw_rng_words_consumed": 1,
+                  "rng_result_reduction": "FPC 3.2.2 Random(LongInt): one MT word, multiply-high",
+                  "argument_evaluation": "single-argument",
+                  "argument_context": null
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
