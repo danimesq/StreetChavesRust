@@ -209,6 +209,29 @@ impl<R: PascalRandomSource> PascalRandomSource for RecordingRandomSource<'_, R> 
 }
 
 impl CombatState {
+    /// Apply the shared C01-C15 Pascal [Acao] victory-command branch.
+    ///
+    /// Every original fighter's pinned ROT uses the same eligibility set and writes:
+    /// acVitoria, QuadroAcao = 0, DuracaoAcao = 250. The character-specific victory
+    /// animation remains in each fighter's [Quadro] script and is deliberately separate.
+    pub fn apply_character_victory(&mut self, fighter_index: usize) -> bool {
+        let Some(fighter) = self.fighters.get_mut(fighter_index) else {
+            return false;
+        };
+
+        if !matches!(
+            fighter.action_id,
+            ACTION_IDLE | ACTION_WALKING | ACTION_CROUCHING
+        ) {
+            return false;
+        }
+
+        fighter.action_id = ACTION_VICTORY;
+        fighter.action_frame = 0;
+        fighter.action_duration = 250;
+        true
+    }
+
     /// Execute one source-ordered Common.rot [IA] tick using no character-specific child ROT.
     pub fn tick_common_ai<R: PascalRandomSource>(
         &mut self,
