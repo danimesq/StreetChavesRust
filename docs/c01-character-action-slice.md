@@ -91,3 +91,25 @@ Each fighter must be audited and validated independently. Mark an item complete 
 This PR does not establish full combat equivalence merely by completing the character action scripts. CameraX, RelogioParado, additional checkpoints and other combat systems remain separate outstanding systems unless explicitly added with source evidence and validation. It does not add a general arbitrary Pascal .rot interpreter.
 
 No Pascal source or game assets are copied into this repository. The source revision is cited for reproducibility.
+
+## 🌈 First executable implementation: victory command
+
+The first runtime behavior landed in `src/combat_runtime.rs` as
+`CombatState::apply_character_victory`.
+
+Source audit result for the pinned C01-C15 ROT files:
+
+- All 15 define the same `cmVitoria` eligibility predicate:
+  `P.Acao in [acParado, acAndando, acAgachado]`.
+- All 15 write `P.Acao := acVitoria`, `P.QuadroAcao := 0` and
+  `P.DuracaoAcao := 250`.
+- The runtime applies only those three source-backed writes. It does not clear
+  unrelated fighter state or consume RNG.
+- Tests cover all 15 character IDs, each eligible starting action, rejected
+  action states, and an invalid fighter index.
+
+This is a bounded implementation of the character [Acao] command entry only.
+It does **not** implement the per-character victory animation in [Quadro].
+Those animation branches differ across the roster and remain independently
+audited. Pose is also not included in this first code slice; its presence and
+frame behavior must be handled per source file rather than assumed for C13-C15.
