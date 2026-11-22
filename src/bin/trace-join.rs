@@ -72,7 +72,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let summary = json!({
         "record_type": "reconciliation_summary",
         "schema_version": 1,
-        "session_id": capture.session_id,
+        "session_id": capture.session_id.clone(),
         "runtime_schema_version": capture.schema_version,
         "runtime_draws": joined.len(),
         "symbolic_rng_timeline_occurrences": symbolic_sites.len(),
@@ -190,13 +190,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "operand_node": control.operand_node,
             "operand_source_line": control.operand_source_line,
             "operand_source_column": control.operand_source_column,
-            "operator": control.operator,
-            "operand": control.operand,
+            "operator": control.operator.clone(),
+            "operand": control.operand.clone(),
             "evaluated": control.evaluated,
             "boolean_value": control.boolean_value,
             "short_circuit": control.short_circuit,
             "expression_result": control.expression_result,
-            "short_circuit_reason": control.short_circuit_reason
+            "short_circuit_reason": control.short_circuit_reason.clone()
         });
         writeln!(output, "{}", serde_json::to_string(&record)?)?;
     }
