@@ -204,7 +204,7 @@ BUNDLE
 # 🌈 A machine-readable hash list for every generated artifact (excluding itself).
 (
   cd -- "$OUT"
-  { find input reports logs manifest -type f ! -name 'artifact-sha256.tsv' -print0; printf '%s\\0' README.txt; } |
+  { find input reports logs manifest -type f ! -name 'artifact-sha256.tsv' -print0; printf '%s\0' README.txt; } |
     sort -z |
     while IFS= read -r -d '' path; do
       printf '%s\t%s\n' "$(sha256_file "$path")" "$path"
