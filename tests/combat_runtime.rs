@@ -76,7 +76,8 @@ fn ai_scenario(trace: &str, tick_index: u64) -> (CombatState, AiTickInputs) {
         }
     }
 
-    let ai = ai_inputs.unwrap_or_else(|| panic!("tick {tick_index} lacks captured Comum.rot [IA] inputs"));
+    let ai = ai_inputs
+        .unwrap_or_else(|| panic!("tick {tick_index} lacks captured Comum.rot [IA] inputs"));
     let fighter = fighter_from_snapshot(&ai["fighter"]);
     let opponent = fighter_from_snapshot(&ai["opponent"]);
 
