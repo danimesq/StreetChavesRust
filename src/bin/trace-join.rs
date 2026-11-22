@@ -76,6 +76,18 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .filter(|control| control.short_circuit == Some(true))
         .count();
+    let mut short_circuit_reason_counts = HashMap::<String, usize>::new();
+    for control in capture
+        .controls
+        .iter()
+        .filter(|control| control.short_circuit == Some(true))
+    {
+        if let Some(reason) = &control.short_circuit_reason {
+            *short_circuit_reason_counts
+                .entry(reason.clone())
+                .or_default() += 1;
+        }
+    }
 
     for row in &joined {
         match row.status {
@@ -123,6 +135,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         "source_column_draws": source_column_draws,
         "boolean_subexpression_records": boolean_subexpression_records,
         "short_circuit_skips": short_circuit_skips,
+        "short_circuit_reason_counts": short_circuit_reason_counts,
         "source_column_available_for_pascal_direct": true,
         "rot_expression_source_column_available": true,
         "instrumented_game_source_rng_scope": true,
