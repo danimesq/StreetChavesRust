@@ -83,8 +83,11 @@ jobs:
           mkdir -p build
           source/build/bin/StreetChaves --gravar build/trace-a 3000 300 --rng-jsonl build/trace-a/rng.jsonl
           source/build/bin/StreetChaves --gravar build/trace-b 3000 300 --rng-jsonl build/trace-b/rng.jsonl
+          source/build/bin/StreetChaves --gravar build/trace-off 3000 300
           cmp build/trace-a/rng.jsonl build/trace-b/rng.jsonl
           cmp build/trace-a/logica.txt build/trace-b/logica.txt
+          cmp build/trace-a/logica.txt build/trace-off/logica.txt
+          cmp build/trace-b/logica.txt build/trace-off/logica.txt
 
       - name: Validate both schema-v2 captures
         run: |
@@ -152,6 +155,7 @@ jobs:
             external/OpenStreetChaves/build/trace-b/rng.jsonl
             external/OpenStreetChaves/build/trace-b/logica.txt
             external/OpenStreetChaves/build/trace-b/reconciliation.jsonl
+            external/OpenStreetChaves/build/trace-off/logica.txt
             external/OpenStreetChaves/build/rot-normalized/symbolic-action-tick-index.json
           if-no-files-found: error
           retention-days: 30
