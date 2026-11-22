@@ -141,6 +141,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 "source_kind": row.draw.source_kind,
                 "source_origin": row.draw.source_origin,
                 "source_line": row.draw.source_line,
+                "source_column": row.draw.source_column,
                 "width": row.draw.width,
                 "range": row.draw.range,
                 "result": row.draw.result,
