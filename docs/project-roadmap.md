@@ -30,7 +30,7 @@ There are no calendar estimates. Each phase advances when its exit criteria are 
 | 5 | Combat, effects, and physics | Planned |
 | 6 | SDL3 runtime, input, rendering, and audio adapters | Planned |
 | 7 | Complete arcade flow and content integration | Planned |
-| 8 | Compatibility, regression, and platform hardening | Planned |
+| 8 | Final original-executable compatibility, regression, and platform hardening | Deferred until first playable baseline |
 | 9 | Packaging, documentation, and first release | Planned |
 
 ## Phase 0 — Research baseline and project definition
