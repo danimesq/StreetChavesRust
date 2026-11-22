@@ -57,7 +57,7 @@ Start with the [documentation index](docs/README.md) for the full research map.
 
 ## Current focus
 
-The current phase is source research and specification, not feature implementation. The move matrix now inventories the special-move names/notation for all 15 fighters and compares Pascal action durations with the C move-setup reference; frame-by-frame, hitbox, effect/sound, and original-executable validation remain in progress:
+The current phase is source research and specification, not feature implementation. The current research pass indexes all 15 Pascal frame scripts and AI blocks, compares all 379 hitbox rectangles with the C tables, and records exceptional move IDs. The first playable Rust baseline comes before the final original-executable compatibility stage:
 
 
 - Compare the two SDL implementations at the source level.
