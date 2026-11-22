@@ -382,7 +382,6 @@ fn victory_state(character_id: u8, action_frame: u16, sprite_frame: i32) -> Comb
     state
 }
 
-
 #[test]
 fn frame_only_victory_sequences_match_audited_boundaries() {
     let cases = [
@@ -419,8 +418,7 @@ fn frame_only_victory_sequences_match_audited_boundaries() {
             .update_victory_animation(1, victory_context(), &mut rng)
             .unwrap();
         assert_eq!(
-            state.fighters[1].sprite_frame,
-            expected,
+            state.fighters[1].sprite_frame, expected,
             "C{character_id:02} at action frame {frame}"
         );
         assert_eq!(rng.cursor, 0);
