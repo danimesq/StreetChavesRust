@@ -192,3 +192,23 @@ The first implementation slice should cover the frame-only branches whose requir
 C06, C09 and C14 also require tests that seed the prior sprite frame to both values; testing only the output frame from a default state would miss their read-before-write behavior.
 
 This section defines the runtime contract, not a claim that victory animation behavior has landed. The victory [Acao] command entry remains implemented separately; all per-character victory [Quadro] execution remains pending until code, tests and replay evidence cover the relevant state and effects.
+
+
+## 🌈 Executable victory animation runtime slice
+
+Commit implementation adds persistent `FighterState::sprite_frame`, explicit
+`VictoryAnimationContext` (sprite offset, ground Y, camera origin and camera-relative
+turn limits), and `CombatState::update_victory_animation`.
+
+The update preserves the audited statement order for C01-C15. C02 consumes exactly
+one shared `Random(2)` draw per victory update. C12 moves by 12, applies camera-relative
+facing thresholds, conditionally consumes its `Random(2)` draw at action-frame
+multiples of eight, then consumes the ten ordered particle-coordinate draws
+(`Random(40)`, `Random(10)` repeated five times). Particle spawn requests are returned
+as ordered data so the effect renderer can consume them without hiding or reordering
+RNG calls. C08 and C13 now receive explicit ground context; C13 uses ties-to-even
+Pascal rounding for its cosine displacement.
+
+C06, C09 and C14 branch on the previous sprite frame. Tests must seed both 33 and 34
+and assert the opposite frame on each eligible action-frame boundary. This is an
+animation update API, not a full renderer/effect-system integration claim.
