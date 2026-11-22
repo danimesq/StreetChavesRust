@@ -1,0 +1,137 @@
+{
+  "schema": "street-chaves-pascal-source-pins/v1",
+  "reference_policy": "Pascal source is normative for Rust reconstruction. C-port differences are annotations pending original-executable reverse-engineering confirmation.",
+  "upstream_repository": "danimesq/OpenStreetChaves",
+  "upstream_license": "GPL-3.0",
+  "upstream_commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+  "files": [
+    {
+      "source_path": "Dados/Lutadores/Comum.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "bf064fd5fbe892aeb31c059ea9272e35bccf1b46",
+      "sha256": null,
+      "target": "research/pascal-rot/Comum.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C01.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "4043ba2780318d05da8e7589a5ca6997408b58bd",
+      "sha256": null,
+      "target": "research/pascal-rot/C01.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C02.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "27b66fdde28e6b57542c2c9bc28c3908ac31c1ef",
+      "sha256": null,
+      "target": "research/pascal-rot/C02.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C03.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "d69dc88e1d898583e4571c9e1f123add9045ba87",
+      "sha256": null,
+      "target": "research/pascal-rot/C03.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C04.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "94cfe1bb5fc8983700a02cf80f74e809325cb999",
+      "sha256": null,
+      "target": "research/pascal-rot/C04.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C05.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "27a221792cb8ac4fc685a8fe510dbc871afeef5a",
+      "sha256": null,
+      "target": "research/pascal-rot/C05.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C06.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "238faecff436d188c96ddd9d7865ceaabfb289cc",
+      "sha256": null,
+      "target": "research/pascal-rot/C06.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C07.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "3cef84b09fce2d677b88e15d47edc926e7ca8ff5",
+      "sha256": null,
+      "target": "research/pascal-rot/C07.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C08.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "38c419da7364fcc5a79654c5facace2b9da38900",
+      "sha256": null,
+      "target": "research/pascal-rot/C08.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C09.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "aaa2677dbc75f82a97631752aca9f62b54b99472",
+      "sha256": null,
+      "target": "research/pascal-rot/C09.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C10.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "e4b229975d0e7bb1f4044f2030a8aa38211218f6",
+      "sha256": null,
+      "target": "research/pascal-rot/C10.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C11.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "862192ac6dbbafbe4d71e3100d99a515f408c894",
+      "sha256": null,
+      "target": "research/pascal-rot/C11.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C12.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "d34fdcd41d050ae2d754d4552d58f429a218fa8b",
+      "sha256": null,
+      "target": "research/pascal-rot/C12.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C13.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "08a0664d1098b59ecfcfb8ca5a3f6cae2126e3a5",
+      "sha256": null,
+      "target": "research/pascal-rot/C13.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C14.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "58157df7c2455e41c201c36217ee51ab9c626728",
+      "sha256": null,
+      "target": "research/pascal-rot/C14.rot"
+    },
+    {
+      "source_path": "Dados/Lutadores/C15.rot",
+      "repository": "danimesq/OpenStreetChaves",
+      "commit": "e1b025c35ecbc2b14d8635564aafd23c2107d3d1",
+      "blob_sha": "08e71835d1e7ae004063c57947c411dfa98d55f8",
+      "sha256": null,
+      "target": "research/pascal-rot/C15.rot"
+    }
+  ]
+}
