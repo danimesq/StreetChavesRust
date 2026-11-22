@@ -21,6 +21,7 @@ This directory records the research and engineering decisions for an independent
 - [Combat tick contracts](combat-tick-contract.md): Rust contracts for ordered events, Delphi 5 RNG, collision geometry, and box records.
 - [Box lifecycle deep dive](box-lifecycle-deep-dive.md): exact C selector and Pascal AplicarCaixas behavior, including retain-on-miss, inactive rows, ordered strength variants, and a port divergence.
 - [RNG compatibility](rng-compatibility.md): Delphi 5 LCG implementation, Free Pascal RTL mismatch, seed initialization, and stream ordering.
+- [RNG call-site inventory](rng-callsite-inventory.md): C shared RNG call sites, fight-tick phase order, and variable-consumption traps.
 - [Original executable reverse engineering](original-executable-reverse-engineering.md): PE/toolchain, resources, assets, gameplay cross-references, and final compatibility-fixture plan.
 - [Chapolin bonus plan](chapolin-bonus-2026.md): keep Chapolin recoverable as an optional 2026 bonus, separate from the base roster.
 - [Data formats and resource pipelines](data-formats.md): INI/ROT data, fighter/stage/effect resources, generated C tables, asset loading and unresolved parser semantics.
