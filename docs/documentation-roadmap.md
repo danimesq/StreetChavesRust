@@ -26,7 +26,9 @@ There are no calendar estimates. Each item advances according to evidence and ex
 | [Data formats](data-formats.md) | Records observed INI/ROT, generated-table and resource pipelines | Test parser edge cases and finish format specifications |
 | [Fighter data deep dive](fighter-data-deep-dive.md) | Compares Pascal INI/ROT execution with the C spec/generated-table model | Expand into per-character move and field matrices |
 | [Fighter roster matrix](fighter-roster-matrix.md) | Records IDs, per-character file presence and optional script sections | Validate all move differences against original executable captures |
-| [Frame, AI and hitbox comparison](frame-ai-hitbox-comparison.md) | Indexes all 15 Pascal frame/AI scripts and compares all 379 hitbox rectangles with C | Complete event timelines, resource mapping, hit metadata, and hurtboxes |
+| [Frame, AI and hitbox comparison](frame-ai-hitbox-comparison.md) | Compares all 15 Pascal AI blocks with C and validates all 379 hitbox metadata tuples plus 305 hurtboxes | Correlate action names, mirror/activation semantics, and original-game timing |
+| [Ordered frame event ledger](ordered-frame-event-ledger.md) | Preserves source-ordered event statements from all 15 Pascal [Quadro] blocks | Expand nested guards, loops, and RNG order into action/tick timelines |
+| [Original executable reverse engineering](original-executable-reverse-engineering.md) | Tracks preliminary PE evidence and the static/runtime reverse-engineering sequence | Reproduce tool reports, resources, asset manifests, and REA cross-reference findings |
 | [Original executable reverse engineering](original-executable-reverse-engineering.md) | Records preliminary PE clues and the staged plan for resources, assets, code cross-references, and later compatibility fixtures | Reproduce PE/hash findings, extract resources, and trace timer/gameplay anchors |
 | [Provenance and licenses](provenance-and-licenses.md) | Records declared licenses and blocks unverified asset reuse | Complete per-file rights and dependency audit |
 
