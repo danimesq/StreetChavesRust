@@ -62,6 +62,9 @@ jobs:
           assert data["timeline_semantics"]["kind"] == "symbolic_static_trace"
           assert data["timeline_semantics"]["runtime_rng_draw_indices_are_not_assigned"] is True
           assert data["pascal_rng_inventory"]["site_count"] > 0
+          assert data["rot_rng_inventory"]["unique_static_sites"] > 0
+          assert data["rot_rng_inventory"]["composed_timeline_occurrences"] >= data["rot_rng_inventory"]["unique_static_sites"]
+          assert data["reference_policy"]["rng_semantics"].startswith("FPC 3.2.2 MTwist")
           for fighter in data["fighters"]:
               assert set(fighter["sections"]) == {"acao", "quadro", "ia", "acerto"}
           print("verified 15 fighter timelines and", data["pascal_rng_inventory"]["site_count"], "Pascal RNG sites")
