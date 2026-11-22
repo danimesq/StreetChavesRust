@@ -59,6 +59,26 @@ This gives three different operations which must remain distinct in Rust:
 
 A complete `Clear` of the stored box record is a fourth, stronger operation. It should only be emitted when a source actually removes the box record, not as a synonym for `GolpeAtivo := False` or `attacking = false`.
 
+## 🌈 Why the row order is real, not a documentation artifact
+
+The C generation path preserves source order end to end:
+
+1. `tools/gen_tables.py` walks `05a-anim-tables.txt` line by line and appends each hit row to the `hit` list.
+2. The `rows(items)` formatter emits a join over the given list without sorting it.
+3. The generated `osc_hit[]` array is therefore in the same order as the parsed specification.
+4. `sel_boxes` scans `osc_hit` from index 0 upward and writes every match. A later duplicate-key row overwrites the earlier one.
+
+The Pascal path also preserves the order it receives:
+
+1. `ChavesGolpes.pas` calls `Ini.ReadSectionValues('Ataque', Linhas)`.
+2. It walks `Linhas[0..Count-1]`, appending each parsed row to the dynamic `Ataques` array.
+3. `AplicarCaixas` scans that array from index 0 upward without sorting or early exit.
+4. The loader's own source comment explicitly labels `Ataques` as being stored “na ordem do arquivo”.
+
+The current Free Pascal RTL source strengthens the mechanism behind that ordering: its INI parser appends each key as it reads the input lines, and `ReadSectionValues` walks the in-memory key list by ascending index. The exact FPC compiler/RTL version used for a specific project binary is not pinned, so this source-level confirmation should not be silently upgraded into a claim about every historical binary.
+
+This order chain is why the character-11 example is a genuine selector discrepancy between the pinned source ports, not merely two rows displayed in a different documentation order.
+
 ## 🌈 C duplicate-key discrepancy: fighter 11, state 27, timer 1
 
 The C animation table contains two hit rows with the same selector key for character 11:
@@ -161,3 +181,5 @@ These are adapters/contracts, not a complete fight implementation. The source-sp
 - [C fighter.c](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6842ff6618ecdb8f425bba61c9183/src/fight/fighter.c)
 - [C combat.c](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6842ff6618ecdb8f425bba61c9183/src/fight/combat.c)
 - [C 05a animation tables](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6842ff6618ecdb8f425bba61c9183/docs/spec/05a-anim-tables.txt)
+- [C table generator](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6842ff6618ecdb8f425bba61c9183/tools/gen_tables.py)
+- [Free Pascal INI parser and section reader](https://github.com/fpc/FPCSource/blob/main/packages/fcl-base/src/inifiles.pp#L1173)
