@@ -31,6 +31,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut ambiguous = 0usize;
     let mut unmatched = 0usize;
     let mut non_rot_source = 0usize;
+    let mut rot_expression_draws = 0usize;
+    let mut pascal_helper_draws = 0usize;
+    let mut pascal_direct_draws = 0usize;
 
     for row in &joined {
         match row.status {
@@ -38,6 +41,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             SiteMatchStatus::Ambiguous => ambiguous += 1,
             SiteMatchStatus::Unmatched => unmatched += 1,
             SiteMatchStatus::NonRotSource => non_rot_source += 1,
+        }
+        match row.draw.source_kind.as_str() {
+            "rot_expression" => rot_expression_draws += 1,
+            "pascal_helper" => pascal_helper_draws += 1,
+            "pascal_direct" => pascal_direct_draws += 1,
+            _ => {}
         }
     }
 
@@ -52,6 +61,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         "ambiguous": ambiguous,
         "unmatched": unmatched,
         "non_rot_source": non_rot_source,
+        "source_kind_counts": {
+            "rot_expression": rot_expression_draws,
+            "pascal_helper": pascal_helper_draws,
+            "pascal_direct": pascal_direct_draws
+        },
         "match_policy": "fighter+character+section+source_line+width+literal_range_when_available",
         "source_column_available_at_runtime": false,
         "wrapper_rng_scope_only": true
