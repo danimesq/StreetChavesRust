@@ -31,6 +31,9 @@ The project studies three independent repositories. They are evidence sources, n
 The research and design notes live in [the documentation directory](docs/README.md).
 
 - [Comparative analysis](docs/comparative-analysis.md) — architecture, strengths, differences, and limitations of the SDL implementations.
+- [Source and data inventory](docs/source-inventory.md) — pinned source revisions, code/data layout, entry points, and subsystem ownership.
+- [Data formats and resource pipelines](docs/data-formats.md) — fighter scripts, INI resources, generated C tables, and unresolved format semantics.
+- [Provenance and licensing review](docs/provenance-and-licenses.md) — code licenses, asset origins, redistribution risks, and reuse decisions.
 - [Fight-loop deep dive](docs/fight-loop-deep-dive.md) — source-level analysis of tick order, frame selection, hit resolution, effects, and physics.
 - [Rust architecture proposal](docs/rust-architecture.md) — proposed boundaries between the simulation core and SDL3/platform services.
 - [Evidence register and open questions](docs/evidence-and-open-questions.md) — evidence, confidence levels, provenance, unknowns, and validation priorities.
