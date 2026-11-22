@@ -207,8 +207,8 @@ A `CharacterActionScript` callback represents the character-specific `[Acao]` ca
 - Trace-only Pascal input snapshot PR: https://github.com/danimesq/OpenStreetChaves/pull/3
 - Pascal FPC 3.2.2 compile, deterministic 3,000-tick capture, snapshot validation and artifact upload: https://github.com/danimesq/OpenStreetChaves/actions/runs/45069244306
 - Full Pascal trace artifact: `ai-input-snapshot-trace`, artifact ID `14772348640`.
-- Rust contracts success before the newest snapshot-driven test/CLI updates: https://github.com/danimesq/StreetChavesRust/actions/runs/45069192699
-- Pascal .rot normalization success before those newest updates: https://github.com/danimesq/StreetChavesRust/actions/runs/45069192703
+- Rust contracts on the snapshot-driven runtime head: https://github.com/danimesq/StreetChavesRust/actions/runs/45070221592 (success; 33 library tests, 2 binary tests, 5 runtime integration tests).
+- Pascal .rot normalization on the same head: https://github.com/danimesq/StreetChavesRust/actions/runs/45070221627 (success).
 
 The selected tick-316 sample is a complete two-checkpoint differential regression. Ticks 317 and 381 currently validate the captured RNG path and selected IA-script outcome; they are not yet full tick-level differential matches. This runtime is not a full combat simulator or a general Pascal .rot interpreter.
 
