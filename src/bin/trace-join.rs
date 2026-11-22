@@ -2,9 +2,9 @@
 //! symbolic RNG/action-tick index. Writes JSONL: one summary followed by one
 //! record per observed SortearValor request.
 
+use std::collections::HashSet;
 use std::env;
 use std::fs::File;
-use std::collections::HashSet;
 use std::io::{self, BufReader, BufWriter, Write};
 use std::process::ExitCode;
 
