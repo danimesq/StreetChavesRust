@@ -68,8 +68,15 @@ pub struct CombatState {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AiTickInputs {
+    /// Pascal IA input `Dist`.
     pub distance: i32,
-    pub projectile_threat: bool,
+    /// Pascal IA input `DistProj`, retained for later character-specific scripts.
+    pub projectile_distance: i32,
+    /// Pascal IA input `OppY`, retained for later character-specific scripts.
+    pub opponent_y: i32,
+    /// Pascal IA input `Ameaca`; the source guard is exactly `Ameaca = 0`.
+    pub threat: i32,
+    /// Pascal IA input `Fator`.
     pub difficulty_factor: f64,
 }
 
@@ -261,7 +268,7 @@ impl CombatState {
 
         // Source lines 302-308: four mutually exclusive direction/facing predicates.
         // Cache the entry guard: each AcaoJogador call clears P.Defendendo internally.
-        let ai_actions_enabled = !self.fighters[1].defending && !input.projectile_threat;
+        let ai_actions_enabled = !self.fighters[1].defending && input.threat == 0;
         if ai_actions_enabled {
             let fighter = &self.fighters[1];
             let command = match (input.distance >= fighter.distance_ai, fighter.facing) {
@@ -282,7 +289,7 @@ impl CombatState {
 
         // Common.rot [IA], lines 310-323. Each independent if consumes its own draw;
         // only the four crouching probabilities are conditional on the fifth draw.
-        if !self.fighters[1].defending && !input.projectile_threat && input.distance <= 80 {
+        if !self.fighters[1].defending && input.threat == 0 && input.distance <= 80 {
             let factor = input.difficulty_factor;
             if Self::random_zero_int64(&mut rng, 8.0, factor, 312)? {
                 self.execute_action_command(
