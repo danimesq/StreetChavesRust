@@ -548,6 +548,11 @@ pub fn reconcile_capture(
     let mut controls_by_invocation: HashMap<(Option<u64>, Option<u64>), Vec<RuntimeControl>> =
         HashMap::new();
     for control in &capture.controls {
+        // Boolean subexpressions are emitted once as dedicated CLI records;
+        // do not clone them into every draw from the same invocation.
+        if control.control_type == "boolean_subexpression" {
+            continue;
+        }
         controls_by_invocation
             .entry((control.tick_index, control.script_execution_id))
             .or_default()
