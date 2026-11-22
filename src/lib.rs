@@ -446,7 +446,204 @@ impl RandomSource for FixtureRng {
     }
 }
 
-/// Delphi 5's 32-bit System.Random range generator.
+
+/// FPC 3.2.2 System.Random compatibility layer used by the normative Pascal source.
+///
+/// The pinned FPC 3.2.2 RTL implements MTwist (MT19937, 624-word state).
+/// Random(LongInt) consumes one 32-bit MT word and applies multiply-high range
+/// reduction. Random(Int64) consumes two MT words, composes a non-negative
+/// 63-bit value, then applies modulo.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PascalRandomWidth {
+    LongInt,
+    Int64,
+}
+
+/// One Pascal System.Random call, including how many raw MT words it consumed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PascalRandomSample {
+    pub call_index: u64,
+    pub first_word_index: u64,
+    pub words_consumed: u8,
+    pub width: PascalRandomWidth,
+    pub range: i64,
+    pub value: i64,
+}
+
+/// Free Pascal 3.2.2 MTwist implementation with injectable RandSeed.
+///
+/// Randomize's platform-specific seed source is deliberately kept outside this
+/// type. The FPC RTL complements RandSeed after detecting a reseed; this
+/// implementation preserves that behavior to match subsequent comparisons.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Fpc322Rng {
+    state: [u32; 624],
+    index: usize,
+    rand_seed: u32,
+    old_rand_seed: u32,
+    calls: u64,
+    words: u64,
+}
+
+impl Fpc322Rng {
+    const N: usize = 624;
+    const M: usize = 397;
+    const MATRIX_A: u32 = 0x9908_B0DF;
+    const UPPER_MASK: u32 = 0x8000_0000;
+    const LOWER_MASK: u32 = 0x7FFF_FFFF;
+
+    /// Match a fresh FPC process with RandSeed set to seed.
+    pub fn new(seed: i32) -> Self {
+        Self {
+            state: [0; Self::N],
+            index: Self::N + 1,
+            rand_seed: seed as u32,
+            old_rand_seed: 0,
+            calls: 0,
+            words: 0,
+        }
+    }
+
+    pub fn rand_seed(&self) -> u32 {
+        self.rand_seed
+    }
+
+    /// Number of System.Random calls (not raw MT words).
+    pub fn calls_consumed(&self) -> u64 {
+        self.calls
+    }
+
+    /// Number of underlying 32-bit MT words consumed.
+    pub fn words_consumed(&self) -> u64 {
+        self.words
+    }
+
+    /// Assign RandSeed as Pascal code can. FPC notices a changed value on the
+    /// next random call, except for the RTL's documented sentinel edge case.
+    pub fn set_rand_seed(&mut self, seed: i32) {
+        self.rand_seed = seed as u32;
+    }
+
+    fn init_state(&mut self, seed: u32) {
+        self.state[0] = seed;
+        for i in 1..Self::N {
+            let previous = self.state[i - 1];
+            self.state[i] = 1_812_433_253u32
+                .wrapping_mul(previous ^ (previous >> 30))
+                .wrapping_add(i as u32);
+        }
+        self.index = Self::N;
+    }
+
+    #[inline]
+    fn twist_word(a: u32, b: u32) -> u32 {
+        let mixed = (a & Self::UPPER_MASK) | (b & Self::LOWER_MASK);
+        (mixed >> 1) ^ if mixed & 1 != 0 { Self::MATRIX_A } else { 0 }
+    }
+
+    /// Preserve the in-place loop order in FPC 3.2.2's mtwist_update_state.
+    fn update_state(&mut self) {
+        for i in 0..(Self::N - Self::M) {
+            self.state[i] =
+                self.state[i + Self::M] ^ Self::twist_word(self.state[i], self.state[i + 1]);
+        }
+        for i in (Self::N - Self::M)..(Self::N - 1) {
+            self.state[i] = self.state[i + (Self::M - Self::N)]
+                ^ Self::twist_word(self.state[i], self.state[i + 1]);
+        }
+        self.state[Self::N - 1] =
+            self.state[Self::M - 1] ^ Self::twist_word(self.state[Self::N - 1], self.state[0]);
+        self.index = 0;
+    }
+
+    /// One raw MT word, following FPC's RandSeed/OldRandSeed logic.
+    pub fn next_u32(&mut self) -> u32 {
+        let mut word_index = self.index;
+        self.index = self.index.saturating_add(1);
+
+        if self.rand_seed != self.old_rand_seed || word_index >= Self::N + 1 {
+            self.init_state(self.rand_seed);
+            self.rand_seed = !self.rand_seed;
+            self.old_rand_seed = self.rand_seed;
+            word_index = Self::N;
+        }
+
+        if word_index == Self::N {
+            self.update_state();
+            word_index = 0;
+            self.index = 1;
+        }
+
+        let mut value = self.state[word_index];
+        value ^= value >> 11;
+        value ^= (value << 7) & 0x9D2C_5680;
+        value ^= (value << 15) & 0xEFC6_0000;
+        value ^= value >> 18;
+
+        self.words = self.words.saturating_add(1);
+        value
+    }
+
+    /// FPC 3.2.2 Random(LongInt): one MT word and multiply-high reduction.
+    pub fn random_longint(&mut self, range: i32) -> PascalRandomSample {
+        let call_index = self.calls;
+        let first_word_index = self.words;
+        let word = self.next_u32();
+        let adjusted_range = if range < 0 { range.wrapping_add(1) } else { range };
+        let product_bits = (word as i64).wrapping_mul(adjusted_range as i64) as u64;
+        let value = (product_bits >> 32) as i32 as i64;
+        self.calls = self.calls.saturating_add(1);
+        PascalRandomSample {
+            call_index,
+            first_word_index,
+            words_consumed: 1,
+            width: PascalRandomWidth::LongInt,
+            range: range as i64,
+            value,
+        }
+    }
+
+    /// FPC 3.2.2 Random(Int64): two MT words, 63-bit assembly, then modulo.
+    pub fn random_int64(&mut self, range: i64) -> PascalRandomSample {
+        let call_index = self.calls;
+        let first_word_index = self.words;
+        let low = self.next_u32() as u64;
+        let high = self.next_u32() as u64;
+        let assembled = low | ((high << 32) & i64::MAX as u64);
+        let value = if range == 0 { 0 } else { (assembled as i64) % range };
+        self.calls = self.calls.saturating_add(1);
+        PascalRandomSample {
+            call_index,
+            first_word_index,
+            words_consumed: 2,
+            width: PascalRandomWidth::Int64,
+            range,
+            value,
+        }
+    }
+}
+
+impl RandomSource for Fpc322Rng {
+    type Error = std::convert::Infallible;
+
+    /// The shared trait exposes the 32-bit Pascal overload. Call random_int64
+    /// explicitly for expressions that ChavesRoteiro marks as Largo=true.
+    fn draw(&mut self, upper_exclusive: u32) -> Result<RandomSample, Self::Error> {
+        assert!(
+            upper_exclusive <= i32::MAX as u32,
+            "FPC Random(LongInt) range must fit in LongInt"
+        );
+        let sample = self.random_longint(upper_exclusive as i32);
+        Ok(RandomSample {
+            draw_index: sample.first_word_index,
+            upper_exclusive,
+            value: sample.value as u32,
+        })
+    }
+}
+
+/// Experimental Delphi 5 LCG candidate reconstructed from the C comparison port.
+/// This is not the normative RNG for StreetChavesRust; Pascal/FPC 3.2.2 is normative.
 ///
 /// The state transition is modulo 2^32:
 /// RandSeed := RandSeed * $08088405 + 1
@@ -519,6 +716,56 @@ impl RandomSource for DelphiRng {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fpc_322_rng_matches_mt19937_reference_words() {
+        let mut rng = Fpc322Rng::new(5489);
+        assert_eq!(rng.next_u32(), 3_499_211_612);
+        assert_eq!(rng.next_u32(), 581_869_302);
+        assert_eq!(rng.next_u32(), 3_890_346_734);
+        assert_eq!(rng.words_consumed(), 3);
+    }
+
+    #[test]
+    fn fpc_322_random_longint_consumes_one_word_with_multiply_high() {
+        let mut rng = Fpc322Rng::new(5489);
+        let sample = rng.random_longint(8);
+        assert_eq!(sample.value, 6);
+        assert_eq!(sample.words_consumed, 1);
+        assert_eq!(sample.first_word_index, 0);
+        assert_eq!(rng.words_consumed(), 1);
+        assert_eq!(rng.calls_consumed(), 1);
+    }
+
+    #[test]
+    fn fpc_322_random_int64_consumes_two_words_then_uses_modulo() {
+        let mut rng = Fpc322Rng::new(5489);
+        let sample = rng.random_int64(1000);
+        assert_eq!(sample.value, 4);
+        assert_eq!(sample.words_consumed, 2);
+        assert_eq!(sample.first_word_index, 0);
+        assert_eq!(rng.words_consumed(), 2);
+        assert_eq!(rng.calls_consumed(), 1);
+    }
+
+    #[test]
+    fn fpc_322_zero_ranges_still_consume_the_overload_word_count() {
+        let mut longint_rng = Fpc322Rng::new(5489);
+        assert_eq!(longint_rng.random_longint(0).value, 0);
+        assert_eq!(longint_rng.words_consumed(), 1);
+
+        let mut int64_rng = Fpc322Rng::new(5489);
+        assert_eq!(int64_rng.random_int64(0).value, 0);
+        assert_eq!(int64_rng.words_consumed(), 2);
+    }
+
+    #[test]
+    fn fpc_322_reseed_restarts_the_reference_sequence() {
+        let mut rng = Fpc322Rng::new(5489);
+        let first = rng.next_u32();
+        rng.set_rand_seed(5489);
+        assert_eq!(rng.next_u32(), first);
+    }
 
     #[test]
     fn delphi_rng_matches_delphi_5_range_vectors() {
