@@ -8,7 +8,7 @@ use std::io::{self, BufReader, BufWriter, Write};
 use std::process::ExitCode;
 
 use serde_json::json;
-use street_chaves_rust::trace_join::{
+use street_chaves::trace_join::{
     load_runtime_capture, load_symbolic_rng_sites, reconcile_capture, SiteMatchStatus,
 };
 
