@@ -9,10 +9,10 @@ Este é o documento canônico de retomada compartilhado pelos dois PRs. Ele regi
 
 | Repositório | PR | Branch → base | HEAD conhecido |
 |---|---|---|---|
-| [StreetChavesRust](https://github.com/danimesq/StreetChavesRust/pull/9) | [#9](https://github.com/danimesq/StreetChavesRust/pull/9) | `research/pascal-rng-jsonl` → `main` | `52437bd59184a368c245753b9c0dca4a54cb53aa` |
+| [StreetChavesRust](https://github.com/danimesq/StreetChavesRust/pull/9) | [#9](https://github.com/danimesq/StreetChavesRust/pull/9) | `research/pascal-rng-jsonl` → `main` | Implementation/fixture commit at CI launch: `52437bd`; handoff added in `fa7b838` |
 | [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves/pull/2) | [#2](https://github.com/danimesq/OpenStreetChaves/pull/2) | `research/sortearvalor-jsonl-v1` → `main` | `d56ac59b648eab722315a4f51148a2b8b4f65b28` |
 
-Ambos estavam abertos na última verificação. O PR Pascal contém a instrumentação de referência; o PR Rust consome, reconcilia e valida os traces. Não mesclar um lado isoladamente sem considerar o checkout de branch cruzado usado pela CI Rust.
+Ambos estavam abertos na última verificação. O PR Pascal contém a instrumentação de referência; o PR Rust consome, reconcilia e valida os traces. O HEAD atual do PR Rust pode avançar com commits de handoff/documentação; a execução runtime listada abaixo foi disparada para o commit de implementação `52437bd`. O commit `fa7b838` adicionou este documento e atualizou as descrições dos dois PRs. Não mesclar um lado isoladamente sem considerar o checkout de branch cruzado usado pela CI Rust.
 
 ## 🌈 Estado recuperado
 
