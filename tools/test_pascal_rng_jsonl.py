@@ -352,6 +352,25 @@ class PascalRngJsonlTests(unittest.TestCase):
         self.assertIn("1 instrumented game RNG calls", result.stdout)
         self.assertIn("1 instrumented MT word(s)", result.stdout)
 
+    def test_accepts_captured_ai_branch_window_fixtures(self) -> None:
+        fixtures = [
+            ("pascal-runtime-ai-target-tick317.jsonl", 2, 2),
+            ("pascal-runtime-ai-close-range-tick381.jsonl", 10, 19),
+        ]
+        root = Path(__file__).resolve().parents[1] / "tests" / "fixtures"
+        for name, expected_calls, expected_words in fixtures:
+            with self.subTest(fixture=name):
+                result = subprocess.run(
+                    [sys.executable, str(VALIDATOR), str(root / name)],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("1 ticks, 1 script executions, 1 branch/loop records", result.stdout)
+                self.assertIn(f"{expected_calls} instrumented game RNG calls", result.stdout)
+                self.assertIn(f"{expected_words} instrumented MT word(s)", result.stdout)
+
     def test_rejects_missing_session_header(self) -> None:
         result = self.run_validator([tick_start()])
         self.assertEqual(result.returncode, 1)
