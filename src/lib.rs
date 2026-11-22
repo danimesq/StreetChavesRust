@@ -10,6 +10,9 @@ use std::fmt;
 /// Parse and conservatively reconcile concrete Pascal JSONL traces with static symbolic sites.
 pub mod trace_join;
 
+/// Strict replay of concrete RNG requests from Pascal schema-v2 captures.
+pub mod pascal_replay;
+
 /// Stable fighter identifier from the researched roster.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FighterId(pub u8);
