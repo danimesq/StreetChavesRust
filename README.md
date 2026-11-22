@@ -4,8 +4,8 @@
 
 An independent Rust reimplementation project inspired by **Street Chaves — O Lutador da Vila**. The goal is to understand the game’s behavior, compare existing reconstructions, and build a clean Rust implementation with a testable game core and a separate SDL3 presentation layer.
 
-> **Project status: research and architecture.**
-> This repository is not yet a playable game. The current work documents source-code findings, compares independent implementations, and turns those findings into an implementation plan. No build or run instructions are published until an executable implementation exists.
+> **Project status: research plus foundational Rust contracts.**
+> The repository now contains a dependency-free Rust library for ordered combat timelines, sequential deterministic fixture RNG, and explicit hitbox/hurtbox update operations. It is not yet a playable game. The crate can be tested with `cargo test`; gameplay behavior and original-executable parity remain incomplete.
 
 ## Project goals
 
@@ -36,6 +36,7 @@ The research and design notes live in [the documentation directory](docs/README.
 - [Fighter roster matrix](docs/fighter-roster-matrix.md) — original 15-character roster, Pascal C16 Chapolin extension, and script-section coverage.
 - [Frame, AI and hitbox comparison](docs/frame-ai-hitbox-comparison.md) — all 15 Pascal frame/AI indexes, 379/379 exact hitbox geometry+metadata matches, and 305/305 hurtbox matches.
 - [Ordered frame event ledger](docs/ordered-frame-event-ledger.md) — source-ordered frame, timer, effect, sound, RNG, and simulation-mutation statements for all 15 Pascal [Quadro] blocks.
+- [Combat tick contracts](docs/combat-tick-contract.md) — Rust event ordering, deterministic RNG injection, hitbox/hurtbox records, and explicitly unresolved box-lifecycle semantics.
 - [Original executable reverse engineering](docs/original-executable-reverse-engineering.md) — PE/resource/asset investigation and gameplay cross-reference plan.
 - [REA tooling](tools/README.md) — reproducible preflight evidence collection and REA/Ghidra handoff.
 - [Original executable reverse engineering](docs/original-executable-reverse-engineering.md) — preliminary PE inspection, DelphiX/DirectX clues, resource and asset inventory plan, gameplay cross-reference targets, and the later golden-fixture strategy.
@@ -63,7 +64,7 @@ Start with the [documentation index](docs/README.md) for the full research map.
 
 ## Current focus
 
-The current phase is source research and specification, not feature implementation. The current research pass indexes all 15 Pascal frame scripts and AI blocks, compares all 379 hitbox geometry and metadata rows plus all 305 hurtboxes with the C tables, records exceptional move IDs, and publishes source-ordered frame-event ledgers. The first playable Rust baseline comes before the final original-executable compatibility stage:
+The project has started its first implementation slice: a dependency-free Rust contract crate and contract-level tests. It is not yet a playable game. The current phase combines source research with foundational simulation contracts. The current research pass indexes all 15 Pascal frame scripts and AI blocks, compares all 379 hitbox geometry and metadata rows plus all 305 hurtboxes with the C tables, records exceptional move IDs, and publishes source-ordered frame-event ledgers. The first playable Rust baseline comes before the final original-executable compatibility stage:
 
 
 - Compare the two SDL implementations at the source level.
@@ -79,7 +80,7 @@ Unverified behavior stays documented as an open question rather than being fille
 
 At this stage, the most useful contributions are reproducible observations, source references, test cases, and corrections to the research documents. Please distinguish direct source observations from interpretations and original-game claims.
 
-There are no supported build, run, or contribution commands yet because the Rust game implementation has not reached that stage. Those instructions will be added alongside the corresponding working tooling.
+Run the current contract suite with `cargo test`. There is not yet a playable runtime or SDL3 frontend, so no game launch command is available.
 
 ---
 
