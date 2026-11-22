@@ -207,7 +207,7 @@ cargo run --release --bin trace-join -- trace/rng.jsonl symbolic-action-tick-ind
 ```
 
 The end-to-end pipeline in
-[Pascal runtime trace #45039290385](https://github.com/danimesq/StreetChavesRust/actions/runs/45039290385)
+[Pascal runtime trace #45039596658](https://github.com/danimesq/StreetChavesRust/actions/runs/45039596658)
 recompiled Pascal, repeated both fixed-seed captures, regenerated the 15
 fighter symbolic index from the pinned Pascal source, reconciled every draw
 in both traces, and confirmed byte-identical reports. The full-capture result:
@@ -235,5 +235,5 @@ Rust CI run
 [contract tests #45038903679](https://github.com/danimesq/StreetChavesRust/actions/runs/45038903679)
 passes formatting and all 22 library tests plus both integration tests.
 The full capture/reconciliation evidence is in
-[artifact #14760554410](https://github.com/danimesq/StreetChavesRust/actions/runs/45039290385/artifacts/14760554410);
+[artifact #14761081684](https://github.com/danimesq/StreetChavesRust/actions/runs/45039596658/artifacts/14761081684);
 the integrated pipeline passed.
