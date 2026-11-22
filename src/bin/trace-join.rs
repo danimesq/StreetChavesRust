@@ -73,7 +73,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "pascal_direct": pascal_direct_draws
         },
         "match_policy": "fighter+character+section+source_line+width+literal_range_when_available",
-        "source_column_available_at_runtime": false,
+        "source_column_draws": source_column_draws,
+        "source_column_available_for_pascal_direct": true,
+        "rot_expression_source_column_available": false,
         "instrumented_game_source_rng_scope": true,
         "external_rtl_library_rng_intercepted": false
     });
