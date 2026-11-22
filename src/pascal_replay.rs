@@ -352,5 +352,4 @@ mod tests {
         assert_eq!(rng.calls_consumed(), 8_841);
         assert_eq!(rng.words_consumed(), 14_895);
     }
-
 }
