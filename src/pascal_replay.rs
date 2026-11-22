@@ -122,6 +122,21 @@ impl PascalDrawReplay {
         Ok(expected.result)
     }
 
+    /// Replay one Pascal Random(LongInt) request from the captured stream.
+    /// The simulator should call this at the original source call site.
+    pub fn random_longint(&mut self, range: i32) -> Result<i32, PascalReplayError> {
+        let value = self.draw(PascalReplayWidth::LongInt, range as i64)?;
+        i32::try_from(value).map_err(|_| PascalReplayError::InvalidRecordedDraw {
+            api_call_index: self.cursor.saturating_sub(1) as u64,
+            reason: format!("LongInt result {value} does not fit i32"),
+        })
+    }
+
+    /// Replay one Pascal Random(Int64) request from the captured stream.
+    pub fn random_int64(&mut self, range: i64) -> Result<i64, PascalReplayError> {
+        self.draw(PascalReplayWidth::Int64, range)
+    }
+
     /// Number of recorded wrapper calls consumed so far.
     pub fn draws_consumed(&self) -> usize {
         self.cursor
