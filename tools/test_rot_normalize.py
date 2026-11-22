@@ -46,7 +46,7 @@ end;
         self.assertEqual(draws[1]["random_width"], "int64")
         self.assertEqual(draws[1]["raw_rng_words_consumed"], 2)
         self.assertIn("modulo", draws[1]["rng_result_reduction"])
-        self.assertTrue(any("RHS skipped only if left is Boolean" in g for g in draws[0]["guards"]))
+        self.assertTrue(any("RHS executes only if left is non-Boolean or" in g for g in draws[0]["guards"]))
         self.assertGreaterEqual(sum(e["kind"] == "loop_region" for e in events), 2)
         self.assertTrue(any(e.get("target") == "P.Quadro" for e in events))
         self.assertTrue(any(e.get("target") == "P.GolpeAtivo" for e in events))
@@ -58,6 +58,24 @@ end;
         self.assertEqual(extractor.events[0]["kind"], "loop_region")
         self.assertEqual(extractor.events[0]["body_event_count"], 1)
         self.assertEqual(extractor.events[1]["target"], "P.Quadro")
+
+    def test_case_later_arms_require_prior_arms_not_to_match(self):
+        source = """
+case P.Acao of
+  acEspecial1: Random(2);
+  acEspecial2: Random(3);
+else
+  Random(4);
+end;
+"""
+        ast = self.parse(source)
+        extractor = mod.EventExtractor("C01", "Quadro", "unknown")
+        extractor.statement(ast["body"])
+        draws = [e for e in extractor.events if e["kind"] == "rng_draw"]
+        self.assertEqual(len(draws), 3)
+        self.assertTrue(any("no earlier arm matched" in g for g in draws[0]["guards"]))
+        self.assertTrue(any("none of the earlier arms matched" in g for g in draws[1]["guards"]))
+        self.assertTrue(any("matches none of the listed arms" in g for g in draws[2]["guards"]))
 
     def test_pascal_shortint_cast_downgrades_wide_random_argument(self):
         ast = self.parse("Random(ShortInt(Round(12.5)));")
