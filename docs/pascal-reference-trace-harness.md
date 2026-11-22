@@ -320,13 +320,15 @@ The expanded 3,000-tick capture now contains:
 
 The Pascal capture workflow fed every one of the 11,769 calls through the
 independent Rust `Fpc322Rng` and matched the result, overload width, range,
-API call index, first MT-word index, and raw-word cost. This confirms the
+API call index, first MT-word index, and raw-word cost. The source-column
+capture also validated 2,928 direct Pascal draw locations. This confirms the
 captured MTwist sequence across the instrumented game-source call sites.
 It does not yet prove that every possible external RTL/library RNG call is
 intercepted, nor does it provide a complete combat/action simulator.
 
-The full artifact is Actions artifact **14764162752**, retained until
+The full source-column artifact is Actions artifact **14764582501**, retained until
 2026-12-22. The compact committed tick-316 sample remains a small fixture,
-not a substitute for the full run. Direct Pascal `.inc` call sites now carry source columns (2,928 concrete
-draws in the 3,000-tick capture). ROT expression AST columns and individual
-short-circuit subexpression values remain open instrumentation work.
+not a substitute for the full run. Direct Pascal `.inc` call sites now carry source columns: 2,928 draw records
+across 23 distinct call sites exercised in the 3,000-tick capture. The static
+scan found 55 call sites across eight files. ROT expression AST columns and
+individual short-circuit subexpression values remain open instrumentation work.
