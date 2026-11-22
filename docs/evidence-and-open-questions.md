@@ -12,6 +12,7 @@ Use these labels consistently in documentation, code comments, tests, and issue 
 - **[unknown]**: not established yet.
 - **[port-specific]**: a behavior or implementation detail belonging to one port, not necessarily the original game.
 - **[normative-project-source]**: a deliberate project policy selecting Pascal/OpenStreetChaves as the primary source for Rust reconstruction when ports differ; it is not proof that the port is identical to the original executable.
+- **[design-question]**: an unresolved architecture or project-policy choice; it is not yet an implementation requirement.
 
 A fact may carry more than one label. Record the exact file, section, commit, binary hash, or test fixture that supports it.
 
@@ -31,9 +32,11 @@ A fact may carry more than one label. Record the exact file, section, commit, bi
 | Hurtboxes | 305/305 Pascal `[Corpo]` and C `hurt frame` rows match after coordinate reordering; both implementations retain old values when no row matches | [cross-project] for rows; [original-decomp] for the reviewed Pascal updater path and [port-specific] for the INI/C adapter details | Preserve per-frame values and explicit retain/deactivate/clear operations; verify the original executable later |
 | RNG | OpenStreetChaves README pins Lazarus 4.8/FPC 3.2.2. `ChavesRoteiro.SortearValor` dispatches LongInt vs Int64 to FPC `System.Random`; the pinned FPC RTL is MTwist. LongInt consumes 1 MT word; Int64 consumes 2 then modulo. `ModoDeSorteio` records/replays range, width and result. The C port uses a separate Delphi-style LCG. | [normative-project-source] for Pascal runtime semantics; [port-specific] for the C LCG; [unknown] for exact original executable RNG until REA/Ghidra/runtime capture | Use Fpc322Rng as the Rust default; preserve width and raw-word consumption; keep the Delphi LCG adapter experimental; capture Pascal and original dynamic traces |
 | Logic comparison | Pascal project has `--gravar` and legacy-vs-script comparison support | [port-specific], OpenStreetChaves README and migration notes | Adopt deterministic trace comparison as a development practice |
+| Pascal dynamic trace | Schema-v2 branch compiled with FPC 3.2.2; two fixed-seed 3,000-step captures produced byte-identical JSONL and `logica.txt`; the Rust join reconciled 8,841 calls as 8,415 unique, 0 ambiguous, 0 unmatched and 426 non-.rot contexts | [port-specific] and [runtime-observed] for the Pascal port only; no claim about original `Chaves.exe` | Draws connect to 465 timeline occurrences / 255 unique sites; 422 direct wrapper and 4 Pascal-helper calls remain outside .rot static matching; global RNG scope and per-predicate guard mapping remain open |
 | Golden screenshots | C17 project documents fixed-seed headless scenarios and SHA-256 screenshot checks | [port-specific], open-street-chaves README | Keep logical-state hashes and render hashes separate |
 | Asset licensing | C17 project explicitly excludes original game assets from its source license | Project README | Keep original game data external; audit every asset source |
 | SDL2 platform validation | Pascal README reports Windows 64-bit testing and lists Linux/macOS/Android as pending | Project README | Do not assume SDL abstraction equals cross-platform validation |
+| Language boundary and native dependencies | The Rust project still needs to define whether Rust-only applies to shipped code only or also to developer tools. SDL3 is a C library even when called through Rust bindings; the experimental JSONL validator is currently Python and is developer-only. | [design-question], current architecture proposal and experimental research tooling | Keep project-owned game/runtime logic in Rust; isolate native libraries behind Rust adapters; decide explicitly whether Python/tooling exceptions are acceptable or migrate the validator to Rust |
 | SMS graphics formats | SMS project documents tile/frame/palette extraction and console-specific limits | [port-specific], SMS README and ROM reference | Reuse methodology only; do not infer PC-game behavior from SMS |
 
 ## Important disagreements and caveats
@@ -66,6 +69,14 @@ The SMS project is based on a Master System fighting-game hack and imports Chave
 
 ## Open questions for the Rust project
 
+### Language boundary and native dependencies
+
+- [ ] Define whether "everything in Rust" applies to shipped game/runtime code only, or also to developer tools, generators, validators, build scripts and test harnesses.
+- [ ] Decide whether SDL3 and other native C/system libraries are acceptable behind narrow Rust FFI adapters, or whether a different rendering/window/audio stack should be investigated.
+- [ ] For each accepted native dependency, choose system linking versus vendoring/build-from-source and document version pinning, licensing, security updates, reproducible-build implications and supported platforms.
+- [ ] Decide whether the experimental Python JSONL validator is an approved developer-only exception or should be replaced by a Rust CLI/test tool before the trace workflow is considered permanent.
+- [ ] Require every non-Rust project-owned tool to state why it is not Rust, whether it is optional, and whether it adds any runtime or release dependency.
+
 ### Original-game compatibility
 
 - [ ] Which original `Chaves.exe` build and SHA-256 will be our canonical reference?
@@ -82,7 +93,14 @@ The SMS project is based on a Master System fighting-game hack and imports Chave
 - [ ] Inventory all Pascal application RNG calls and normalize them into tick order.
 - [x] Pin the Pascal build requirement to FPC 3.2.2 and implement its MTwist Random(LongInt)/Random(Int64) consumption rules in Rust.
 - [x] Generate symbolic timelines for all 15 .rot scripts and inventory Pascal RNG sites.
-- [ ] Use the Pascal `--gravar` harness to capture runtime call traces and compare Rust state transitions.
+- [x] Compile the experimental Pascal schema-v2 trace branch with FPC 3.2.2 and SDL2.
+- [x] Run two fixed-seed 3,000-step `--gravar` captures and require byte-identical JSONL plus matching `logica.txt` checkpoints.
+- [x] Validate both real schema-v2 captures and commit a compact tick-316 excerpt as a Rust regression fixture.
+- [x] Implement the first Rust reconciliation path and test a unique real draw match, an ambiguous same-line match, and a Pascal-helper non-match.
+- [x] Reconcile all 8,841 runtime RNG draws against all 15 fighter timelines; preserve unique, ambiguous, unmatched and non-.rot classifications.
+- [x] Validate real LongInt/Int64 draws and script helper/direct-call provenance in the full deterministic capture.
+- [ ] Expand compact committed regression fixtures across action sections, nested scripts, loop branches, Int64 draws, helper/direct calls and more fighters.
+- [ ] Decide whether to extend runtime attribution with source columns, direct `System.Random` call sites and fuller game-state snapshots; these remain outside schema v2.
 - [ ] Capture the original executable's initial RNG state and algorithm in the later compatibility phase; the C LCG remains comparative only.
 - [x] Trace retain-on-miss behavior in Pascal AplicarCaixas and C sel_boxes.
 - [x] Trace explicit attack-flag deactivation in both ports separately from lookup misses and full record clearing.

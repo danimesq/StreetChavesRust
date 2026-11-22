@@ -35,14 +35,15 @@ A static call site therefore carries its width and expected raw-word cost. The n
 
 The existing Pascal `ModoDeSorteio(msGravar/msRepetir)` records and replays requests by range and width. The game also has a deterministic `--gravar` harness that sets `RandSeed := 20261026` and emits `logica.txt`.
 
-Next work should use that harness to capture a reproducible stream with:
-- phase/system identifier;
-- fighter and section;
-- source line and call site;
-- LongInt vs Int64 overload;
-- raw MT word start index and number of words consumed;
-- requested range and returned value;
-- branch and loop context.
+The Pascal research branch
+[research/sortearvalor-jsonl-v1](https://github.com/danimesq/OpenStreetChaves/tree/research/sortearvalor-jsonl-v1)
+now emits verified schema-v2 JSONL: ticks, nested `.rot` executions, control
+decisions/loop values, source provenance, and `SortearValor` draws. Two
+3,000-step fixed-seed runs compiled with FPC 3.2.2 and produced byte-identical
+JSONL and `logica.txt` checkpoints. Direct `System.Random` calls outside
+`SortearValor` remain excluded, so the word cursor is still wrapper-local.
+The Pascal branch remains unmerged and the normative source pin unchanged.
+See [Pascal reference trace harness](pascal-reference-trace-harness.md).
 
 The latest normalizer CI run #30 passes 7 grammar tests and verifies the 15-fighter bundle. The current source normalizer does not assign dynamic tick or raw-word indices. It preserves the static call graph and symbolic execution guards, including a measured function-argument evaluation profile. The interpreter's own OrdemArgsInversa probe is reproduced by tools/fpc-argument-order-probe.pas; in the FPC 3.2.2 x86_64 Linux CI build, run #42 reported right-to-left (evaluation trace 5431). The normalizer now emits multi-argument call events in that measured order for this build. `symbolic-action-tick-index.json` groups all 5,091 events into 1,749 groups by symbolic P.Acao / P.QuadroAcao guard contexts and preserves all other guards and loop contexts. These are symbolic lanes, not actual executed ticks.
 
@@ -53,3 +54,35 @@ Pascal/FPC 3.2.2 is the normative source for the Rust implementation. C-port cal
 The existing runtime capture and differential mechanisms are mapped in [Pascal reference trace harness](pascal-reference-trace-harness.md).
 
 See [RNG compatibility](rng-compatibility.md), [ROT normalizer](rot-normalizer.md), and [C call-site comparison](rng-callsite-inventory.md).
+
+ 
+## 🌈 Dynamic trace status: schema v2
+
+The Pascal exporter compiled with FPC 3.2.2 and passed two deterministic
+3,000-step captures. Each contains 3,000 ticks, 20,437 script executions,
+394,252 control records, 8,841 `SortearValor` requests and 14,895
+wrapper-scoped MT words. Both JSONL files and both `logica.txt` outputs
+matched byte for byte; both traces passed the schema-v2 validator.
+
+The full-capture Rust join covers all 8,841 observed wrapper draws across
+the 15 fighter timelines:
+
+| Runtime classification | Count |
+|---|---:|
+| Unique `.rot` static-site matches | 8,415 |
+| Ambiguous | 0 |
+| Unmatched | 0 |
+| Non-`.rot` source context | 426 |
+
+The 426 non-`.rot` calls split into 422 direct `SortearValor` wrapper calls
+with no active script context and 4 Pascal-helper calls made from a script.
+They are retained as runtime RNG events, but are not falsely assigned to a
+static `.rot` AST site. The static index contains 465 composed RNG
+occurrences representing 255 unique source sites. The 8,415 expression draws
+matched uniquely by fighter/character, source file and section, source line,
+width, and literal range when available.
+
+The Pascal interpreter still does not emit source columns, every
+short-circuited boolean subexpression, direct `System.Random` calls outside
+`SortearValor`, or full game-state snapshots. Its MT-word index is not a
+global MTwist cursor. The experimental Pascal branch remains unmerged.

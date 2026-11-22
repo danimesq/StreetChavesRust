@@ -134,6 +134,15 @@ Prioritize idle/movement/jump/landing, representative normal and special moves, 
 
 **Deliverable:** versioned fixture set and differential matrix identifying the first divergence without silently changing expected results.
 
+## Long-term source and binary reconstruction goals
+
+The broader long-term goal is documented separately in [Delphi source reconstruction and reproducible binary research](delphi-source-and-reproducible-binary.md). Keep its two tracks distinct:
+
+- **Source reconstruction:** recover Delphi units, classes, forms, methods, resources and semantics, labeling decompiled or inferred material rather than presenting it as original source.
+- **Byte-identical rebuild:** investigate whether the original executable can be rebuilt with an exact whole-file SHA-256 match. This requires identifying the toolchain and build inputs, and may be blocked by unavailable compiler versions, resources, metadata or provenance.
+
+A source reconstruction can be useful without producing an identical executable. A behaviorally equivalent or structurally similar executable is not byte-identical. No success on either track is claimed by this preliminary plan.
+
 ## Evidence and safety rules
 
 - Label each statement as direct static observation, runtime observation, source observation, inference, or unknown.

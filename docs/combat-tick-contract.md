@@ -91,10 +91,12 @@ Recommended fixture groups:
 - [x] Keep DelphiRng isolated as a comparison candidate, not the normative Rust RNG.
 - [x] Trace C and Pascal lookup misses as retain operations and matched inactive rows as explicit inactive writes.
 - [x] Distinguish explicit attack deactivation from clearing the stored box.
-- [ ] Use Pascal `--gravar` / `ModoDeSorteio` to capture deterministic dynamic call traces and compare them with Rust.
+- [x] Capture deterministic schema-v2 Pascal runtime traces with `--gravar`: logical ticks, nested scripts, branch/loop decisions and width-aware RNG draws.
+- [x] Reconcile all 8,841 captured `SortearValor` calls against the 15-fighter symbolic index without forcing ambiguous or unmatched sites.
+- [x] Keep symbolic guard groups separate from concrete Pascal ticks; attach the runtime evidence to source sites and script invocations.
+- [ ] Replay the captured draw streams through the Rust RNG and compare Rust simulation state transitions against Pascal checkpoints.
+- [ ] Extend the capture/reconciliation fixtures across more actions, branches, loops and fighter matchups.
 - [ ] Capture original Chaves.exe RNG state/algorithm in the later compatibility phase.
-- [ ] Use the existing Pascal --gravar and ModoDeSorteio/msGravar-msRepetir mechanisms to capture dynamic traces, then replay them in Rust.
-- [ ] Execute the symbolic timelines with concrete fighter states to assign actual runtime ticks and RNG word indices; keep static guard groups separate from runtime traces.
 - [ ] Confirm the fighter 11 selector divergence against the original executable.
 - [ ] Run the PE preflight against the canonical Chaves.exe and hand off its bundle to REA/Ghidra.
 

@@ -158,6 +158,66 @@ The logical input representation should preserve edge-triggered presses and held
 
 When a golden image changes, require an explicit update and a short explanation of why it is expected.
 
+## Rust-first policy and non-Rust dependencies
+
+The project is a Rust reimplementation, but that statement needs a precise boundary.
+It must not silently become either "every byte in the complete software stack is
+written in Rust" or "anything may be implemented in another language".
+
+Keep these categories separate:
+
+1. **Project-owned game/runtime code:** simulation, game rules, fighter/state logic,
+   replay, resource validation, orchestration, and adapters should be written in Rust.
+   The deterministic core must remain headless and must not depend on native UI,
+   windowing, audio-device or wall-clock APIs.
+2. **Rust libraries and bindings:** Rust crates are acceptable dependencies, subject
+   to normal review of maintenance, licensing, portability, unsafe code and build
+   behavior. A Rust binding does not automatically make the library behind it Rust.
+3. **Native system libraries:** SDL3 is the concrete example. SDL3 is a C library;
+   using Rust bindings still means calling a non-Rust implementation through an FFI
+   boundary. Operating-system APIs and platform drivers are further unavoidable
+   external boundaries. This may be a sensible engineering choice, but it is not
+   "everything implemented in Rust".
+4. **Developer-only research tools:** scripts used to inspect or validate evidence
+   are not automatically part of the shipped game. The experimental Pascal JSONL
+   validator is currently Python. That makes Python a development-tool dependency
+   for this helper, not a runtime dependency. Whether such tools must also be Rust,
+   or may use a small explicitly approved set of languages, remains undecided.
+
+### Decision still required
+
+Before the workspace and release packaging are finalized, decide what "Rust-only"
+means for this project:
+
+- Does it apply to shipped game/runtime code only, or also to generators,
+  validators, build scripts, test harnesses and repository maintenance tools?
+- Are native non-Rust libraries such as SDL3 allowed when isolated behind small,
+  replaceable Rust adapters?
+- Must native libraries be system-provided, bundled, or built from source, and how
+  will each choice affect reproducible builds, licensing, security updates and
+  platform support?
+- Which non-Rust developer tools, if any, are acceptable, and must every such tool
+  have a documented reason and a Rust replacement path?
+
+### Provisional engineering boundary (not yet a final dependency approval)
+
+The safest current working rule is:
+
+- Write all project-owned game and application logic in Rust.
+- Keep native dependencies behind narrow Rust FFI/adaptor crates. Never expose
+  SDL/native types in domain or simulation APIs.
+- Keep the core independently testable and buildable without SDL3 or a display.
+- Treat each native dependency as an explicit architectural decision with a pinned
+  version, license/provenance review, build strategy and platform test coverage.
+- Mark non-Rust research helpers as developer-only and optional. Do not make Python
+  or another scripting runtime a dependency of the game itself.
+- Revisit the Python JSONL validator before treating it as permanent tooling: either
+  approve it explicitly as a developer-only exception, or port its schema checks
+  into a Rust CLI/test tool. Do not quietly expand the project's language footprint.
+
+This is a policy proposal to guide investigation, not a claim that the project has
+already selected or validated every dependency.
+
 ## SDL3 dependency
 
 Use the Rust SDL3 bindings behind `chaves-sdl3`. The current crate documentation describes both high-level `sdl3` bindings and low-level `sdl3-sys`; the high-level crate is the natural first choice unless a required SDL3 API is missing.

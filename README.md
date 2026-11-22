@@ -4,8 +4,8 @@
 
 An independent Rust reimplementation project inspired by **Street Chaves — O Lutador da Vila**. The goal is to understand the game’s behavior, compare existing reconstructions, and build a clean Rust implementation with a testable game core and a separate SDL3 presentation layer.
 
-> **Project status: research plus foundational Rust contracts.**
-> The repository now contains a dependency-free Rust library for ordered combat timelines, Pascal/FPC 3.2.2 MTwist RNG compatibility with width-aware raw-word tracing, an isolated experimental Delphi LCG candidate, strict AABB geometry, and source-specific hitbox/hurtbox lifecycle contracts. The Pascal .rot normalizer parses all 15 fighters plus Comum.rot, producing 5,091 symbolic events, 255 unique RNG sites (465 composed occurrences), and a 71-reference Pascal source RNG inventory. The normalizer is a static trace, not a concrete tick simulation. GitHub Actions Rust run #85 passed all 21 Rust tests (19 unit, 2 integration). Normalizer run #42 passed all 9 parser tests, measured FPC 3.2.2 argument evaluation as right-to-left (trace 5431), and generated 5,091 symbolic events in 1,749 action/timer guard groups for all 15 fighters. The game is not yet playable; original-executable parity remains incomplete.
+> **Project status: research, deterministic Pascal runtime evidence, and foundational Rust contracts.**
+> The repository contains Rust contracts for ordered combat timelines, Pascal/FPC 3.2.2 MTwist RNG compatibility, strict AABB geometry, and source-specific hitbox/hurtbox lifecycle behavior. The static .rot normalizer covers all 15 fighters: 5,091 symbolic events, 1,749 guard groups, 255 unique RNG sites (465 fighter-timeline occurrences), plus 71 Pascal .pas/.inc RNG references. Separately, an experimental Pascal schema-v2 runtime exporter now captures concrete ticks, nested script invocations, actual branch/loop outcomes and SortearValor draws. Two fixed-seed 3,000-step runs compiled with FPC 3.2.2 and produced byte-identical traces and logica.txt checkpoints. The Rust joiner reconciled 8,841 draws: 8,415 unique .rot matches, 0 ambiguous, 0 unmatched, and 426 non-.rot contexts (422 direct wrapper calls, 4 Pascal helpers). The Pascal exporter remains on a research branch; Rust simulation/replay and original-executable parity remain incomplete. The game is not yet playable.
 
 ## Project goals
 
@@ -39,7 +39,7 @@ The research and design notes live in [the documentation directory](docs/README.
 - [Combat tick contracts](docs/combat-tick-contract.md) — Rust event ordering, Delphi 5 RNG, hitbox/hurtbox records, and strict collision geometry.
 - [Box lifecycle deep dive](docs/box-lifecycle-deep-dive.md) — C selector and Pascal AplicarCaixas update order, stale-box retention, strength variants, and the fighter 11 discrepancy.
 - [Pascal RNG compatibility](docs/rng-compatibility.md) — FPC 3.2.2 MTwist semantics, LongInt/Int64 raw-word costs, deterministic seed and the optional Delphi candidate.
-- [Pascal reference trace harness](docs/pascal-reference-trace-harness.md) — existing deterministic --gravar, RNG record/replay, and old-code/script differential harness.
+- [Pascal reference trace harness](docs/pascal-reference-trace-harness.md) — schema-v2 tick/script/control/RNG JSONL capture, deterministic replay evidence, and Rust-to-symbolic reconciliation.
 - [Pascal RNG inventory](docs/pascal-rng-inventory.md) — 255 unique `.rot` sites, 465 composed occurrences and 71 Pascal source references.
 - [ROT normalizer](docs/rot-normalizer.md) — parser, source pins, symbolic timeline output and CI artifact.
 - [C RNG call-site comparison](docs/rng-callsite-inventory.md) — shared C RNG call sites, tick-phase order and variable draw-count traps.

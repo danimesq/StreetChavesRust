@@ -1,0 +1,161 @@
+name: Pascal runtime trace (experimental)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/pascal-rng-jsonl
+    paths:
+      - ".github/workflows/pascal-runtime-trace.yml"
+      - "Cargo.toml"
+      - "src/**"
+      - "tests/fixtures/**"
+      - "research/pascal-rot/**"
+      - "tools/rot-normalize.py"
+      - "tools/fpc-argument-order-probe.pas"
+      - "tools/validate-pascal-rng-jsonl.py"
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    name: Compile, capture and reconcile Pascal runtime trace
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out StreetChavesRust
+        uses: actions/checkout@v4
+
+      - name: Check out experimental Pascal source
+        uses: actions/checkout@v4
+        with:
+          repository: danimesq/OpenStreetChaves
+          ref: research/sortearvalor-jsonl-v1
+          path: external/OpenStreetChaves
+          persist-credentials: false
+
+      - name: Check out pinned Pascal source for static RNG inventory
+        uses: actions/checkout@v4
+        with:
+          repository: danimesq/OpenStreetChaves
+          ref: e1b025c35ecbc2b14d8635564aafd23c2107d3d1
+          path: external/OpenStreetChaves-pinned
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Free Pascal 3.2.2 and SDL2
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y fp-compiler fp-units-base fp-units-fcl libsdl2-dev
+          fpc -iV
+          test "$(fpc -iV)" = "3.2.2"
+
+      - name: Probe compiler argument evaluation order
+        run: |
+          set -euo pipefail
+          mkdir -p build/bin build/units
+          fpc -FEbuild/bin -FUbuild/units -obuild/bin/fpc-argument-order-probe tools/fpc-argument-order-probe.pas
+          build/bin/fpc-argument-order-probe | tee build/argument-order.txt
+          grep -Eq '^argument-order=(left-to-right|right-to-left)$' build/argument-order.txt
+
+      - name: Compile the experimental Pascal branch
+        working-directory: external/OpenStreetChaves/source
+        run: |
+          set -euo pipefail
+          mkdir -p build/bin build/units
+          fpc -B \
+            -Fu3party -Fu3party/SDL2 -Fugame -Figame \
+            -FUbuild/units -FEbuild/bin \
+            -obuild/bin/StreetChaves StreetChaves.lpr
+
+      - name: Run two deterministic headless captures
+        working-directory: external/OpenStreetChaves
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          source/build/bin/StreetChaves --gravar build/trace-a 3000 300 --rng-jsonl build/trace-a/rng.jsonl
+          source/build/bin/StreetChaves --gravar build/trace-b 3000 300 --rng-jsonl build/trace-b/rng.jsonl
+          source/build/bin/StreetChaves --gravar build/trace-off 3000 300
+          cmp build/trace-a/rng.jsonl build/trace-b/rng.jsonl
+          cmp build/trace-a/logica.txt build/trace-b/logica.txt
+          cmp build/trace-a/logica.txt build/trace-off/logica.txt
+          cmp build/trace-b/logica.txt build/trace-off/logica.txt
+
+      - name: Validate both schema-v2 captures
+        run: |
+          set -euo pipefail
+          python tools/validate-pascal-rng-jsonl.py external/OpenStreetChaves/build/trace-a/rng.jsonl
+          python tools/validate-pascal-rng-jsonl.py external/OpenStreetChaves/build/trace-b/rng.jsonl
+
+      - name: Generate all 15 symbolic fighter timelines
+        run: |
+          set -euo pipefail
+          ARGUMENT_ORDER="$(sed -n 's/^argument-order=//p' build/argument-order.txt)"
+          python tools/rot-normalize.py \
+            --input-dir research/pascal-rot \
+            --output-dir external/OpenStreetChaves/build/rot-normalized \
+            --pascal-source-root external/OpenStreetChaves-pinned/source \
+            --argument-order "$ARGUMENT_ORDER"
+
+      - name: Reconcile every captured draw against the symbolic index
+        run: |
+          set -euo pipefail
+          cargo run --quiet --bin trace-join -- \
+            external/OpenStreetChaves/build/trace-a/rng.jsonl \
+            external/OpenStreetChaves/build/rot-normalized/symbolic-action-tick-index.json \
+            external/OpenStreetChaves/build/trace-a/reconciliation.jsonl
+          cargo run --quiet --bin trace-join -- \
+            external/OpenStreetChaves/build/trace-b/rng.jsonl \
+            external/OpenStreetChaves/build/rot-normalized/symbolic-action-tick-index.json \
+            external/OpenStreetChaves/build/trace-b/reconciliation.jsonl
+          cmp external/OpenStreetChaves/build/trace-a/reconciliation.jsonl \
+              external/OpenStreetChaves/build/trace-b/reconciliation.jsonl
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = Path("external/OpenStreetChaves/build/trace-a/reconciliation.jsonl")
+          summary = json.loads(report.open().readline())
+          assert summary["record_type"] == "reconciliation_summary"
+          assert summary["runtime_draws"] == 8841, summary
+          assert summary["unique"] == 8415, summary
+          assert summary["ambiguous"] == 0, summary
+          assert summary["unmatched"] == 0, summary
+          assert summary["non_rot_source"] == 426, summary
+          assert summary["source_kind_counts"] == {
+              "rot_expression": 8415,
+              "pascal_helper": 4,
+              "pascal_direct": 422,
+          }, summary
+          assert summary["symbolic_rng_timeline_occurrences"] == 465, summary
+          assert summary["unique_symbolic_rng_sites"] == 255, summary
+          assert (
+              summary["unique"] + summary["ambiguous"] +
+              summary["unmatched"] + summary["non_rot_source"]
+          ) == summary["runtime_draws"], summary
+          print("full-capture reconciliation:", json.dumps(summary, sort_keys=True))
+          PY
+
+      - name: Upload deterministic Pascal trace and reconciliation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: pascal-runtime-trace-and-reconciliation
+          path: |
+            external/OpenStreetChaves/build/trace-a/rng.jsonl
+            external/OpenStreetChaves/build/trace-a/logica.txt
+            external/OpenStreetChaves/build/trace-a/reconciliation.jsonl
+            external/OpenStreetChaves/build/trace-b/rng.jsonl
+            external/OpenStreetChaves/build/trace-b/logica.txt
+            external/OpenStreetChaves/build/trace-b/reconciliation.jsonl
+            external/OpenStreetChaves/build/trace-off/logica.txt
+            external/OpenStreetChaves/build/rot-normalized/symbolic-action-tick-index.json
+          if-no-files-found: error
+          retention-days: 30

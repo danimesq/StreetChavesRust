@@ -10,6 +10,7 @@ This directory records the research and engineering decisions for an independent
 ## Research documents
 
 - [Original executable reverse engineering](original-executable-reverse-engineering.md): preliminary PE/toolchain findings and the investigation plan for embedded resources, external assets, gameplay cross-references, and final compatibility fixtures.
+- [Delphi source reconstruction and reproducible binary](delphi-source-and-reproducible-binary.md): two separate long-term research tracks, from source-level recovery to a strict byte-identical rebuild criterion.
 
 - [Comparative analysis of the SDL implementations](comparative-analysis.md): the Pascal/SDL2 and C17/SDL3 projects, their architectures, strengths, differences, and limitations.
 - [Fight-loop deep dive](fight-loop-deep-dive.md): source-level comparison of the fight tick, fighter frame selection, hit resolution, effects, and physics.
@@ -21,7 +22,7 @@ This directory records the research and engineering decisions for an independent
 - [Combat tick contracts](combat-tick-contract.md): Rust contracts for ordered events, normative FPC 3.2.2 MTwist RNG, collision geometry, and box records.
 - [Box lifecycle deep dive](box-lifecycle-deep-dive.md): exact C selector and Pascal AplicarCaixas behavior, including retain-on-miss, inactive rows, ordered strength variants, and a port divergence.
 - [RNG compatibility](rng-compatibility.md): normative FPC 3.2.2 MTwist implementation, one-word LongInt and two-word Int64 behavior; experimental Delphi LCG candidate remains separate.
-- [Pascal reference trace harness](pascal-reference-trace-harness.md): existing --gravar deterministic regression, ModoDeSorteio recorder/replayer, and old-code/script differential comparison.
+- [Pascal reference trace harness](pascal-reference-trace-harness.md): deterministic --gravar regression, schema-v2 tick/script/control/RNG JSONL, repeatability evidence, and Rust reconciliation CLI.
 - [Pascal RNG inventory](pascal-rng-inventory.md): 255 unique .rot RNG sites, 465 composed occurrences, and 71 .pas/.inc references.
 - [ROT normalizer](rot-normalizer.md): parser for all 15 fighter scripts, nested guards/loops and symbolic RNG sites.
 - [C RNG call-site inventory](rng-callsite-inventory.md): comparative C shared RNG call sites and fight-tick phase order.

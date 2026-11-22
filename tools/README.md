@@ -49,6 +49,45 @@ rea-output/<binary>-<sha-prefix>-<utc-time>/
 
 The report bundle is tied to the input SHA-256. Do not compare addresses or RVAs across different hashes without revalidating them.
 
+## 🌈 Pascal RNG JSONL validator
+
+The Pascal schema-v2 exporter writes ticks, nested `.rot` invocations,
+interpreter branch/loop events, and `SortearValor` draws. Validate its JSONL
+and wrapper-local counters with:
+
+```bash
+python3 tools/validate-pascal-rng-jsonl.py ./saida/rng.jsonl
+python3 -m unittest discover -s tools -p 'test_*.py' -v
+```
+
+The validator checks tick and script nesting, source provenance, call ordering,
+LongInt/Int64 word costs, replay entries that must not consume MT words, and
+positive-range results. It does not make the capture a global MTwist trace:
+direct `System.Random` calls outside `SortearValor` remain outside the
+captured RNG cursor.
+
+Use the Rust CLI to reconcile a complete trace with the normalizer's static
+index and write one JSONL result per draw:
+
+```bash
+cargo run --release --bin trace-join -- \
+  ./saida/rng.jsonl \
+  ./normalized/symbolic-action-tick-index.json \
+  ./saida/reconciliation.jsonl
+```
+
+The report begins with aggregate counts and then lists every draw's candidate
+static sites, symbolic action/tick guards, loop context, and IDs of control
+observations from its script invocation. Match statuses are `Unique`,
+`Ambiguous`, `Unmatched`, and `NonRotSource`. The full deterministic
+scenario is covered by the CI workflow in
+[Pascal runtime trace #45040091460](https://github.com/danimesq/StreetChavesRust/actions/runs/45040091460).
+The Python validator remains a developer-only helper; the project's Rust-only
+policy for tooling is still an open design decision.
+
+See [the Pascal reference trace harness](../docs/pascal-reference-trace-harness.md)
+for compile/capture evidence and known limits.
+
 ## 🌈 Using the bundle with REA
 
 REA means **Reverse Engineer Anything**. It is the MCP-based reverse-engineering environment, not this shell script. The preflight collector prepares a stable, traceable input package for that workflow.
