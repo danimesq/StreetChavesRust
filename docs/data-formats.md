@@ -2,7 +2,7 @@
 
 ## Scope and evidence labels
 
-This document records formats and pipelines observed in the pinned source revisions. It is a design input for a future Rust data model, not a proposed parser specification yet.
+This document records formats and pipelines observed in the pinned source revisions. Pascal/OpenStreetChaves is the normative project source for Rust reconstruction; C is comparison-only. The ROT normalizer is a static research parser, not yet a runtime game-script engine or a proposed final data schema.
 
 Evidence labels:
 - **Observed in source/data**: directly described by a checked-in loader, data file, generator or project documentation.
@@ -123,7 +123,7 @@ Observed resource types include BMP, PNG and WAV:
 
 The high-resolution generation tool is not the same as the game data loader. Generated HD images should be tracked as derived artifacts, with the original source file and transformation settings recorded.
 
-## C17 / SDL3 data model
+## C17 / SDL3 data model (comparative only)
 
 Primary references:
 - `open-street-chaves/docs/spec/`
