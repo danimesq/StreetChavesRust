@@ -40,7 +40,12 @@ fn main() -> ExitCode {
         }
     };
 
-    let body = BodyBox { x1: -10.0, y1: -40.0, x2: 10.0, y2: 0.0 };
+    let body = BodyBox {
+        x1: -10.0,
+        y1: -40.0,
+        x2: 10.0,
+        y2: 0.0,
+    };
     let mut state = CombatState {
         tick_index: 316,
         game_state: 7,
@@ -81,7 +86,10 @@ fn main() -> ExitCode {
     state.fighters[0].facing = SIDE_LEFT;
 
     let tick = match state.tick_common_ai_walk(
-        AiTickInputs { distance: 150, projectile_threat: false },
+        AiTickInputs {
+            distance: 150,
+            projectile_threat: false,
+        },
         &mut replay,
     ) {
         Ok(tick) => tick,
