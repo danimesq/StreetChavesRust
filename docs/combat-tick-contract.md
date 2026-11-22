@@ -23,6 +23,7 @@ This document defines the first Rust-facing contracts derived from the research 
 | HitboxRecord | Retains selector key (Pascal action / C state), timer, raw coordinates, active, strength, damage, and guard damage. |
 | HurtboxRecord | Retains frame and raw coordinates. |
 | BoxUpdate | Makes replace, clear, and retain explicit operations. |
+| AttackDeactivated | Sets the attack-active flag false while preserving stored geometry/metadata. |
 | Aabb | Implements strict AABB overlap; edge contact alone is not a collision. |
 
 FixtureRng remains a synthetic deterministic test source. DelphiRng now implements the Delphi 5 32-bit recurrence and multiply-high range reduction, with the initial RandSeed supplied by the caller. The recurrence is implemented; original startup seeding and the full original call sequence remain separate research tasks.
@@ -31,7 +32,7 @@ FixtureRng remains a synthetic deterministic test source. DelphiRng now implemen
 
 Both ports retain prior box values on a lookup miss, but the implementation details differ. Pascal does so in AplicarCaixas, where an undefined body row or an unmatched attack row causes no write. C does so in sel_boxes, where no matching hurt/hit row also causes no write. See [the lifecycle deep dive](box-lifecycle-deep-dive.md) for the exact selector keys, update order, independent clear paths, and the fighter 11 duplicate-key discrepancy.
 
-A matched row with active=false is not a clear. It stores the row's geometry and metadata while disabling the attack. A miss is different: it leaves all prior fields untouched. Rust now represents these separately and includes a Pascal ordered-row adapter.
+A matched row with active=false is not a clear. It stores the row's geometry and metadata while disabling the attack. A lookup miss is different: it leaves all prior fields, including the old active bit, untouched. An explicit state-machine deactivation is a third case: it flips the active bit while retaining geometry and metadata. Rust now represents all three separately and includes a Pascal ordered-row adapter.
 
 The C melee path uses strict AABB comparisons (left < other.right, right > other.left, top < other.bottom, bottom > other.top). The inspected Pascal fight/object/effect paths use the same strict edge-overlap pattern. Rust exposes that geometry as a pure contract; hit consequences are not implemented yet.
 
@@ -42,7 +43,7 @@ Still unverified against the original executable:
 - activation behavior across state transitions, hit-stop, and same-tick victim re-selection;
 - whether the original uses the same strict AABB comparisons in every collision path.
 
-The Rust model exposes Replace, Clear, and Retain as explicit operations. The current source adapters now map a C/Pascal lookup miss to Retain, a matched inactive row to Replace with active=false, and only source-backed explicit clear paths to Clear. These are confirmed port semantics; whether the original executable shares every detail remains an open compatibility check.
+The Rust model exposes Replace, Clear, and Retain as explicit operations, plus AttackDeactivated for a state-machine active-flag write. The current source adapters map a C/Pascal lookup miss to Retain, a matched inactive row to Replace with active=false, and writes such as GolpeAtivo := False / attacking = false to AttackDeactivated. Clear is reserved for actual record removal. These are confirmed port semantics; whether the original executable shares every detail remains an open compatibility check.
 
 ## 🌈 Tick timeline normalization
 
@@ -84,6 +85,7 @@ Recommended fixture groups:
 - [x] Run cargo fmt --all -- --check and cargo test --all-targets in GitHub Actions (run #23: 13 unit + 2 integration tests passed).
 - [x] Implement DelphiRng's 32-bit LCG transition and multiply-high range reduction with an injected seed.
 - [x] Trace C and Pascal lookup misses as retain operations and matched inactive rows as explicit inactive writes.
+- [x] Distinguish explicit attack deactivation from clearing the stored box.
 - [ ] Capture original RandSeed and expand the complete original RNG call stream.
 - [ ] Expand the 15 fighter ledgers into fully evaluated action/tick traces.
 - [ ] Confirm the fighter 11 selector divergence against the original executable.
