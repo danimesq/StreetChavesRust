@@ -1,12 +1,11 @@
-//! Replay the tick-316 Pascal AI sample through the first Rust runtime slice.
+//! Replay the captured Pascal tick-316 AI path through the Rust runtime.
 //!
 //! Usage:
 //! cargo run --bin pascal-replay-tick -- tests/fixtures/pascal-runtime-schema-v2-tick316.jsonl
 //!
-//! The source trace does not export Dist/DistanciaIA/body geometry. The bounded
-//! scenario below supplies admissible values that select the observed left-walk
-//! branch while preserving the captured Random(13) request/result. It is not a
-//! claim that these hidden input values were the original tick-316 values.
+//! Fighter state and all five AI inputs are reconstructed from the captured
+//! script_start.ai_inputs snapshot. Camera position and clock-stopped state are
+//! not included in that snapshot; this sample does not enter those edge cases.
 
 use std::env;
 use std::fs::File;
@@ -40,12 +39,7 @@ fn main() -> ExitCode {
         }
     };
 
-    let body = BodyBox {
-        x1: -10.0,
-        y1: -40.0,
-        x2: 10.0,
-        y2: 0.0,
-    };
+    // Exact body boxes and fighter state captured at tick-316 IA entry.
     let mut state = CombatState {
         tick_index: 316,
         game_state: 7,
@@ -59,40 +53,50 @@ fn main() -> ExitCode {
                 action_duration: 99,
                 facing: SIDE_RIGHT,
                 defending: false,
-                x: 100.0,
-                y: 0.0,
-                speed: 3.0,
-                distance_ai: 250,
                 vertical_velocity: 0,
                 in_air: false,
-                health: 100,
-                body,
+                x: 234.0,
+                y: 300.0,
+                speed: 8.0,
+                distance_ai: 0,
+                health: 125,
+                body: BodyBox {
+                    x1: -18.0,
+                    y1: 30.0,
+                    x2: 13.0,
+                    y2: 170.0,
+                },
             },
             FighterState {
                 character_id: 1,
                 action_id: 1,
                 action_frame: 0,
                 action_duration: 99,
-                facing: SIDE_RIGHT,
+                facing: SIDE_LEFT,
                 defending: false,
-                x: 250.0,
-                y: 0.0,
-                speed: 3.0,
-                distance_ai: 250,
                 vertical_velocity: 0,
                 in_air: false,
-                health: 100,
-                body,
+                x: 366.0,
+                y: 300.0,
+                speed: 8.0,
+                distance_ai: 0,
+                health: 125,
+                body: BodyBox {
+                    x1: -19.0,
+                    y1: 35.0,
+                    x2: 13.0,
+                    y2: 164.0,
+                },
             },
         ],
     };
-    // Make the initial values explicit: fighter 1's facing is not used by this AI pass.
-    state.fighters[0].facing = SIDE_LEFT;
 
     let tick = match state.tick_common_ai(
         AiTickInputs {
-            distance: 150,
-            projectile_threat: false,
+            distance: 132,
+            projectile_distance: 0,
+            opponent_y: 300,
+            threat: 0,
             difficulty_factor: 3.6,
         },
         &mut replay,
@@ -110,7 +114,7 @@ fn main() -> ExitCode {
     }
 
     for draw in &tick.draws {
-        eprintln!("RNG LongInt range={} -> {}", draw.range, draw.value);
+        eprintln!("RNG {:?} range={} -> {}", draw.width, draw.range, draw.value);
     }
     print!("{}", tick.checkpoint_jsonl);
     ExitCode::SUCCESS
