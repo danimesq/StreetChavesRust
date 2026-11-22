@@ -51,7 +51,7 @@ Pin analyzed repository revisions. A moving `main` branch must not silently chan
 - [x] High-level SDL architecture comparison.
 - [x] Fight-loop source-level analysis.
 - [ ] Add a lightweight review checklist for new research documents.
-- [ ] Record exact reference-project commits used by each major investigation.
+- [x] Record exact reference-project commits used by each major investigation.
 
 **Deliverable:** navigable documentation with consistent provenance and confidence language.
 
