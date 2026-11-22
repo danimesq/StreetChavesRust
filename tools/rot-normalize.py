@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-PARSER_VERSION = "0.1.0"
+PARSER_VERSION = "0.2.0"
 UPSTREAM_COMMIT = "e1b025c35ecbc2b14d8635564aafd23c2107d3d1"
 
 
@@ -525,12 +525,20 @@ class EventExtractor:
                 self.expr(args[i], guards, loops, f"{node['name']} arg[{i}] ({order})")
             name = node["name"].lower()
             if name == "random":
+                width = infer_random_width(args[0])
+                words = {"int32": 1, "int64": 2}.get(width)
+                reduction = {
+                    "int32": "FPC 3.2.2 Random(LongInt): one MT word, multiply-high",
+                    "int64": "FPC 3.2.2 Random(Int64): two MT words, compose 63-bit value, modulo",
+                }.get(width, "unknown until the argument's Pascal integer width is resolved")
                 self.emit("rng_draw", node, guards, loops,
                           rng_site=f"{self.character}.{self.section}.L{node['span']['line']}.C{node['span']['column']}",
                           function="Random", range_expression=expr_text(args[0]),
-                          random_width=infer_random_width(args[0]), argument_evaluation=order,
-                          argument_context=arg_context,
-                          draw_index_semantics="assigned only during concrete execution")
+                          random_width=width, raw_rng_words_consumed=words,
+                          rng_result_reduction=reduction,
+                          runtime_rng="Free Pascal 3.2.2 System.Random (MTwist)",
+                          argument_evaluation=order, argument_context=arg_context,
+                          draw_index_semantics="raw MT word index assigned only during concrete execution")
             elif name in {"criaefeito", "empurra", "acaojogador", "aplicarcaixas"}:
                 self.emit("simulation_call", node, guards, loops, function=node["name"],
                           arguments=[expr_text(x) for x in args], argument_evaluation=order,
@@ -772,13 +780,75 @@ def build_normalization(input_dir, output_dir, source_root, argument_order):
                                "short_circuit_and_loop_contexts_are_preserved": True,
                                "common_sections_run_before_fighter_sections": True},
         "inputs": inputs, "fighters": fighters}
+    # Deduplicate common-script RNG sites while retaining how often each is
+    # instantiated in the 15 composed fighter timelines.
+    rot_sites = {}
+    rot_occurrences = 0
+    for fighter in fighters:
+        fighter_id = fighter["fighter_id"]
+        for section in fighter["sections"].values():
+            for component in section["components"]:
+                for event in component["events"]:
+                    if event["kind"] != "rng_draw":
+                        continue
+                    rot_occurrences += 1
+                    key = (component["source"], component["section"].lower(),
+                           event["source_line"], event["source_column"])
+                    site = rot_sites.get(key)
+                    if site is None:
+                        site = {
+                            "source": component["source"],
+                            "section": component["section"],
+                            "source_line": event["source_line"],
+                            "source_column": event["source_column"],
+                            "rng_site": event["rng_site"],
+                            "range_expression": event["range_expression"],
+                            "random_width": event["random_width"],
+                            "raw_rng_words_consumed": event["raw_rng_words_consumed"],
+                            "rng_result_reduction": event["rng_result_reduction"],
+                            "used_by_fighters": [],
+                        }
+                        rot_sites[key] = site
+                    if fighter_id not in site["used_by_fighters"]:
+                        site["used_by_fighters"].append(fighter_id)
+
+    rot_rng_inventory = {
+        "runtime": "Free Pascal 3.2.2 System.Random (MTwist)",
+        "unique_static_sites": len(rot_sites),
+        "composed_timeline_occurrences": rot_occurrences,
+        "sites": sorted(rot_sites.values(), key=lambda x: (
+            x["source"], x["section"], x["source_line"], x["source_column"])),
+        "note": "Common.rot sites appear once per fighter timeline; unique sites are deduplicated by source path, section and source coordinates.",
+    }
+
+    result = {
+        "schema": "street-chaves-rot-normalization/v1",
+        "normalizer_version": PARSER_VERSION,
+        "reference_policy": {
+            "normative_source": "Pascal/FPC 3.2.2 ChavesRoteiro interpreter, System.Random and .rot data",
+            "comparison_source": "C17/SDL3 port; divergences are annotations, not overrides",
+            "conflict_resolution": "follow Pascal until original-executable evidence justifies a documented change",
+            "original_executable": "reverse-engineering confirmation required for disputed behavior",
+            "rng_semantics": "FPC 3.2.2 MTwist; Random(LongInt) consumes 1 MT word, Random(Int64) consumes 2",
+            "upstream_repository": "https://github.com/danimesq/OpenStreetChaves",
+            "upstream_commit": UPSTREAM_COMMIT,
+            "argument_evaluation_profile": argument_order},
+        "timeline_semantics": {"kind": "symbolic_static_trace", "runtime_ticks_are_not_simulated": True,
+                               "runtime_rng_draw_indices_are_not_assigned": True,
+                               "source_order_is_preserved": True,
+                               "short_circuit_and_loop_contexts_are_preserved": True,
+                               "common_sections_run_before_fighter_sections": True},
+        "inputs": inputs, "fighters": fighters,
+        "rot_rng_inventory": rot_rng_inventory}
     if pin:
         result["source_pin_manifest"] = pin
+    (output_dir / "rot-rng-call-sites.json").write_text(
+        json.dumps(rot_rng_inventory, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if source_root is not None:
         sites = inventory_pascal_rng(source_root)
         result["pascal_rng_inventory"] = {
             "source_root": str(source_root), "site_count": len(sites), "sites": sites,
-            "note": "Static source-call-site inventory. Dynamic order requires fight-loop phase order and branch outcomes."}
+            "note": "Static .pas/.inc source-call-site inventory. Dynamic order requires fight-loop phase order and branch outcomes."}
         (output_dir / "pascal-rng-call-sites.json").write_text(
             json.dumps(result["pascal_rng_inventory"], ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (output_dir / "normalized-timelines.json").write_text(
@@ -809,9 +879,21 @@ def render_summary(result):
               "- Common section events precede fighter-specific events.",
               "- Nested if/else, case, for, while, and repeat/until structure remains explicit.",
               "- Boolean and/or can short-circuit; integer bitwise operands evaluate both sides in the Pascal interpreter.",
-              "- A Random(...) occurrence is a static site, not a concrete RNG draw; draw indices appear only during execution/replay.",
+              "- A Random(...) occurrence is a static site, not a concrete runtime call; guards and loops can alter execution counts.",
+              "- FPC 3.2.2 Random(LongInt) consumes one MT word; Random(Int64) consumes two words and applies modulo.",
               "- Multiple function arguments retain the compiler argument-order profile. Use unknown until measured.",
               "- Pascal is normative; C-port mismatches are documented separately and do not override this output.", ""]
+    rot_rng = result["rot_rng_inventory"]
+    lines += ["## Pascal .rot RNG sites", "",
+              f"Found **{rot_rng['unique_static_sites']} unique static sites**, represented **{rot_rng['composed_timeline_occurrences']} times** across the 15 composed fighter timelines.", "",
+              "| Script | Unique sites |", "|---|---:|"]
+    rot_groups = {}
+    for site in rot_rng["sites"]:
+        rot_groups.setdefault(Path(site["source"]).name, 0)
+        rot_groups[Path(site["source"]).name] += 1
+    for path, count in sorted(rot_groups.items()):
+        lines.append(f"| {path} | {count} |")
+    lines.append("")
     if "pascal_rng_inventory" in result:
         rng = result["pascal_rng_inventory"]
         lines += ["## Pascal source RNG sites", "",
