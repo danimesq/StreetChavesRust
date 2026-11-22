@@ -118,5 +118,5 @@ A frame-selector spawn can draw for X/Y offsets in `fx_spawns_for`, then call `s
 - [C frame selector and special throws](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6842ff6618ecdb8f425bba61c9183/src/fight/selector.c)
 - [C fighter movement and physics](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6842ff6618ecdb8f425bba61c9183/src/fight/fighter.c)
 - [C melee and defense](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6842ff6618ecdb8f425bba61c9183/src/fight/combat.c)
-- [C effects and nested spawn randomness](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6618ecdb8f425bba61c9183/src/fight/effects.c)
+- [C effects and nested spawn randomness](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6842ff6618ecdb8f425bba61c9183/src/fight/effects.c)
 - [C stage objects](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6618ecdb8f425bba61c9183/src/fight/stage.c)
