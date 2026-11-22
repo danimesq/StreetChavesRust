@@ -273,7 +273,7 @@ mod tests {
             replay.finish(),
             Err(PascalReplayError::Unconsumed {
                 remaining: 1,
-                next_api_call_index: 0
+                next_api_call_index: 88
             })
         ));
     }
