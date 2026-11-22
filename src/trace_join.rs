@@ -185,6 +185,7 @@ fn optional_bool(record: &Value, key: &str) -> Option<bool> {
 
 fn parse_draw(record: &Value, line: usize) -> Result<RuntimeDraw, TraceJoinError> {
     let source_line = optional_u32(record, "source_line");
+    let source_column = optional_u32(record, "source_column");
     let first_mt_word_index = optional_u64(record, "first_mt_word_index");
 
     Ok(RuntimeDraw {
