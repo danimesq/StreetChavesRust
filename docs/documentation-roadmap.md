@@ -95,6 +95,7 @@ Documents:
 - `animation-and-frame-selection.md`: frame selection, animation clocks, transitions, frame-associated boxes, and side effects.
 - `moves-and-command-recognition.md`: commands, button rules, priorities, buffering, and cancellation.
 - `fighter-state-machine.md`: state inventory, transitions, timers, and exceptions.
+- `ordered-frame-event-ledger.md`: source-ordered event statements from all 15 character-specific `[Quadro]` blocks.
 
 Tasks:
 - [x] Inventory all 16 Pascal INIs and all 16 character ROT section headers.
@@ -102,9 +103,12 @@ Tasks:
 - [x] Compare the Pascal data/script representation with the C spec-to-generated-table pipeline.
 - [x] Inventory the five named special-move slots and input notation for all 15 fighters from both references.
 - [x] Compare Pascal special-action duration assignments with the C move-setup duration table for all 15 fighters, recording exceptions and mismatches.
-- [x] Complete the first cross-roster [Quadro] event index and compare all 379 Pascal/C hitbox rectangles by action/timer key and coordinates.
+- [x] Publish source-ordered event ledgers for all 15 `[Quadro]` blocks.
+- [x] Compare all 379 Pascal/C hitbox rows, including geometry and active/strength/damage/guard-damage metadata.
+- [x] Compare all 305 Pascal/C hurtbox rows after coordinate normalization.
 - [x] Compare all 15 character-specific Pascal [IA] blocks with the C CPU table; retain difficulty-scale and shared-AI caveats.
-- [ ] Complete ordered per-character event timelines, resource-ID mapping, hit metadata, and hurtbox comparison.
+- [ ] Expand the ordered event ledgers into fully evaluated action/tick timelines with nested guard paths, loop expansion, and exact RNG call order.
+- [ ] Map Pascal/C sound and effect IDs to resource definitions.
 - [ ] Compare every fighter's move behavior beyond the initial inventory; do not extrapolate from duration/name agreement.
 - [x] Start the move-by-move matrix with Chaves, including Pascal command recognition, special-action behavior, hitbox rows, CPU rules, and validation backlog.
 - [x] Complete the first comparative source pass for all 15 fighters; keep detailed event ordering and original-executable checks as separate remaining work.
