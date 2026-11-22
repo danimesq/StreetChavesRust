@@ -104,7 +104,6 @@ fn unsupported_close_range_attack_chain_fails_closed() {
     ));
 }
 
-
 #[test]
 fn replay_and_pascal_diff_clis_round_trip_tick_316() {
     use std::fs;
@@ -141,7 +140,8 @@ fn replay_and_pascal_diff_clis_round_trip_tick_316() {
         String::from_utf8_lossy(&diff.stdout)
     );
     assert!(
-        String::from_utf8_lossy(&diff.stdout).contains("MATCH: 2 Pascal/Rust tick checkpoints compared"),
+        String::from_utf8_lossy(&diff.stdout)
+            .contains("MATCH: 2 Pascal/Rust tick checkpoints compared"),
         "unexpected differential output: {}",
         String::from_utf8_lossy(&diff.stdout)
     );
