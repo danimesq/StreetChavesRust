@@ -112,7 +112,7 @@ Exit criteria:
 
 **Status: In progress**
 
-Initial contracts cover ordered per-tick events, the normative FPC 3.2.2 MTwist RNG with separate LongInt/Int64 raw-word costs, explicit Pascal box lifecycle operations, Pascal strength-conditioned row ordering, and strict AABB overlap. A static normalizer parses the full 15-fighter .rot roster and preserves guards, loops and RNG sites. An experimental Pascal branch now proposes schema-v2 JSONL capture for logical ticks, nested script invocations, actual branch/loop decisions and RNG draws with per-script indices. This exporter is still uncompiled and unrun; no real runtime fixture has been accepted yet. The Rust simulation/replay integration and original-executable parity remain unimplemented.
+Initial contracts cover ordered per-tick events, the normative FPC 3.2.2 MTwist RNG with separate LongInt/Int64 raw-word costs, explicit Pascal box lifecycle operations, Pascal strength-conditioned row ordering, and strict AABB overlap. A static normalizer parses the full 15-fighter .rot roster and preserves guards, loops and RNG sites. The experimental Pascal schema-v2 exporter now compiles with FPC 3.2.2 and has two byte-identical 3,000-step captures, with matching `logica.txt` checkpoints. A real tick-316 excerpt is a Rust fixture, and `src/trace_join.rs` uniquely joins its first runtime draw to `Common.IA.L293.C4`, while retaining ambiguous/unmatched states. Full-capture reconciliation across all 8,841 draws, Rust simulation/replay integration, and original-executable parity remain open.
 
 Goals:
 - Implement logical coordinates, ticks, player identifiers, input actions, timers, geometry, and explicit game state types.
