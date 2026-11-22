@@ -69,9 +69,7 @@ fn ai_scenario(trace: &str, tick_index: u64) -> (CombatState, AiTickInputs) {
 
         match record["record_type"].as_str() {
             Some("tick_start") => game_state = record["game_state"].as_u64().map(|n| n as u8),
-            Some("script_start")
-                if record["script_origin"].as_str() == Some("Comum.rot [IA]") =>
-            {
+            Some("script_start") if record["script_origin"].as_str() == Some("Comum.rot [IA]") => {
                 ai_inputs = Some(record["ai_inputs"].clone());
             }
             _ => {}
