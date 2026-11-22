@@ -27,6 +27,7 @@ There are no calendar estimates. Each item advances according to evidence and ex
 | [Fighter data deep dive](fighter-data-deep-dive.md) | Compares Pascal INI/ROT execution with the C spec/generated-table model | Expand into per-character move and field matrices |
 | [Fighter roster matrix](fighter-roster-matrix.md) | Records IDs, per-character file presence and optional script sections | Validate all move differences against original executable captures |
 | [Frame, AI and hitbox comparison](frame-ai-hitbox-comparison.md) | Indexes all 15 Pascal frame/AI scripts and compares all 379 hitbox rectangles with C | Complete event timelines, resource mapping, hit metadata, and hurtboxes |
+| [Original executable reverse engineering](original-executable-reverse-engineering.md) | Records preliminary PE clues and the staged plan for resources, assets, code cross-references, and later compatibility fixtures | Reproduce PE/hash findings, extract resources, and trace timer/gameplay anchors |
 | [Provenance and licenses](provenance-and-licenses.md) | Records declared licenses and blocks unverified asset reuse | Complete per-file rights and dependency audit |
 
 The baseline is useful, but it is not a complete specification. Agreement between two ports does not by itself prove original-game behavior.
@@ -152,6 +153,8 @@ Tasks:
 ## Phase 5 — Original-executable validation (final compatibility stage)
 
 **Status: Deferred until the first playable Rust baseline exists**
+
+Preliminary static PE and resource research is tracked separately in [original-executable-reverse-engineering.md](original-executable-reverse-engineering.md). It can identify investigation targets before the baseline exists, but does not constitute runtime validation or move the final compatibility milestone forward.
 
 Artifacts:
 - `original-build-and-capture.md`: executable identity, hash, provenance, environment, and repeatable capture method.
