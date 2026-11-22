@@ -120,13 +120,6 @@ impl CombatState {
             fighter.distance_ai = input.distance;
         }
 
-        // The following attack-selection block is intentionally excluded.
-        if !fighter.defending && !input.projectile_threat && input.distance <= 80 {
-            return Err(RuntimeError::UnsupportedBranch(
-                "Common.rot [IA]: close-range attack probability chain",
-            ));
-        }
-
         // Common.rot [IA], four mutually exclusive direction/facing predicates.
         if !fighter.defending && !input.projectile_threat {
             let command_left = (input.distance < fighter.distance_ai
@@ -141,6 +134,13 @@ impl CombatState {
             } else if command_right {
                 self.execute_common_walk(1, 1.0)?;
             }
+        }
+
+        // This source block follows movement in Common.rot. It is not implemented yet.
+        if !self.fighters[1].defending && !input.projectile_threat && input.distance <= 80 {
+            return Err(RuntimeError::UnsupportedBranch(
+                "Common.rot [IA]: close-range attack probability chain",
+            ));
         }
 
         let end = self.checkpoint(false, false);
