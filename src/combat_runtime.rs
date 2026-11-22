@@ -493,8 +493,7 @@ impl CombatState {
                     Self::set_attack(fighter, ACTION_WEAK_KICK, 6);
                 }
                 if matches!(fighter.action_id, ACTION_CROUCHING | ACTION_LOW_DEFENDING)
-                    || (fighter.action_id == ACTION_CROUCH_WEAK_PUNCH
-                        && fighter.action_frame >= 2)
+                    || (fighter.action_id == ACTION_CROUCH_WEAK_PUNCH && fighter.action_frame >= 2)
                 {
                     Self::set_attack(fighter, ACTION_CROUCH_WEAK_KICK, 6);
                 }
@@ -534,8 +533,7 @@ impl CombatState {
                     Self::set_attack(fighter, ACTION_STRONG_KICK, 11);
                 }
                 if matches!(fighter.action_id, ACTION_CROUCHING | ACTION_LOW_DEFENDING)
-                    || (fighter.action_id == ACTION_CROUCH_WEAK_KICK
-                        && fighter.action_frame >= 2)
+                    || (fighter.action_id == ACTION_CROUCH_WEAK_KICK && fighter.action_frame >= 2)
                 {
                     Self::set_attack(fighter, ACTION_CROUCH_STRONG_KICK, 11);
                     if fighter.character_id == 13 {
