@@ -81,8 +81,9 @@ Recommended fixture groups:
 - [x] Model explicit replace/clear/retain operations.
 - [x] Add strict AABB overlap geometry from the inspected Pascal/C collision paths.
 - [x] Trace retain-on-miss in both ports, including the distinct Pascal row-order and C last-match behavior.
+- [x] Model explicit `GolpeAtivo := False` / `attacking = false` separately from a full box clear.
 - [x] Add the character 11 state 27 timer 1 selector divergence as a documented open original-compatibility question.
-- [x] Run cargo fmt --all -- --check and cargo test --all-targets in GitHub Actions (run #23: 13 unit + 2 integration tests passed).
+- [x] Run cargo fmt --all -- --check and cargo test --all-targets in GitHub Actions (run #30: 14 unit + 2 integration tests passed).
 - [x] Implement DelphiRng's 32-bit LCG transition and multiply-high range reduction with an injected seed.
 - [x] Trace C and Pascal lookup misses as retain operations and matched inactive rows as explicit inactive writes.
 - [x] Distinguish explicit attack deactivation from clearing the stored box.
