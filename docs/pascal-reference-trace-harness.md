@@ -327,5 +327,6 @@ intercepted, nor does it provide a complete combat/action simulator.
 
 The full artifact is Actions artifact **14764162752**, retained until
 2026-12-22. The compact committed tick-316 sample remains a small fixture,
-not a substitute for the full run. Runtime source columns and individual
+not a substitute for the full run. Direct Pascal `.inc` call sites now carry source columns (2,928 concrete
+draws in the 3,000-tick capture). ROT expression AST columns and individual
 short-circuit subexpression values remain open instrumentation work.
