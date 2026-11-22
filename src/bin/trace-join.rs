@@ -76,7 +76,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "pascal_helper": pascal_helper_draws,
             "pascal_direct": pascal_direct_draws
         },
-        "match_policy": "fighter+character+section+source_line+source_column_when_available+width+literal_range_when_available",
+        "match_policy": "fighter+character+section+source_line+width+literal_range_when_available;source_column_retained_for_follow_up",
         "source_column_draws": source_column_draws,
         "source_column_available_for_pascal_direct": true,
         "rot_expression_source_column_available": true,
