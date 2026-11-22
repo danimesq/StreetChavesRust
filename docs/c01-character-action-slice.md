@@ -77,6 +77,10 @@ Each fighter must be audited and validated independently. Mark an item complete 
 
 ## 🌈 Validation gates
 
+- [x] Add persistent `sprite_frame` and explicit victory animation context for sprite offset, ground and camera bounds.
+- [x] Execute audited C01-C15 victory-frame branches with ordered shared RNG and C12 particle requests.
+- [x] Test C06, C09 and C14 using both possible previous sprite frames.
+- [x] Test C02's one-draw behavior, C12's ordered draw sequence/movement/effects, and C08/C13 ground-relative movement.
 - [ ] Complete the source audit for all 15 original fighters, recording absent sections and per-character exceptions.
 - [x] Verify the implemented Rust action mapping for pose against the Pascal enum (acPose = 24); other command mappings remain to be audited.
 - [ ] Implement per-character victory-frame behavior (entry and pose command entry are implemented; victory animation and pose [Quadro] frame updates remain pending).
@@ -182,12 +186,9 @@ The operation must preserve these rules:
 
 ### Incremental implementation boundary
 
-The first implementation slice should cover the frame-only branches whose required inputs are already represented, with per-fighter boundary tests. The following branches must remain blocked until their missing dependencies are represented and tested:
+The runtime now receives the explicit context and executes the previously blocked movement/RNG branches; rendering the returned C12 particle requests remains the responsibility of the effect system:
 
-- C02: shared RNG draw on every victory-frame update.
-- C08: vertical movement and ground clamp.
-- C12: horizontal movement, camera-relative bounds, facing changes and conditional shared RNG.
-- C13: cosine-based vertical movement and ground-relative clamp.
+- C12 particle requests are emitted as ordered data; the renderer/effect-system integration remains pending.
 
 C06, C09 and C14 also require tests that seed the prior sprite frame to both values; testing only the output frame from a default state would miss their read-before-write behavior.
 
@@ -212,3 +213,6 @@ Pascal rounding for its cosine displacement.
 C06, C09 and C14 branch on the previous sprite frame. Tests must seed both 33 and 34
 and assert the opposite frame on each eligible action-frame boundary. This is an
 animation update API, not a full renderer/effect-system integration claim.
+
+
+Validation note: the code and focused tests have been committed, but CI must pass before this slice is considered validated. The update API preserves the shared RNG cursor; it does not claim renderer integration for C12's returned particle events.
