@@ -57,7 +57,8 @@ Start with the [documentation index](docs/README.md) for the full research map.
 
 ## Current focus
 
-The current phase is source research and specification, not feature implementation:
+The current phase is source research and specification, not feature implementation. The move matrix now inventories the special-move names/notation for all 15 fighters and compares Pascal action durations with the C move-setup reference; frame-by-frame, hitbox, effect/sound, and original-executable validation remain in progress:
+
 
 - Compare the two SDL implementations at the source level.
 - Map fighter frame selection and the combat update pipeline.
