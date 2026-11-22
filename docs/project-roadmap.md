@@ -108,7 +108,7 @@ Exit criteria:
 
 **Status: In progress**
 
-Initial contracts now cover ordered per-tick events, sequential fixture RNG injection, explicit box updates, and strict AABB overlap. These are contract-level primitives only; no complete fighter simulation or Delphi-compatible RNG is implemented yet.
+Initial contracts now cover ordered per-tick events, a Delphi 5 32-bit RNG transition with injected seed, explicit C/Pascal box lifecycle operations, Pascal strength-conditioned row ordering, and strict AABB overlap. These are contract-level primitives only; the complete fighter simulation, original RandSeed capture, and original call-stream parity remain unimplemented.
 
 Goals:
 - Implement logical coordinates, ticks, player identifiers, input actions, timers, geometry, and explicit game state types.
