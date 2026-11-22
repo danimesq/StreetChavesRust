@@ -184,11 +184,7 @@ fn tick_381_replays_the_ordered_close_range_attack_probability_chain() {
     );
     assert_eq!(
         result.commands,
-        vec![
-            AiCommand::WalkLeft,
-            AiCommand::WeakKick,
-            AiCommand::Crouch
-        ]
+        vec![AiCommand::WalkLeft, AiCommand::WeakKick, AiCommand::Crouch]
     );
     assert_eq!(state.fighters[1].action_id, 4);
     assert_eq!(state.fighters[1].action_frame, 0);
