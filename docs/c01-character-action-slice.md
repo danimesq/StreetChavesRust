@@ -113,3 +113,38 @@ It does **not** implement the per-character victory animation in [Quadro].
 Those animation branches differ across the roster and remain independently
 audited. Pose is also not included in this first code slice; its presence and
 frame behavior must be handled per source file rather than assumed for C13-C15.
+
+## 🌈 Victory animation audit: C01-C15
+
+The complete character [Quadro] victory branches were inspected at the pinned Pascal revision. They are not interchangeable:
+
+| Fighter | Frame selection / transition | Additional behavior |
+|---|---|---|
+| C01 | Frames 33/34/35 at action frames 0/7/14/21/28; resets action frame at 28 | Loops a 28-frame sequence |
+| C02 | Defaults to 33; independently draws Random(2) and selects 34 when zero | One RNG draw on each victory-frame update |
+| C03 | 33 for frames <5; then 34/35/34/33/34/35/34 at 5/10/15/20/25/30/35 | Eight explicit frame boundaries |
+| C04 | 33 while frame <13; 34 at frame 13 | Two-stage sequence |
+| C05 | 33 while frame <5; alternates 34/33 at 9/13/17/21/25/29/33/37; 35 at 41 | Nonuniform 4-frame transitions |
+| C06 | Every fourth action frame toggles between 33 and 34 based on the current sprite frame | Depends on prior P.Quadro |
+| C07 | 33 on even action frames, 34 on odd action frames | Alternating every frame |
+| C08 | Sprite frame 33 throughout | Moves Y by -4/+4 according to parity, then clamps to ChaoY |
+| C09 | Every third action frame toggles between 33 and 34 based on current sprite frame | Depends on prior P.Quadro |
+| C10 | 33 while frame <12; 34 at frame 12 | Two-stage sequence |
+| C11 | Sprite frame 33 throughout | No extra write in this branch |
+| C12 | 33/34 according to parity | Moves X by 12 according to facing, clamps facing at camera-relative bounds, and may consume Random(2) when frame mod 8 = 0 to reverse direction |
+| C13 | Sprite frame 33 throughout | Cosine-based Y motion with a floor clamp at ChaoY - 10 |
+| C14 | Every third action frame toggles between 33 and 34 based on current sprite frame | Same frame rule as C09, independently confirmed in C14 |
+| C15 | 33 while frame <=10; then 34 at frame 10; 35 at frame 14 | Independent source-ordered ifs mean frame 10 ends on 34 |
+
+The C02 and C12 branches consume RNG from the shared Pascal stream. The C12 branch also has movement, camera-boundary and facing side effects. These are specifically **not** implemented by the pose command or by the existing victory-entry helper. Victory animation runtime work remains pending until the frame-update contract can represent sprite-frame state, position/facing side effects and shared RNG without losing source ordering.
+
+## 🌈 Verified pose enum and first runtime implementation
+
+The numeric mapping is grounded in the original source/game/ChavesTipos.pas at source revision e1b025c35ecbc2b14d8635564aafd23c2107d3d1:
+
+- acVitoria = 23
+- acPose = 24
+
+C01-C12 each define cmPose with the same guard (P.Acao in [acParado, acAndando]) and writes (P.Acao := acPose, P.QuadroAcao := 0, P.DuracaoAcao := 20). C13-C15 do not define cmPose. Rust now exposes ACTION_POSE = 24 and CombatState::apply_character_pose, which applies that branch only to C01-C12. Tests cover all 12 eligible character IDs, both allowed starting actions, rejected actions, C13-C15 and invalid fighter indices.
+
+This implements the [Acao] command entry only. The per-character [Quadro] pose frame assignments (frame 12 at action frame 0 and frame 30 at action frame 2 in C01-C12) remain a separate animation-update task.
