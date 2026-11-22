@@ -112,7 +112,7 @@ Exit criteria:
 
 **Status: In progress**
 
-Initial contracts now cover ordered per-tick events, the normative FPC 3.2.2 MTwist RNG with separate LongInt/Int64 raw-word costs, explicit Pascal box lifecycle operations, Pascal strength-conditioned row ordering, and strict AABB overlap. A static normalizer parses the full 15-fighter .rot roster and preserves guards, loops and RNG sites. These are research/contracts only; concrete tick execution, Pascal `--gravar` trace capture and original-executable parity remain unimplemented.
+Initial contracts cover ordered per-tick events, the normative FPC 3.2.2 MTwist RNG with separate LongInt/Int64 raw-word costs, explicit Pascal box lifecycle operations, Pascal strength-conditioned row ordering, and strict AABB overlap. A static normalizer parses the full 15-fighter .rot roster and preserves guards, loops and RNG sites. An experimental Pascal branch now proposes schema-v2 JSONL capture for logical ticks, nested script invocations, actual branch/loop decisions and RNG draws with per-script indices. This exporter is still uncompiled and unrun; no real runtime fixture has been accepted yet. The Rust simulation/replay integration and original-executable parity remain unimplemented.
 
 Goals:
 - Implement logical coordinates, ticks, player identifiers, input actions, timers, geometry, and explicit game state types.
