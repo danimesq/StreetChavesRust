@@ -521,11 +521,7 @@ impl CombatState {
     /// All twelve pinned ROT files write Desloc + 12 at action frame 0 and
     /// Desloc + 30 at action frame 2. Other frames retain the previous sprite.
     /// C13-C15 do not define the pose command and are rejected.
-    pub fn update_pose_animation(
-        &mut self,
-        fighter_index: usize,
-        sprite_offset: i32,
-    ) -> bool {
+    pub fn update_pose_animation(&mut self, fighter_index: usize, sprite_offset: i32) -> bool {
         let Some(fighter) = self.fighters.get_mut(fighter_index) else {
             return false;
         };
