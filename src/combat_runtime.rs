@@ -435,13 +435,12 @@ impl CombatState {
             12 => {
                 if frame % 2 == 0 {
                     fighter.sprite_frame = offset + 33;
+                } else {
+                    fighter.sprite_frame = offset + 34;
                 }
-                } else { fighter.sprite_frame = offset + 34; }
 
                 if fighter.facing == SIDE_RIGHT {
-
                     fighter.x += 12.0;
-
                 }
                 if fighter.facing == SIDE_LEFT {
                     fighter.x -= 12.0;
@@ -458,8 +457,9 @@ impl CombatState {
                 if frame % 8 == 0 && rng.draw_longint(2).map_err(RuntimeError::Rng)? == 0 {
                     if fighter.facing == SIDE_RIGHT {
                         fighter.facing = SIDE_LEFT;
+                    } else if fighter.facing == SIDE_LEFT {
+                        fighter.facing = SIDE_RIGHT;
                     }
-                    } else if fighter.facing == SIDE_LEFT { fighter.facing = SIDE_RIGHT; }
                 }
 
                 // Pascal evaluates the two Random expressions for each effect in order.
