@@ -526,7 +526,10 @@ class EventExtractor:
             if op in {"and", "or"}:
                 left = expr_text(node["left"])
                 predicate = f"({left}) is True" if op == "and" else f"({left}) is False"
-                rhs_guard = f"RHS skipped only if left is Boolean and {predicate}; integer bitwise {op} evaluates RHS"
+                rhs_guard = (
+                    f"RHS executes only if left is non-Boolean or {predicate}; "
+                    f"Boolean {op} short-circuits on the opposite value"
+                )
                 self.expr(node["right"], guards + [rhs_guard], loops, arg_context)
             else:
                 self.expr(node["right"], guards, loops, arg_context)
@@ -608,8 +611,13 @@ class EventExtractor:
         elif k == "case":
             self.expr(node["selector"], guards, loops)
             selector = expr_text(node["selector"])
+            prior_matches = []
             for ai, arm in enumerate(node["arms"]):
-                reached = f"case dispatch reaches arm {ai + 1}"
+                reached = (f"case {selector} reaches arm {ai + 1}; "
+                           + ("no earlier arm matched" if not prior_matches
+                              else "none of the earlier arms matched: " + "; ".join(prior_matches)))
+                # The Pascal interpreter evaluates every label expression in the
+                # reached arm before dispatching its body, even after Achou=True.
                 for label in arm["labels"]:
                     if label["kind"] == "range":
                         self.expr(label["low"], guards + [reached], loops)
@@ -617,9 +625,13 @@ class EventExtractor:
                     else:
                         self.expr(label, guards + [reached], loops)
                 labels = [expr_text(x) for x in arm["labels"]]
-                self.statement(arm["body"], guards + [f"case {selector} matches {' or '.join(labels)}"], loops)
+                match_guard = f"case {selector} matches any of ({' or '.join(labels)})"
+                self.statement(arm["body"], guards + [reached, match_guard], loops)
+                prior_matches.append(match_guard)
             if node["default"] is not None:
-                self.statement(node["default"], guards + [f"case {selector} matches no listed arm"], loops)
+                no_match = (f"case {selector} matches none of the listed arms"
+                            + (": " + "; ".join(prior_matches) if prior_matches else ""))
+                self.statement(node["default"], guards + [no_match], loops)
         elif k == "assign":
             self.expr(node["value"], guards, loops)
             target = expr_text(node["target"])
