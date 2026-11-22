@@ -239,7 +239,7 @@ pub enum CombatEvent {
     RandomDraw {
         upper_exclusive: u32,
         value: u32,
-        draw_index: u32,
+        draw_index: u64,
     },
     /// Explicitly disables a stored attack without erasing its coordinates.
     AttackDeactivated,
@@ -348,7 +348,7 @@ pub trait RandomSource {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RandomSample {
-    pub draw_index: u32,
+    pub draw_index: u64,
     pub upper_exclusive: u32,
     pub value: u32,
 }
@@ -380,11 +380,11 @@ impl FixtureRng {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FixtureRngError {
     Exhausted {
-        draw_index: u32,
+        draw_index: u64,
         upper_exclusive: u32,
     },
     OutOfRange {
-        draw_index: u32,
+        draw_index: u64,
         value: u32,
         upper_exclusive: u32,
     },
@@ -420,7 +420,7 @@ impl RandomSource for FixtureRng {
     type Error = FixtureRngError;
 
     fn draw(&mut self, upper_exclusive: u32) -> Result<RandomSample, Self::Error> {
-        let draw_index = u32::try_from(self.cursor).unwrap_or(u32::MAX);
+        let draw_index = u64::try_from(self.cursor).unwrap_or(u64::MAX);
         let value = *self
             .values
             .get(self.cursor)
@@ -487,11 +487,16 @@ impl DelphiRng {
         self.rand_seed
     }
 
-    /// Delphi's Random(N) for a non-negative 32-bit range.
+    /// Delphi's Random(N) for the valid non-negative signed LongInt range.
+    /// The source runtime accepts 0..=i32::MAX; game callers use small ranges.
     ///
     /// A zero range still advances RandSeed, matching the Delphi 5 assembly:
     /// the seed update occurs before the multiply-high result is produced.
     pub fn random_range(&mut self, upper_exclusive: u32) -> u32 {
+        assert!(
+            upper_exclusive <= i32::MAX as u32,
+            "Delphi 5 Random range must fit in a non-negative LongInt"
+        );
         let next = self.next_u32() as u64;
         ((next * upper_exclusive as u64) >> 32) as u32
     }
@@ -501,7 +506,7 @@ impl RandomSource for DelphiRng {
     type Error = std::convert::Infallible;
 
     fn draw(&mut self, upper_exclusive: u32) -> Result<RandomSample, Self::Error> {
-        let draw_index = u32::try_from(self.draws).unwrap_or(u32::MAX);
+        let draw_index = self.draws;
         let value = self.random_range(upper_exclusive);
         Ok(RandomSample {
             draw_index,
