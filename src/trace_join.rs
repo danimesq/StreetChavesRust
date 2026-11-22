@@ -6,7 +6,7 @@
 //! ambiguity instead of choosing a static AST site by guessed column.
 
 use serde_json::Value;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::io::{BufRead, Read};
 
@@ -94,6 +94,10 @@ pub struct RuntimeCapture {
     pub schema_version: u64,
     pub draws: Vec<RuntimeDraw>,
     pub controls: Vec<RuntimeControl>,
+    pub script_invocations: usize,
+    pub nested_script_invocations: usize,
+    pub fighter_indices: Vec<u8>,
+    pub action_ids: Vec<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -273,6 +277,10 @@ pub fn load_runtime_capture<R: BufRead>(reader: R) -> Result<RuntimeCapture, Tra
     let mut schema_version = None;
     let mut draws = Vec::new();
     let mut controls = Vec::new();
+    let mut script_invocations = 0usize;
+    let mut nested_script_invocations = 0usize;
+    let mut fighter_indices = HashSet::new();
+    let mut action_ids = HashSet::new();
 
     for (index, raw_line) in reader.lines().enumerate() {
         let line_number = index + 1;
@@ -301,7 +309,28 @@ pub fn load_runtime_capture<R: BufRead>(reader: R) -> Result<RuntimeCapture, Tra
                 schema_version = Some(required_u64(&record, "schema_version", line_number)?);
                 session_id = Some(required_string(&record, "session_id", line_number)?);
             }
-            "draw" => draws.push(parse_draw(&record, line_number)?),
+            "draw" => {
+                let draw = parse_draw(&record, line_number)?;
+                if let Some(fighter_index) = draw.fighter_index {
+                    fighter_indices.insert(fighter_index);
+                }
+                if let Some(action_id) = draw.action_id {
+                    action_ids.insert(action_id);
+                }
+                draws.push(draw);
+            }
+            "script_start" => {
+                script_invocations += 1;
+                if optional_u64(&record, "parent_script_execution_id").is_some() {
+                    nested_script_invocations += 1;
+                }
+                if let Some(fighter_index) = optional_u8(&record, "fighter_index") {
+                    fighter_indices.insert(fighter_index);
+                }
+                if let Some(action_id) = optional_u32(&record, "action_id") {
+                    action_ids.insert(action_id);
+                }
+            }
             "control" => controls.push(parse_control(&record, line_number)?),
             _ => {}
         }
@@ -322,6 +351,18 @@ pub fn load_runtime_capture<R: BufRead>(reader: R) -> Result<RuntimeCapture, Tra
         schema_version,
         draws,
         controls,
+        script_invocations,
+        nested_script_invocations,
+        fighter_indices: {
+            let mut values: Vec<_> = fighter_indices.into_iter().collect();
+            values.sort_unstable();
+            values
+        },
+        action_ids: {
+            let mut values: Vec<_> = action_ids.into_iter().collect();
+            values.sort_unstable();
+            values
+        },
     })
 }
 
