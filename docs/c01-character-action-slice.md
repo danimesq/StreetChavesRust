@@ -148,3 +148,47 @@ The numeric mapping is grounded in the original source/game/ChavesTipos.pas at s
 C01-C12 each define cmPose with the same guard (P.Acao in [acParado, acAndando]) and writes (P.Acao := acPose, P.QuadroAcao := 0, P.DuracaoAcao := 20). C13-C15 do not define cmPose. Rust now exposes ACTION_POSE = 24 and CombatState::apply_character_pose, which applies that branch only to C01-C12. Tests cover all 12 eligible character IDs, both allowed starting actions, rejected actions, C13-C15 and invalid fighter indices.
 
 This implements the [Acao] command entry only. The per-character [Quadro] pose frame assignments (frame 12 at action frame 0 and frame 30 at action frame 2 in C01-C12) remain a separate animation-update task.
+
+
+## 🌈 Victory animation runtime: state and execution contract
+
+The victory audit is not implemented as a per-character frame-number lookup. The Pascal [Quadro] branches read and mutate more than the action timer, and several branches depend on values that are currently absent from `FighterState` or `CombatState`.
+
+### Runtime state that must become explicit
+
+| Pascal concept | Required Rust representation | Why it is not interchangeable |
+|---|---|---|
+| `P.Quadro` | Persistent `sprite_frame` on each fighter | C06, C09 and C14 inspect the existing sprite frame before deciding whether to toggle it. |
+| `P.X`, `P.Y` | Existing fighter coordinates, with source-ordered mutation | C08, C12 and C13 move the fighter as part of the victory frame update. |
+| `P.Lado` | Existing `facing`, with explicit transition semantics | C12 can reverse facing after movement and a conditional RNG draw. |
+| `ChaoY` | Explicit ground reference in the animation update context | C08 clamps to the ground; C13 clamps against a ground-relative offset. |
+| `CameraX` and screen limits | Explicit camera/bounds context, not an assumed constant | C12's horizontal clamp is camera-relative. |
+| Pascal `Random(2)` | The caller's existing mutable `PascalRandomSource` | C02 and C12 must advance the same replay cursor used by the rest of the tick. |
+
+The current replay snapshot does not provide every animation input (notably the ground reference and camera context). Those inputs must be captured or supplied from a source-backed simulation state before the affected branches can claim parity. Do not silently substitute zero or a guessed screen boundary.
+
+### Ordered update contract
+
+The runtime entry point should be a fallible operation that receives the fighter index, the current animation context, and the caller's mutable Pascal RNG source. It should execute the fighter's [Quadro] branch in Pascal statement order and return an ordered effect/event trace for assertions and differential diagnostics.
+
+The operation must preserve these rules:
+
+1. Read the pre-update action frame, sprite frame, position and facing exactly where the Pascal statement reads them.
+2. Apply each assignment immediately in source order. Do not turn independent Pascal `if` statements into an exclusive `match`; C15 demonstrates why the final write at a shared boundary matters.
+3. Request RNG only at the exact source statement that requests it. C02 draws on every victory-frame update; C12 draws only on its audited frame-modulo boundary. A branch that does not draw must not advance the cursor.
+4. Apply movement, facing changes and clamps in their original order. Do not calculate a final position from a simplified direction enum if the source mutates intermediate values.
+5. Keep animation frame writes distinct from action-frame advancement. The caller owns the tick/update cadence; this function must not invent an extra increment or reset.
+6. Return an explicit unsupported-input/error result when required context is unavailable. Never report a successful frame update after skipping a source-visible side effect.
+
+### Incremental implementation boundary
+
+The first implementation slice should cover the frame-only branches whose required inputs are already represented, with per-fighter boundary tests. The following branches must remain blocked until their missing dependencies are represented and tested:
+
+- C02: shared RNG draw on every victory-frame update.
+- C08: vertical movement and ground clamp.
+- C12: horizontal movement, camera-relative bounds, facing changes and conditional shared RNG.
+- C13: cosine-based vertical movement and ground-relative clamp.
+
+C06, C09 and C14 also require tests that seed the prior sprite frame to both values; testing only the output frame from a default state would miss their read-before-write behavior.
+
+This section defines the runtime contract, not a claim that victory animation behavior has landed. The victory [Acao] command entry remains implemented separately; all per-character victory [Quadro] execution remains pending until code, tests and replay evidence cover the relevant state and effects.
