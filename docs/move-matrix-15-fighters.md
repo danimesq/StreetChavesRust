@@ -305,11 +305,14 @@ Do not label a mismatch as an original-game bug. It is a difference between two 
 
 ### Cross-roster validation backlog
 
-- [x] Inspect all 15 Pascal `[Quadro]` blocks and publish a first-pass frame/timer/effect/sound event index in [frame, AI and hitbox comparison](frame-ai-hitbox-comparison.md).\n- [ ] Expand the index into full ordered per-move event timelines with branch conditions and RNG order.
+- [x] Inspect all 15 Pascal `[Quadro]` blocks and publish a first-pass frame/timer/effect/sound event index in [frame, AI and hitbox comparison](frame-ai-hitbox-comparison.md).
+- [ ] Expand the index into full ordered per-move event timelines with branch conditions and RNG order.
 - [x] Inspect all 15 Pascal `[IA]` blocks and compare character-specific conditions/move IDs against C `05d-cpu-table.txt`; shared CPU prelude and difficulty-scale equivalence remain open.
-- [x] Normalize all 379 Pascal `[Ataque]` rows against all 379 C hit rows by action/timer key and rectangle coordinates.\n- [ ] Decode the remaining hit metadata and map action IDs to named moves.
+- [x] Normalize all 379 Pascal `[Ataque]` rows against all 379 C hit rows by action/timer key and rectangle coordinates.
+- [ ] Decode the remaining hit metadata and map action IDs to named moves.
 - [ ] Map sound/effect IDs to resource definitions for both projects.
-- [x] Resolve Seu Madruga move 22/23 and Sr. Furtado move 22 as character-specific setup paths; identify Jaiminho move 26 as extra2/final-like.\n- [ ] Resolve Jaiminho move 24/25, which appear in the command map but not the cited per-character setup table.
+- [x] Resolve Seu Madruga move 22/23 and Sr. Furtado move 22 as character-specific setup paths; identify Jaiminho move 26 as extra2/final-like.
+- [ ] Resolve Jaiminho move 24/25, which appear in the command map but not the cited per-character setup table.
 - [ ] Confirm whether C duration and Pascal action timer advance at the same simulation cadence.
 - [ ] Validate representative and exceptional moves against the original executable.
 - [ ] Add deterministic tests for parser order, sequence timeout, button matching, eligibility, and chained actions.
@@ -323,16 +326,16 @@ Do not label a mismatch as an original-game bug. It is a difference between two 
 | 3 | Chiquinha | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
 | 4 | Quico | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
 | 5 | Dona Florinda | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
-| 6 | Prof. Girafales | Documented | Duration inventory | Setup/AI table available | Pending |
-| 7 | Sr. Barriga | Documented | Duration inventory | Setup/AI table available | Pending |
-| 8 | Bruxa do 71 | Documented | Air-only special noted | Setup/AI table available | Pending |
-| 9 | Paty | Documented | Jump-only special noted | Setup/AI table available | Pending |
-| 10 | Nhonho | Documented | Charge/mash behavior noted | Setup/AI table available | Pending |
-| 11 | Godines | Documented | Duration inventory | Setup/AI table available | Pending |
-| 12 | Sr. Furtado | Documented | Final-like special 4 exception | Setup ID exception noted | Pending |
-| 13 | Jaiminho | Documented | Extra 1/2 and grouped final exception | Move ID 26 exception noted | Pending |
-| 14 | Dona Neves | Documented | Jump-only special noted | Setup/AI table available | Pending |
-| 15 | Glória | Documented | Duration inventory | Setup/AI table available | Pending |
+| 6 | Prof. Girafales | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
+| 7 | Sr. Barriga | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
+| 8 | Bruxa do 71 | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
+| 9 | Paty | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
+| 10 | Nhonho | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
+| 11 | Godines | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
+| 12 | Sr. Furtado | Documented | Frame/event index; AI compared; hitboxes normalized | Move 22 final-like exception mapped | Pending |
+| 13 | Jaiminho | Documented | Frame/event index; AI compared; hitboxes normalized | Move 26 mapped; 24/25 open | Pending |
+| 14 | Dona Neves | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
+| 15 | Glória | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
 
 
 See also: [Frame, AI and hitbox comparison](frame-ai-hitbox-comparison.md) for the complete 15-fighter first-pass index, the 379/379 rectangle match, CPU comparisons, and exceptional-ID findings.
