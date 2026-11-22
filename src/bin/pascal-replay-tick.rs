@@ -69,6 +69,7 @@ fn main() -> ExitCode {
                 },
             },
             FighterState {
+                sprite_frame: 0,
                 character_id: 1,
                 action_id: 1,
                 action_frame: 0,
