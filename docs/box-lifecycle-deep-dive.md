@@ -33,7 +33,31 @@ Inside sel_boxes:
 
 The fighter reset path begins with a zeroed fighter record and then assigns a fallback hurtbox. Thus attack fields begin inactive/zero, but after the first selector writes, a missing match is a retain operation.
 
-Other code can clear the attack flag independently. Examples include move-clock completion, landing cleanup, knockdown setup, normal-hit resolution, and selected move setup paths. Those explicit state-machine writes are not the same thing as a selector miss.
+## 🌈 Explicit attack deactivation is not a box clear
+
+The two projects have state-machine paths that set the attack-active flag to false independently of the table selector. These paths normally leave the stored attack coordinates intact. Some paths also reset damage or other action fields, but that is a separate state mutation.
+
+| Port | Source location | Deactivation point | Other writes in the same path |
+|---|---|---|---|
+| Pascal | `Estado7_Luta.inc:966` | A blocked attack sets `P.GolpeAtivo := False` | The guard branch can apply chip damage and hit-stop; the stored attack rectangle is not erased |
+| Pascal | `Estado7_Luta.inc:1028-1030` | A successful hit sets both attacker and victim `GolpeAtivo := False` before `ExecutarAcerto` | It then runs the character [Acerto] script and calls `AtualizaQuadro` on the victim, which may immediately select a new box for the victim's new action |
+| Pascal | `Estado7_Luta.inc:1065` | Action-duration completion sets `GolpeAtivo := False` | Also sets `DanoGolpe := 0` and resets the action/timer/guard/invulnerability state |
+| Pascal | `Estado7_Luta.inc:1097` | A physics/landing transition sets `GolpeAtivo := False` | Also resets selected airborne/action fields; coordinates are not erased here |
+| Pascal | `Estado7_Luta.inc:1174` | Landing cleanup sets `GolpeAtivo := False` | Also sets `DanoGolpe := 0` and resets action/airborne fields |
+| C | `fighter.c:set_move`, move 10 | Knockdown setup sets `attacking = false` | Replaces fighter state/timer and marks invulnerable; does not erase hit coordinates |
+| C | `fighter.c:set_move`, moves 8/9 | Selected reaction moves set `attacking = false` | Does not itself erase hit coordinates or damage |
+| C | `fighter.c:move_clock` | Move completion sets `attacking = false` | Also zeros damage and resets action flags/timers |
+| C | `fighter.c:physics` | Landing sets `attacking = false` | Also zeros damage and resets airborne/action state |
+| C | `combat.c:melee_step` | Blocked attack deactivates the attacker; successful hit deactivates attacker and victim | The hit path may chain the attacker into another move and reselect the victim's frame later in the same call |
+| C | `selector.c:sel_throws` and special-motion landing branch | Specific throw/landing transitions set `attacking = false` | Changes action/airborne state; the box fields remain separate |
+
+This gives three different operations which must remain distinct in Rust:
+
+1. **Replace with an inactive row:** a matching table row writes new geometry/damage metadata with the active bit false.
+2. **Deactivate the current attack:** an explicit state-machine write changes only the active bit; stored geometry/metadata remain.
+3. **Lookup miss:** the selector writes nothing at all, so both the previous active bit and metadata remain unchanged.
+
+A complete `Clear` of the stored box record is a fourth, stronger operation. It should only be emitted when a source actually removes the box record, not as a synonym for `GolpeAtivo := False` or `attacking = false`.
 
 ## 🌈 C duplicate-key discrepancy: fighter 11, state 27, timer 1
 
@@ -108,6 +132,7 @@ The Rust library now provides:
 - RawBounds::mirrored_horizontally for the source endpoint transform.
 - BoxUpdate::Replace, Clear, and Retain as separate operations.
 - BoxState::apply_last_match_or_retain to model ordered selectors where the final matching row wins and a miss retains the old value.
+- BoxState::deactivate_attack and CombatEvent::AttackDeactivated to model an explicit active-flag clear while preserving stored geometry and damage metadata.
 - PascalAttackDefinition, which keeps strength_condition separate from assigned_strength.
 - PascalAttackState::apply_ordered_rows, which evaluates matching rows in original order and allows a prior row's force assignment to affect later conditions.
 
@@ -119,7 +144,8 @@ These are adapters/contracts, not a complete fight implementation. The source-sp
 - [x] Confirm Pascal AplicarCaixas misses retain old box state.
 - [x] Confirm the Pascal attack loop is ordered and has separate condition/assignment strength fields.
 - [x] Identify the character 11 state 27 timer 1 duplicate-row divergence.
-- [ ] Trace all explicit attack-flag clear sites in both ports and classify which are state transitions versus collision outcomes.
+- [x] Trace the principal explicit attack-flag deactivation sites in both fight paths and distinguish them from selector misses.
+- [ ] Exhaustively inventory any remaining attack-flag writes outside the inspected fight/selector/physics files.
 - [ ] Validate whether the original executable matches Pascal's strength-specific row selection or the C port's last-row behavior.
 - [ ] Capture facing changes on a frame with no box-table row.
 - [ ] Add source-backed fixtures for state transitions that clear attacking while retaining geometry.
