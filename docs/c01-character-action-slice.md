@@ -1,18 +1,41 @@
-# 🌈 C01 character-action slice: source contract
+# 🌈 Character-script parity: 15-fighter contract
 
-## 🌈 Purpose
+## 🌈 Scope and roster
 
-Define the first bounded character-specific action-script slice for the Rust runtime, using Chaves (fighter 1, C01) as the reference. This document records source behavior and an implementation boundary; it does **not** claim that C01's [Acao] has been ported.
+This PR is the consolidated workstream for character-specific combat scripts across the complete original 15-fighter roster, not a C01-only milestone.
 
-Normative source: [OpenStreetChaves C01.rot](https://github.com/danimesq/OpenStreetChaves/blob/e1b025c35ecbc2b14d8635564aafd23c2107d3d1/Dados/Lutadores/C01.rot), pinned at e1b025c35ecbc2b14d8635564aafd23c2107d3d1.
+The original roster is C01-C15: Chaves, Seu Madruga, Chiquinha, Quico, Dona Florinda, Prof. Girafales, Sr. Barriga, Bruxa do 71, Paty, Nhonho, Godines, Sr. Furtado, Jaiminho, Dona Neves and Glória. Pascal C16 (Chapolin) is a generated bonus character and remains outside the original 15-fighter completion criterion; preserve it as a separately tracked optional 2026 bonus.
 
-The character-specific [Acao] runs after Comum.rot [Acao]. The full action composition then runs the character-specific section before the common [AcaoFim]. Keep this order explicit in the runtime.
+Normative Pascal source revision: OpenStreetChaves e1b025c35ecbc2b14d8635564aafd23c2107d3d1. The roster inventory is documented in [fighter-roster-matrix.md](fighter-roster-matrix.md). File/section presence does not prove identical behavior.
 
-## 🌈 Ordered command families
+## 🌈 Consolidated objectives for this PR
 
-The source contains seven independent top-level if statements. They are evaluated in source order, not as an exclusive match. A command can only affect the state when its own condition passes; do not silently turn the sequence into first-match dispatch.
+This PR intentionally absorbs the previously proposed follow-up work. Do not split these into separate PRs #11, #12 or #13:
 
-| Command | Eligible current actions | State writes |
+1. **Character-script contract for all 15 fighters:** inspect and document each C01-C15 [Acao], [Quadro], [IA] and optional [Acerto] behavior, including character-specific differences, dependencies, source ordering and missing sections. Do not infer behavior from another fighter.
+2. **Victory and pose implementation:** implement the source-backed victory and pose behavior for every fighter that actually defines the corresponding command, with per-character eligibility and state-write tests. Do not assume identical predicates or durations.
+3. **Special-command implementation:** expand character-specific specials across the roster, incrementally and only where each source branch and its dependencies are understood. Preserve effect ownership, charge arithmetic, weak/strong variants, movement/sequence transitions, power semantics, global presentation events and RNG consumption exactly where the source requires them.
+4. **Pascal child-script RNG capture:** add a real historical Pascal capture in which a parent action script invokes a child script that consumes the shared RNG stream; verify the cursor continues at the exact subsequent index and compare the resulting state/draw sequence against Rust.
+
+These are all part of PR #10's intended scope. Completion is not implied by this initial contract update; keep the PR open until the implementation and evidence are actually present and validated.
+
+## 🌈 Execution strategy
+
+- Build a per-fighter source matrix before generalizing any behavior. Track each command, eligibility predicate, state mutation, script call, side effect, RNG draw and evidence scenario independently.
+- Use shared Rust helpers only after at least two source implementations demonstrate the same semantics. Keep character-specific differences explicit in data or code.
+- Preserve Pascal evaluation order. Independent sequential if statements must not be rewritten as an exclusive match unless the source proves exclusivity.
+- Keep common script order explicit: common [Acao], character [Acao], then common [AcaoFim], with any other ordering verified from the actual caller.
+- Add focused tests per fighter and command, plus integration/replay fixtures. A passing generic helper test is not evidence that all 15 source scripts match.
+- Unsupported commands or missing source sections remain explicitly unimplemented. Never synthesize a missing [Acerto] or other section.
+- Keep Chapolin C16 outside the 15-fighter acceptance gate; its bonus status and provenance remain separately documented.
+
+## 🌈 C01: first inspected reference, not the whole roster
+
+C01 (Chaves) is the first detailed source inspection and a reference for building the audit format. It is not a template that can be copied blindly to C02-C15.
+
+The C01.rot [Acao] section contains seven independent top-level command branches: cmVitoria, cmPose, cmEsp1Fraco/Forte, cmEsp2Fraco/Forte, cmEsp3Fraco/Forte, cmEsp4Fraco/Forte and cmEspFinal. Their eligibility predicates and state writes are recorded below as C01-specific observations only.
+
+| C01 command | Eligible current actions | Observed state writes |
 |---|---|---|
 | cmVitoria | idle, walking, crouching | action = victory; action frame = 0; duration = 250 |
 | cmPose | idle, walking | action = pose; action frame = 0; duration = 20 |
@@ -22,43 +45,49 @@ The source contains seven independent top-level if statements. They are evaluate
 | cmEsp4Fraco/Forte | idle, walking, standing defense, low defense | action = special 4; frame = 0; add 5 × charge gain when below max; duration = 22; set weak/strong force |
 | cmEspFinal | idle, walking, strong punch, crouching, standing defense, low defense; and either health <= 15 or power > 0 | action = special 5; frame = 0; duration = 38; clear charge when power is exactly 3; decrement power; set sprite frame to displacement + 36; force = special; request screen flash 22 and final-special sound |
 
-Names in the table are semantic descriptions of the Pascal enum values, not Rust enum variants. The Rust implementation must use its own typed identifiers and map them explicitly.
+Important C01-only semantics:
+- Conditions are independent and evaluated in source order, not an exclusive dispatcher.
+- Special 1 checks for effect type 7 owned by the current player.
+- Charge is incremented only after checking P.CargaPoder < CargaMax; that statement does not clamp the result.
+- Special 3 changes multiple movement and command-sequence fields together.
+- The final special can pass at low health with zero power, after which the source decrements power. Verify the Rust field's signedness and exact source type before implementing.
+- Flash, sound, effect creation, screen shake, opponent invulnerability, pushback and RNG must be traced to their actual script sections; do not infer them from the action-start branch.
 
-## 🌈 Important semantics to preserve
+## 🌈 Roster audit checklist
 
-- **Ordered independent conditions:** retain the source's sequential if evaluation. Do not replace it with an exclusive dispatcher.
-- **Effect ownership gate:** special 1 checks for effect type 7 owned by the current player before starting.
-- **Charge arithmetic:** the source checks P.CargaPoder < CargaMax before adding the gain. It does not clamp the result in that statement.
-- **Weak/strong selection:** the source sets force in separate conditional statements after the action setup.
-- **Special 3 landing:** this path changes several movement and command-sequence fields together. A partial implementation must not claim the complete transition.
-- **Final move power:** the condition permits the move at low health even when power is zero; the source then decrements power. Preserve the observed rule and investigate the field's signedness/type before implementing it.
-- **Side effects:** flash, sound, effect creation, screen shake, opponent invulnerability, pushback and RNG belong to other script sections and must not be inferred from the action-start section.
-- **No fabricated fallback:** missing or unsupported script semantics must fail or remain explicitly unimplemented, never be filled with guessed values.
+Each fighter must be audited and validated independently. Mark an item complete only with source evidence and tests/replay where applicable.
 
-## 🌈 Recommended implementation boundary
+| Fighter | Character | Source audit | Victory/pose | Specials | Pascal replay |
+|---:|---|---|---|---|---|
+| C01 | Chaves | [ ] | [ ] | [ ] | [ ] |
+| C02 | Seu Madruga | [ ] | [ ] | [ ] | [ ] |
+| C03 | Chiquinha | [ ] | [ ] | [ ] | [ ] |
+| C04 | Quico | [ ] | [ ] | [ ] | [ ] |
+| C05 | Dona Florinda | [ ] | [ ] | [ ] | [ ] |
+| C06 | Prof. Girafales | [ ] | [ ] | [ ] | [ ] |
+| C07 | Sr. Barriga | [ ] | [ ] | [ ] | [ ] |
+| C08 | Bruxa do 71 | [ ] | [ ] | [ ] | [ ] |
+| C09 | Paty | [ ] | [ ] | [ ] | [ ] |
+| C10 | Nhonho | [ ] | [ ] | [ ] | [ ] |
+| C11 | Godines | [ ] | [ ] | [ ] | [ ] |
+| C12 | Sr. Furtado | [ ] | [ ] | [ ] | [ ] |
+| C13 | Jaiminho | [ ] | [ ] | [ ] | [ ] |
+| C14 | Dona Neves | [ ] | [ ] | [ ] | [ ] |
+| C15 | Glória | [ ] | [ ] | [ ] | [ ] |
 
-The first executable increment should cover only cmVitoria and cmPose, because their visible [Acao] branches have bounded state writes and no calls to effects, RNG, physics helpers or global presentation state.
+## 🌈 Validation gates
 
-That increment still requires:
-1. A typed command/action mapping grounded in the existing Rust model.
-2. Exact eligible-action predicates.
-3. Action-frame reset and duration writes.
-4. Tests for eligible and ineligible starting actions.
-5. A source-order test showing that the character script runs between common [Acao] and common [AcaoFim].
+- [ ] Complete the source audit for all 15 original fighters, recording absent sections and per-character exceptions.
+- [ ] Verify Rust action/command identifiers and mappings against the Pascal enums.
+- [ ] Implement victory and pose per source-defined fighter behavior; test eligible and ineligible states.
+- [ ] Implement specials incrementally, with focused state-diff and RNG tests for every supported branch.
+- [ ] Verify common-action -> character-action -> common-action-end ordering.
+- [ ] Capture and replay at least one Pascal child-script RNG consumption case; prove shared cursor continuity across parent and child.
+- [ ] Add representative and edge-case Pascal/Rust state-differential fixtures; expand coverage across all 15 fighters.
+- [ ] Keep unsupported branches explicitly unimplemented; do not claim complete combat equivalence until all required systems and evidence are covered.
 
-Special commands should be added in separate increments. Special 1 requires effect lookup; special 3 requires the complete movement/sequence state; special final requires verified power-field semantics and global flash/sound event handling.
+## 🌈 Explicit non-claims
 
-## 🌈 Out of scope
+This PR does not establish full combat equivalence merely by completing the character action scripts. CameraX, RelogioParado, additional checkpoints and other combat systems remain separate outstanding systems unless explicitly added with source evidence and validation. It does not add a general arbitrary Pascal .rot interpreter.
 
-This contract does not port C01 [Quadro], [IA] or [Acerto]; does not port any other fighter; does not interpret arbitrary Pascal-like .rot; and does not establish original-executable equivalence.
-
-The current shared-RNG child callback remains an injection seam. Historical Pascal evidence of a child script consuming RNG is still required before claiming nested-script RNG parity.
-
-## 🌈 Validation checklist
-
-- [ ] Verify the Rust action/command identifiers against the pinned Pascal enums.
-- [ ] Implement only the bounded victory/pose increment first.
-- [ ] Test every eligible and ineligible source action.
-- [ ] Verify common-action -> C01-action -> common-action-end ordering.
-- [ ] Capture a Pascal scenario for at least one C01 character-specific action and compare the resulting state.
-- [ ] Keep unsupported special commands explicit until their dependencies are implemented.
+No Pascal source or game assets are copied into this repository. The source revision is cited for reproducibility.
