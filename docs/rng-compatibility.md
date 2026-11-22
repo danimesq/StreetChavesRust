@@ -11,7 +11,7 @@ This is a 32-bit state recurrence followed by a multiply-high range reduction. T
 
 The Delphi 5 assembly form reproduced in the historical Borland discussion uses IMUL against RandSeed, increments the result, stores RandSeed, then uses MUL with the requested range. The seed update occurs before the multiply. A zero range therefore still advances the state and returns zero.
 
-The range API is intended for non-negative integer limits and returns values in [0, range). The Rust implementation uses u32 for that range. Negative ranges are deliberately outside the new API's contract.
+Delphi 5's integer Random takes a signed LongInt range; the valid compatibility domain is 0 through 2^31-1, returning values in [0, range). The C reconstruction's interface is signed int. Rust currently stores the non-negative range as u32, but compatibility callers must keep it within i32::MAX. Negative ranges are deliberately outside the Rust API's contract.
 
 ## 🌈 Rust implementation
 
@@ -72,7 +72,7 @@ The Pascal application has a process-global RandSeed and random calls outside th
 
 A Rust implementation that uses a separate RNG for cosmetic effects can change later gameplay outcomes if the original shared stream was consumed by those operations. Keep one ordered stream until a captured original trace proves a split is behaviorally safe.
 
-The next RNG research artifact should list every Random call in actual fight-loop execution order, including conditional calls and loops, not merely list source locations. A loop that tries again until a frame differs consumes a variable number of draws.
+The [RNG call-site inventory](rng-callsite-inventory.md) now records the C call groups and the pinned fight-tick phase order. It is still a source inventory, not a normalized per-tick dynamic trace. A loop that tries again until a frame differs consumes a variable number of draws; nested effect spawning and short-circuit branches also shift subsequent draw indices.
 
 ## 🌈 What is confirmed and what remains open
 
@@ -84,8 +84,9 @@ The next RNG research artifact should list every Random call in actual fight-loo
 - [x] Pascal port's wrapper calls Free Pascal System.Random rather than implementing the Delphi 5 transition.
 - [ ] Capture the original executable's startup RandSeed or a reproducible way to set it.
 - [ ] Verify the range edge cases against the original executable.
+- [x] Inventory C fight RNG call sites and phase order, including camera, stage, effect, defense, melee, and round-end code.
 - [ ] Expand every per-fighter and common-script RNG call into exact tick order.
-- [ ] Include camera, stage, effect, UI, and fight-flow calls in the same stream trace.
+- [ ] Inventory every Pascal RNG call, including draw-time UI/stage behavior, in Pascal fight-loop order.
 - [ ] Compare the C port's consumption order with an original-executable capture.
 - [ ] Add original-executable golden RNG traces after the playable Rust baseline.
 
@@ -96,6 +97,7 @@ The next RNG research artifact should list every Random call in actual fight-loo
 - [Free Pascal System.Random documentation](https://www.freepascal.org/docs-html/rtl/system/random.html): documents the FPC Mersenne Twister implementation.
 - [Free Pascal Randomize documentation](https://www.freepascal.org/docs-html/rtl/system/randomize.html): states that FPC seeds its generator from the system clock.
 - [C fight.c at the pinned revision](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6842ff6618ecdb8f425bba61c9183/src/fight/fight.c)
+- [C RNG call-site inventory and fight-tick ordering](rng-callsite-inventory.md)
 - [C game.c at the pinned revision](https://github.com/danimesq/open-street-chaves/blob/e76ad2188af6842ff6618ecdb8f425bba61c9183/src/game.c)
 - [Pascal ChavesRoteiro.pas at the pinned revision](https://github.com/danimesq/OpenStreetChaves/blob/e1b025c35ecbc2b14d8635564aafd23c2107d3d1/source/game/ChavesRoteiro.pas)
 - [Pascal Comum_Inicio.inc at the pinned revision](https://github.com/danimesq/OpenStreetChaves/blob/e1b025c35ecbc2b14d8635564aafd23c2107d3d1/source/game/Comum_Inicio.inc)
