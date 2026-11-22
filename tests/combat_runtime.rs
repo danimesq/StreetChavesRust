@@ -103,3 +103,46 @@ fn unsupported_close_range_attack_chain_fails_closed() {
         )
     ));
 }
+
+
+#[test]
+fn replay_and_pascal_diff_clis_round_trip_tick_316() {
+    use std::fs;
+    use std::process::Command;
+
+    let fixture_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/pascal-runtime-schema-v2-tick316.jsonl");
+    let replay = Command::new(env!("CARGO_BIN_EXE_pascal-replay-tick"))
+        .arg(&fixture_path)
+        .output()
+        .expect("run pascal-replay-tick CLI");
+    assert!(
+        replay.status.success(),
+        "replay CLI failed: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+
+    let rust_path = std::env::temp_dir().join(format!(
+        "street-chaves-rust-tick316-{}.jsonl",
+        std::process::id()
+    ));
+    fs::write(&rust_path, &replay.stdout).expect("write Rust checkpoint JSONL");
+
+    let diff = Command::new(env!("CARGO_BIN_EXE_pascal-diff"))
+        .arg(&fixture_path)
+        .arg(&rust_path)
+        .output()
+        .expect("run pascal-diff CLI");
+    let _ = fs::remove_file(&rust_path);
+
+    assert!(
+        diff.status.success(),
+        "pascal-diff CLI failed: {}",
+        String::from_utf8_lossy(&diff.stdout)
+    );
+    assert!(
+        String::from_utf8_lossy(&diff.stdout).contains("MATCH: 2 Pascal/Rust tick checkpoints compared"),
+        "unexpected differential output: {}",
+        String::from_utf8_lossy(&diff.stdout)
+    );
+}
