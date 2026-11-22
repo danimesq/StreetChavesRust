@@ -93,6 +93,7 @@ Recommended fixture groups:
 - [x] Distinguish explicit attack deactivation from clearing the stored box.
 - [ ] Use Pascal `--gravar` / `ModoDeSorteio` to capture deterministic dynamic call traces and compare them with Rust.
 - [ ] Capture original Chaves.exe RNG state/algorithm in the later compatibility phase.
+- [ ] Use the existing Pascal --gravar and ModoDeSorteio/msGravar-msRepetir mechanisms to capture dynamic traces, then replay them in Rust.
 - [ ] Execute the symbolic timelines with concrete fighter states to assign actual runtime ticks and RNG word indices; keep static guard groups separate from runtime traces.
 - [ ] Confirm the fighter 11 selector divergence against the original executable.
 - [ ] Run the PE preflight against the canonical Chaves.exe and hand off its bundle to REA/Ghidra.
