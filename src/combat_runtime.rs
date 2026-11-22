@@ -478,7 +478,7 @@ impl CombatState {
             13 => {
                 fighter.sprite_frame = offset + 33;
                 let displacement = pascal_round((f64::from(frame) / 3.0).cos() * 6.0);
-                fighter.y -= displacement;
+                fighter.y -= f64::from(displacement);
                 if context.ground_y - 10.0 < fighter.y {
                     fighter.y = context.ground_y - 10.0;
                 }
