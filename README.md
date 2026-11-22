@@ -66,7 +66,7 @@ Start with the [documentation index](docs/README.md) for the full research map.
 
 ## Current focus
 
-The project has started its first implementation slice: a dependency-free Rust contract crate with ordered tick events, Delphi 5 RNG compatibility for an injected seed, strict AABB geometry, and source-specific C/Pascal box-lifecycle adapters. The Rust format check and 15 contract tests pass in GitHub Actions. It is not yet a playable game. The current phase combines source research with foundational simulation contracts. The current research pass indexes all 15 Pascal frame scripts and AI blocks, compares all 379 hitbox geometry and metadata rows plus all 305 hurtboxes with the C tables, records exceptional move IDs, and publishes source-ordered frame-event ledgers. The first playable Rust baseline comes before the final original-executable compatibility stage:
+The project has started its first implementation slice: a dependency-free Rust contract crate with ordered tick events, Delphi 5 RNG compatibility for an injected seed, strict AABB geometry, source-specific C/Pascal box-lifecycle adapters, and explicit attack deactivation that preserves stored metadata. The Rust format check and 16 contract tests pass in GitHub Actions. It is not yet a playable game. The current phase combines source research with foundational simulation contracts. The current research pass indexes all 15 Pascal frame scripts and AI blocks, compares all 379 hitbox geometry and metadata rows plus all 305 hurtboxes with the C tables, records exceptional move IDs, and publishes source-ordered frame-event ledgers. The first playable Rust baseline comes before the final original-executable compatibility stage:
 
 
 - Compare the two SDL implementations at the source level.
