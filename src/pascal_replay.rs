@@ -248,7 +248,7 @@ mod tests {
         assert!(matches!(
             replay.draw(PascalReplayWidth::LongInt, 12),
             Err(PascalReplayError::RequestMismatch {
-                api_call_index: 0,
+                api_call_index: 88,
                 ..
             })
         ));
