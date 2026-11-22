@@ -681,3 +681,44 @@ fn pose_command_rejects_an_invalid_fighter_index_without_mutation() {
     assert!(!state.apply_character_pose(2));
     assert_eq!(state, before);
 }
+
+#[test]
+fn pose_animation_writes_audited_frames_for_c01_through_c12() {
+    for character_id in 1..=12 {
+        let mut at_start = victory_state(character_id, 0, 777);
+        at_start.fighters[1].action_id = ACTION_POSE;
+        assert!(at_start.update_pose_animation(1, 1000));
+        assert_eq!(at_start.fighters[1].sprite_frame, 1012, "C{character_id:02} frame 0");
+
+        let mut at_second_boundary = victory_state(character_id, 2, 777);
+        at_second_boundary.fighters[1].action_id = ACTION_POSE;
+        assert!(at_second_boundary.update_pose_animation(1, 1000));
+        assert_eq!(at_second_boundary.fighters[1].sprite_frame, 1030, "C{character_id:02} frame 2");
+
+        let mut between_boundaries = victory_state(character_id, 1, 777);
+        between_boundaries.fighters[1].action_id = ACTION_POSE;
+        assert!(between_boundaries.update_pose_animation(1, 1000));
+        assert_eq!(between_boundaries.fighters[1].sprite_frame, 777, "C{character_id:02} frame 1 retains P.Quadro");
+    }
+}
+
+#[test]
+fn pose_animation_rejects_non_pose_actions_unsupported_fighters_and_bad_indices() {
+    let mut wrong_action = victory_state(1, 0, 777);
+    let before = wrong_action.fighters[1].clone();
+    assert!(!wrong_action.update_pose_animation(1, 1000));
+    assert_eq!(wrong_action.fighters[1], before);
+
+    for character_id in 13..=15 {
+        let mut unsupported = victory_state(character_id, 0, 777);
+        unsupported.fighters[1].action_id = ACTION_POSE;
+        let before = unsupported.fighters[1].clone();
+        assert!(!unsupported.update_pose_animation(1, 1000));
+        assert_eq!(unsupported.fighters[1], before);
+    }
+
+    let mut invalid_index = victory_state(1, 0, 777);
+    let before = invalid_index.clone();
+    assert!(!invalid_index.update_pose_animation(2, 1000));
+    assert_eq!(invalid_index, before);
+}
