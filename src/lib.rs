@@ -13,6 +13,9 @@ pub mod trace_join;
 /// Strict replay of concrete RNG requests from Pascal schema-v2 captures.
 pub mod pascal_replay;
 
+/// Differential support for concrete Pascal tick checkpoints.
+pub mod pascal_differential;
+
 /// Stable fighter identifier from the researched roster.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FighterId(pub u8);
