@@ -4,8 +4,8 @@
 
 An independent Rust reimplementation project inspired by **Street Chaves — O Lutador da Vila**. The goal is to understand the game’s behavior, compare existing reconstructions, and build a clean Rust implementation with a testable game core and a separate SDL3 presentation layer.
 
-> **Project status: research and architecture.**
-> This repository is not yet a playable game. The current work documents source-code findings, compares independent implementations, and turns those findings into an implementation plan. No build or run instructions are published until an executable implementation exists.
+> **Project status: research plus foundational Rust contracts.**
+> The repository now contains a dependency-free Rust library for ordered combat timelines, Pascal/FPC 3.2.2 MTwist RNG compatibility with width-aware raw-word tracing, an isolated experimental Delphi LCG candidate, strict AABB geometry, and source-specific hitbox/hurtbox lifecycle contracts. The Pascal .rot normalizer parses all 15 fighters plus Comum.rot, producing 5,091 symbolic events, 255 unique RNG sites (465 composed occurrences), and a 71-reference Pascal source RNG inventory. The normalizer is a static trace, not a concrete tick simulation. GitHub Actions Rust run #85 passed all 21 Rust tests (19 unit, 2 integration). Normalizer run #42 passed all 9 parser tests, measured FPC 3.2.2 argument evaluation as right-to-left (trace 5431), and generated 5,091 symbolic events in 1,749 action/timer guard groups for all 15 fighters. The game is not yet playable; original-executable parity remains incomplete.
 
 ## Project goals
 
@@ -18,12 +18,12 @@ An independent Rust reimplementation project inspired by **Street Chaves — O L
 
 ## Research references
 
-The project studies three independent repositories. They are evidence sources, not a parent/child chain, and none is treated as automatically canonical.
+The project studies three independent repositories, but they do not have equal authority for this reconstruction. **OpenStreetChaves (Pascal/Lazarus) is the normative project source** for Rust behavior, including its FPC 3.2.2 interpreter/runtime semantics. The C17/SDL3 project is a comparative implementation: disagreements are documented and reserved for original-executable verification, but C behavior does not silently override Pascal.
 
 | Project | Technology | Role here |
 |---|---|---|
-| [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves) | Pascal / Lazarus / SDL2 | Reference for a working SDL-hosted reconstruction, fighter scripts, software rendering, and its migration history. |
-| [open-street-chaves](https://github.com/danimesq/open-street-chaves) | C17 / SDL3 | Independent implementation and a useful reference for game-state logic, hitboxes, combat, effects, and testability. |
+| [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves) | Pascal / Lazarus / SDL2 | **Normative project source** for fighter scripts, interpreter semantics, game-state order, and FPC 3.2.2 RNG behavior. |
+| [open-street-chaves](https://github.com/danimesq/open-street-chaves) | C17 / SDL3 | Comparative implementation for cross-checking state logic, hitboxes, combat and effects. Its differences remain annotations, not normative overrides. |
 | [street-chaves-hack-sms](https://github.com/danimesq/street-chaves-hack-sms) | SMS ROM hack | Supporting reference for ROM investigation, graphics extraction, binary formats, and hardware constraints. It is **not** treated as an authoritative source for the PC game's mechanics. |
 
 ## Documentation
@@ -34,6 +34,20 @@ The research and design notes live in [the documentation directory](docs/README.
 - [Source and data inventory](docs/source-inventory.md) — pinned source revisions, code/data layout, entry points, and subsystem ownership.
 - [Fighter data deep dive](docs/fighter-data-deep-dive.md) — INI/ROT semantics, generated C tables, command recognition, and character-specific behavior.
 - [Fighter roster matrix](docs/fighter-roster-matrix.md) — original 15-character roster, Pascal C16 Chapolin extension, and script-section coverage.
+- [Frame, AI and hitbox comparison](docs/frame-ai-hitbox-comparison.md) — all 15 Pascal frame/AI indexes, 379/379 exact hitbox geometry+metadata matches, and 305/305 hurtbox matches.
+- [Ordered frame event ledger](docs/ordered-frame-event-ledger.md) — source-ordered frame, timer, effect, sound, RNG, and simulation-mutation statements for all 15 Pascal [Quadro] blocks.
+- [Combat tick contracts](docs/combat-tick-contract.md) — Rust event ordering, Delphi 5 RNG, hitbox/hurtbox records, and strict collision geometry.
+- [Box lifecycle deep dive](docs/box-lifecycle-deep-dive.md) — C selector and Pascal AplicarCaixas update order, stale-box retention, strength variants, and the fighter 11 discrepancy.
+- [Pascal RNG compatibility](docs/rng-compatibility.md) — FPC 3.2.2 MTwist semantics, LongInt/Int64 raw-word costs, deterministic seed and the optional Delphi candidate.
+- [Pascal reference trace harness](docs/pascal-reference-trace-harness.md) — existing deterministic --gravar, RNG record/replay, and old-code/script differential harness.
+- [Pascal RNG inventory](docs/pascal-rng-inventory.md) — 255 unique `.rot` sites, 465 composed occurrences and 71 Pascal source references.
+- [ROT normalizer](docs/rot-normalizer.md) — parser, source pins, symbolic timeline output and CI artifact.
+- [C RNG call-site comparison](docs/rng-callsite-inventory.md) — shared C RNG call sites, tick-phase order and variable draw-count traps.
+- [Original executable reverse engineering](docs/original-executable-reverse-engineering.md) — PE/resource/asset investigation and gameplay cross-reference plan.
+- [REA tooling](tools/README.md) — reproducible preflight evidence collection and REA/Ghidra handoff.
+- [Original executable reverse engineering](docs/original-executable-reverse-engineering.md) — preliminary PE inspection, DelphiX/DirectX clues, resource and asset inventory plan, gameplay cross-reference targets, and the later golden-fixture strategy.
+- [Move matrix for the 15 fighters](docs/move-matrix-15-fighters.md) — move-by-move research; first detailed entry is Chaves, with evidence and original-executable validation gaps.
+- [Chapolin bonus plan](docs/chapolin-bonus-2026.md) — preservation/recovery plan for Chapolin as a future optional bonus.
 - [Data formats and resource pipelines](docs/data-formats.md) — fighter scripts, INI resources, generated C tables, and unresolved format semantics.
 - [Provenance and licensing review](docs/provenance-and-licenses.md) — code licenses, asset origins, redistribution risks, and reuse decisions.
 - [Fight-loop deep dive](docs/fight-loop-deep-dive.md) — source-level analysis of tick order, frame selection, hit resolution, effects, and physics.
@@ -56,21 +70,23 @@ Start with the [documentation index](docs/README.md) for the full research map.
 
 ## Current focus
 
-The current phase is source research and specification, not feature implementation:
+The project has started its first implementation slice: a dependency-free Rust contract crate with ordered tick events, Delphi 5 RNG compatibility for an injected seed, strict AABB geometry, source-specific C/Pascal box-lifecycle adapters, and explicit attack deactivation that preserves stored metadata. The Rust format check and 16 contract tests pass in GitHub Actions. It is not yet a playable game. The current phase combines source research with foundational simulation contracts. The current research pass indexes all 15 Pascal frame scripts and AI blocks, compares all 379 hitbox geometry and metadata rows plus all 305 hurtboxes with the C tables, records exceptional move IDs, and publishes source-ordered frame-event ledgers. The first playable Rust baseline comes before the final original-executable compatibility stage:
+
 
 - Compare the two SDL implementations at the source level.
 - Map fighter frame selection and the combat update pipeline.
 - Investigate effect types, collision paths, and timing-sensitive behavior.
+- Perform preliminary static inspection of the original executable and identify code/resource targets.
 - Identify discrepancies that need validation against the original executable.
 - Convert confirmed behavior into Rust-facing specifications and deterministic test cases.
 
-Unverified behavior stays documented as an open question rather than being filled in with invented mechanics.
+Unverified behavior stays documented as an open question rather than being filled in with invented mechanics. Static executable inspection is research groundwork; systematic original-executable pairing and golden differential fixtures remain part of the final compatibility stage after the first playable Rust baseline.
 
 ## Contributing and development
 
 At this stage, the most useful contributions are reproducible observations, source references, test cases, and corrections to the research documents. Please distinguish direct source observations from interpretations and original-game claims.
 
-There are no supported build, run, or contribution commands yet because the Rust game implementation has not reached that stage. Those instructions will be added alongside the corresponding working tooling.
+Run the current contract suite with `cargo test`. There is not yet a playable runtime or SDL3 frontend, so no game launch command is available.
 
 ---
 

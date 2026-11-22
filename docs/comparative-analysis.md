@@ -11,6 +11,8 @@ The SMS project is deliberately secondary. It is useful for reverse-engineering 
 
 The projects are not successive versions of one codebase. Similarities may reflect the same original game, while differences may reflect implementation decisions, different evidence, or bugs. Each claim needs provenance.
 
+**Rust-project precedence:** OpenStreetChaves is the normative source for reconstructing behavior in Rust, including the FPC 3.2.2 runtime semantics. The C17/SDL3 project is comparative only. When they disagree, document the C behavior but follow Pascal until reverse engineering of the original `Chaves.exe` gives evidence for a documented correction. This is a project implementation rule, not a claim that the Pascal port is the original executable.
+
 ---
 
 ## 1. OpenStreetChaves: Pascal reconstruction on SDL2

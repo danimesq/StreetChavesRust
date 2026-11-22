@@ -26,6 +26,10 @@ There are no calendar estimates. Each item advances according to evidence and ex
 | [Data formats](data-formats.md) | Records observed INI/ROT, generated-table and resource pipelines | Test parser edge cases and finish format specifications |
 | [Fighter data deep dive](fighter-data-deep-dive.md) | Compares Pascal INI/ROT execution with the C spec/generated-table model | Expand into per-character move and field matrices |
 | [Fighter roster matrix](fighter-roster-matrix.md) | Records IDs, per-character file presence and optional script sections | Validate all move differences against original executable captures |
+| [Frame, AI and hitbox comparison](frame-ai-hitbox-comparison.md) | Compares all 15 Pascal AI blocks with C and validates all 379 hitbox metadata tuples plus 305 hurtboxes | Correlate action names, mirror/activation semantics, and original-game timing |
+| [Ordered frame event ledger](ordered-frame-event-ledger.md) | Preserves source-ordered event statements from all 15 Pascal [Quadro] blocks | Expand nested guards, loops, and RNG order into action/tick timelines |
+| [Original executable reverse engineering](original-executable-reverse-engineering.md) | Tracks preliminary PE evidence and the static/runtime reverse-engineering sequence | Reproduce tool reports, resources, asset manifests, and REA cross-reference findings |
+| [Original executable reverse engineering](original-executable-reverse-engineering.md) | Records preliminary PE clues and the staged plan for resources, assets, code cross-references, and later compatibility fixtures | Reproduce PE/hash findings, extract resources, and trace timer/gameplay anchors |
 | [Provenance and licenses](provenance-and-licenses.md) | Records declared licenses and blocks unverified asset reuse | Complete per-file rights and dependency audit |
 
 The baseline is useful, but it is not a complete specification. Agreement between two ports does not by itself prove original-game behavior.
@@ -91,12 +95,23 @@ Documents:
 - `animation-and-frame-selection.md`: frame selection, animation clocks, transitions, frame-associated boxes, and side effects.
 - `moves-and-command-recognition.md`: commands, button rules, priorities, buffering, and cancellation.
 - `fighter-state-machine.md`: state inventory, transitions, timers, and exceptions.
+- `ordered-frame-event-ledger.md`: source-ordered event statements from all 15 character-specific `[Quadro]` blocks.
 
 Tasks:
 - [x] Inventory all 16 Pascal INIs and all 16 character ROT section headers.
 - [x] Establish the 15-character base roster and isolate Pascal C16 Chapolin as an extension.
 - [x] Compare the Pascal data/script representation with the C spec-to-generated-table pipeline.
-- [ ] Compare every fighter's move behavior; do not extrapolate the roster from one example.
+- [x] Inventory the five named special-move slots and input notation for all 15 fighters from both references.
+- [x] Compare Pascal special-action duration assignments with the C move-setup duration table for all 15 fighters, recording exceptions and mismatches.
+- [x] Publish source-ordered event ledgers for all 15 `[Quadro]` blocks.
+- [x] Compare all 379 Pascal/C hitbox rows, including geometry and active/strength/damage/guard-damage metadata.
+- [x] Compare all 305 Pascal/C hurtbox rows after coordinate normalization.
+- [x] Compare all 15 character-specific Pascal [IA] blocks with the C CPU table; retain difficulty-scale and shared-AI caveats.
+- [ ] Expand the ordered event ledgers into fully evaluated action/tick timelines with nested guard paths, loop expansion, and exact RNG call order.
+- [ ] Map Pascal/C sound and effect IDs to resource definitions.
+- [ ] Compare every fighter's move behavior beyond the initial inventory; do not extrapolate from duration/name agreement.
+- [x] Start the move-by-move matrix with Chaves, including Pascal command recognition, special-action behavior, hitbox rows, CPU rules, and validation backlog.
+- [x] Complete the first comparative source pass for all 15 fighters; keep detailed event ordering and original-executable checks as separate remaining work.
 - Trace input recognition through move selection, frame selection, hitbox activation, and reaction.
 - Separate shared behavior from character-specific rules.
 - Preserve source numeric IDs as evidence without assuming IDs match between implementations.
@@ -141,9 +156,11 @@ Tasks:
 
 **Exit criteria:** the observable game flow is mapped and platform/presentation responsibilities are clearly separated from simulation.
 
-## Phase 5 — Original-executable validation
+## Phase 5 — Original-executable validation (final compatibility stage)
 
-**Status: Needs validation**
+**Status: Deferred until the first playable Rust baseline exists**
+
+Preliminary static PE and resource research is tracked separately in [original-executable-reverse-engineering.md](original-executable-reverse-engineering.md). It can identify investigation targets before the baseline exists, but does not constitute runtime validation or move the final compatibility milestone forward.
 
 Artifacts:
 - `original-build-and-capture.md`: executable identity, hash, provenance, environment, and repeatable capture method.
@@ -157,9 +174,9 @@ Priority scenarios:
 - Projectile spawn, clash, reflection, fighter collision, and expiration.
 - Pause/focus behavior, timer boundaries, and RNG sequences.
 
-Each observation should record executable hash, environment, initial conditions, input sequence, tick/frame reference, and expected result. Screenshots alone cannot prove hidden logical state.
+This phase begins after the first playable Rust baseline. It is not a gate for reaching the first playable build. Each observation should record executable hash, environment, initial conditions, input sequence, tick/frame reference, and expected result. Screenshots alone cannot prove hidden logical state.
 
-**Exit criteria:** high-impact mechanics have reproducible original-game observations or remain explicitly unverified.
+**Exit criteria:** high-impact mechanics have reproducible original-game observations or remain explicitly unverified; Rust divergences are recorded as compatibility decisions rather than silently patched.
 
 ## Phase 6 — Asset and resource pipeline
 

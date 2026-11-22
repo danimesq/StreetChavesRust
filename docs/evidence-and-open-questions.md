@@ -11,6 +11,7 @@ Use these labels consistently in documentation, code comments, tests, and issue 
 - **[inferred]**: a reasoned interpretation that still needs confirmation.
 - **[unknown]**: not established yet.
 - **[port-specific]**: a behavior or implementation detail belonging to one port, not necessarily the original game.
+- **[normative-project-source]**: a deliberate project policy selecting Pascal/OpenStreetChaves as the primary source for Rust reconstruction when ports differ; it is not proof that the port is identical to the original executable.
 
 A fact may carry more than one label. Record the exact file, section, commit, binary hash, or test fixture that supports it.
 
@@ -25,7 +26,10 @@ A fact may carry more than one label. Record the exact file, section, commit, bi
 | Fighter count | 15 character IDs in recovered PC-game specification | [original-decomp], SDL3 move/fighter specs | Verify complete roster and ID mapping before defining final content tables |
 | Player record | Reconstructed 176-byte record with position, state, frame, hit/hurt boxes, health, meter, etc. | [original-decomp], SDL3 `docs/spec/02-player-record.md` | Use typed Rust fields; preserve raw offsets only in research notes |
 | Fight update order | The original tick has a specific order for input, AI, stage, hit detection, timers, and physics | [original-decomp], SDL3 `docs/spec/05-fight-engine.md` | Encode order explicitly and test it |
-| Fighter scripts | Pascal project uses INI + `.rot` data and an interpreter | [port-specific], OpenStreetChaves README and `source/LEIAME.md` | Data-driven design is promising; format is not binding |
+| Fighter scripts | Pascal project uses INI + `.rot` data and `ChavesRoteiro.pas`; Rust project explicitly follows Pascal first, with C as comparison-only | [normative-project-source] for project precedence; [port-specific] for the interpreter itself | Preserve Pascal grammar, interpreter and execution order; record C differences without silently overriding Pascal |
+| Hitbox metadata | 379/379 Pascal/C rows match as a multiset, but character 11 action/state 27 timer 1 has two strength-specific rectangles; Pascal filters `.f1/.f2`, while C matches both and the last row wins. Both row-order chains are source-traced through their loaders/generators. | [cross-project] for row multiset; [original-decomp] for the reviewed frame-updater entry point; [port-specific] for each adapter's selector behavior | Preserve row provenance and strength conditions; the selector discrepancy is confirmed between the pinned ports, but original behavior remains open |
+| Hurtboxes | 305/305 Pascal `[Corpo]` and C `hurt frame` rows match after coordinate reordering; both implementations retain old values when no row matches | [cross-project] for rows; [original-decomp] for the reviewed Pascal updater path and [port-specific] for the INI/C adapter details | Preserve per-frame values and explicit retain/deactivate/clear operations; verify the original executable later |
+| RNG | OpenStreetChaves README pins Lazarus 4.8/FPC 3.2.2. `ChavesRoteiro.SortearValor` dispatches LongInt vs Int64 to FPC `System.Random`; the pinned FPC RTL is MTwist. LongInt consumes 1 MT word; Int64 consumes 2 then modulo. `ModoDeSorteio` records/replays range, width and result. The C port uses a separate Delphi-style LCG. | [normative-project-source] for Pascal runtime semantics; [port-specific] for the C LCG; [unknown] for exact original executable RNG until REA/Ghidra/runtime capture | Use Fpc322Rng as the Rust default; preserve width and raw-word consumption; keep the Delphi LCG adapter experimental; capture Pascal and original dynamic traces |
 | Logic comparison | Pascal project has `--gravar` and legacy-vs-script comparison support | [port-specific], OpenStreetChaves README and migration notes | Adopt deterministic trace comparison as a development practice |
 | Golden screenshots | C17 project documents fixed-seed headless scenarios and SHA-256 screenshot checks | [port-specific], open-street-chaves README | Keep logical-state hashes and render hashes separate |
 | Asset licensing | C17 project explicitly excludes original game assets from its source license | Project README | Keep original game data external; audit every asset source |
@@ -33,6 +37,14 @@ A fact may carry more than one label. Record the exact file, section, commit, bi
 | SMS graphics formats | SMS project documents tile/frame/palette extraction and console-specific limits | [port-specific], SMS README and ROM reference | Reuse methodology only; do not infer PC-game behavior from SMS |
 
 ## Important disagreements and caveats
+
+### Normative project source
+
+The user's explicit project policy is to follow the Pascal source when Pascal and C disagree. The Rust implementation therefore treats OpenStreetChaves and its FPC 3.2.2 runtime as the normative reconstruction reference. The C project remains a comparison source, and its discrepancies are marked for original-executable verification. This policy does not claim that Pascal is necessarily identical to the original executable.
+
+### Hitbox/hurtbox cross-port comparison
+
+The pinned Pascal and C snapshots have exact multiset matches for all 379 hitbox rows and all 305 hurtbox rows after coordinate normalization. Code-path tracing establishes retain-on-miss in both ports. However, character 11 action/state 27 timer 1 has two strength-specific rows: Pascal filters by strength, while C scans both and the last row overwrites the first. The 379-row match is therefore data parity, not selector/runtime parity. All of these remain port-level evidence until checked against the original executable.
 
 ### README status versus implementation
 
@@ -65,7 +77,17 @@ The SMS project is based on a Master System fighting-game hack and imports Chave
 ### Simulation and numeric behavior
 
 - [ ] Which fields require exact floating-point behavior, and which can use fixed-point safely?
-- [ ] Can we reproduce Delphi's RNG sequence exactly for a given seed?
+- [x] Implement the Delphi 5 32-bit LCG transition and multiply-high range reduction with an injected seed.
+- [x] Inventory C RNG call sites and the C fight-tick phase order, including variable draw-count traps.
+- [ ] Inventory all Pascal application RNG calls and normalize them into tick order.
+- [x] Pin the Pascal build requirement to FPC 3.2.2 and implement its MTwist Random(LongInt)/Random(Int64) consumption rules in Rust.
+- [x] Generate symbolic timelines for all 15 .rot scripts and inventory Pascal RNG sites.
+- [ ] Use the Pascal `--gravar` harness to capture runtime call traces and compare Rust state transitions.
+- [ ] Capture the original executable's initial RNG state and algorithm in the later compatibility phase; the C LCG remains comparative only.
+- [x] Trace retain-on-miss behavior in Pascal AplicarCaixas and C sel_boxes.
+- [x] Trace explicit attack-flag deactivation in both ports separately from lookup misses and full record clearing.
+- [ ] Verify the character 11 strength-specific selector behavior against the original executable.
+- [ ] Confirm the exact Free Pascal RTL/compiler version used for the Pascal port build; current FPC RTL documentation describes System.Random as Mersenne Twister, but the project snapshot does not pin the compiler build.
 - [ ] What is the exact ordering of all fight-tick side effects?
 - [ ] Are timer edge cases and pause behavior covered by original-game traces?
 - [ ] How should draw-time side effects in the original be represented without making rendering mutate simulation state?

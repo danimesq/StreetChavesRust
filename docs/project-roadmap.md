@@ -6,12 +6,13 @@ Build an independent Rust implementation of **Street Chaves — O Lutador da Vil
 
 This roadmap describes the whole project: research, architecture, implementation, validation, packaging, and release. It is not a claim that any listed feature is already implemented. The repository is currently in the research and architecture stage.
 
-There are no calendar estimates. Each phase advances when its exit criteria are met. The original game executable and its data are treated as evidence and compatibility references, not as permission to redistribute copyrighted material.
+There are no calendar estimates. Each phase advances when its exit criteria are met. Delivery is deliberately split into two stages: (1) build a complete, independently playable Rust baseline from the best documented evidence available; (2) after that baseline exists, run the final compatibility stage by pairing it with the original executable. Original-executable parity is not a prerequisite for the first playable milestone. The original game executable and its data are treated as evidence and compatibility references, not as permission to redistribute copyrighted material.
 
 ## Guiding constraints
 
 - Independent implementation: do not mechanically translate either SDL project.
 - Evidence-led behavior: distinguish original-game observations from port-specific behavior and inference.
+- Normative-source precedence: follow OpenStreetChaves Pascal/FPC 3.2.2 for Rust behavior; use C17/SDL3 for comparison only. Record disagreements and leave them open for original-executable verification.
 - Simulation/platform separation: the game core must not depend on SDL, window handles, device APIs, or wall-clock time.
 - Deterministic tests: identical initial state, RNG state, and logical inputs should reproduce the same simulation results.
 - Compatibility before embellishment: preserve observed behavior first; improvements and optional enhancements must be explicit.
@@ -23,14 +24,14 @@ There are no calendar estimates. Each phase advances when its exit criteria are 
 | Phase | Focus | Status |
 |---|---|---|
 | 0 | Research baseline and project definition | In progress |
-| 1 | Original-game evidence and source/data inventory | In progress / needs validation |
-| 2 | Technical architecture and workspace foundation | Planned |
-| 3 | Core simulation primitives and deterministic harness | Planned |
+| 1 | Original-game evidence and source/data inventory | In progress / needs validation (Pascal .rot pins and symbolic normalizer added) |
+| 2 | Technical architecture and workspace foundation | In progress (minimal Cargo crate created) |
+| 3 | Core simulation primitives and deterministic harness | In progress (FPC 3.2.2 RNG, timeline contracts and static .rot normalization; no playable simulation yet) |
 | 4 | Fighter data, animation, and state machine | Planned |
 | 5 | Combat, effects, and physics | Planned |
 | 6 | SDL3 runtime, input, rendering, and audio adapters | Planned |
 | 7 | Complete arcade flow and content integration | Planned |
-| 8 | Compatibility, regression, and platform hardening | Planned |
+| 8 | Final original-executable compatibility, regression, and platform hardening | Deferred until first playable baseline |
 | 9 | Packaging, documentation, and first release | Planned |
 
 ## Phase 0 — Research baseline and project definition
@@ -62,15 +63,18 @@ Exit criteria:
 
 Goals:
 - Pin the exact commits of reference projects used for each investigation.
-- Identify the canonical original executable build for compatibility testing, recording its hash and provenance.
+- Follow Pascal/FPC 3.2.2 as the normative Rust reconstruction source; keep C-port divergences separately documented for original-executable verification.
+- Inventory and hash the supplied original executable as a preliminary static-research artifact; deeper runtime pairing and differential validation remain reserved for the final compatibility stage and do not block the first playable Rust baseline.
 - Inventory fighter, move, stage, effect, sprite, sound, configuration, and save data.
 - Determine which values are static, decompiled, runtime-observed, cross-project, inferred, or unknown.
 - Audit source and asset licenses and redistribution constraints.
 
 Deliverables:
 - Source inventory and pinned revision manifest.
+- Verbatim `Comum.rot` and `C01.rot`..`C15.rot` inputs plus a SHA-pinned manifest.
+- Static symbolic timelines for all 15 fighters and a Pascal RNG source inventory.
 - Data-format and resource catalog.
-- Original executable identity and repeatable capture procedure.
+- Preliminary original executable identity and PE inspection report; repeatable runtime capture procedure for the later compatibility stage.
 - Provenance/license notes.
 - Initial differential-test matrix.
 
@@ -81,7 +85,9 @@ Exit criteria:
 
 ## Phase 2 — Technical architecture and workspace foundation
 
-**Status: Planned**
+**Status: In progress**
+
+Initial work: a dependency-free Cargo library now exists with typed fighter/action/tick identifiers and source-preserving combat data structures. The full workspace layout and SDL3 application crate remain future work.
 
 Goals:
 - Convert the architecture proposal into a minimal Rust workspace.
@@ -104,7 +110,9 @@ Exit criteria:
 
 ## Phase 3 — Core simulation primitives and deterministic harness
 
-**Status: Planned**
+**Status: In progress**
+
+Initial contracts now cover ordered per-tick events, the normative FPC 3.2.2 MTwist RNG with separate LongInt/Int64 raw-word costs, explicit Pascal box lifecycle operations, Pascal strength-conditioned row ordering, and strict AABB overlap. A static normalizer parses the full 15-fighter .rot roster and preserves guards, loops and RNG sites. These are research/contracts only; concrete tick execution, Pascal `--gravar` trace capture and original-executable parity remain unimplemented.
 
 Goals:
 - Implement logical coordinates, ticks, player identifiers, input actions, timers, geometry, and explicit game state types.
@@ -189,12 +197,14 @@ Exit criteria:
 - Missing or malformed data fails clearly rather than crashing unpredictably.
 - The game is playable with keyboard and at least one supported controller path, if controller support is validated for the chosen SDL target.
 
-## Phase 8 — Compatibility, regression, and platform hardening
+## Phase 8 — Final original-executable compatibility, regression, and platform hardening
 
-**Status: Planned**
+**Status: Deferred until the first playable Rust baseline exists**
+
+The preliminary static-inspection plan and its investigation sequence are tracked in [original executable reverse engineering](original-executable-reverse-engineering.md). Static PE/resource inspection can proceed during research, but pairing the original executable with Rust for behavioral compatibility remains deferred.
 
 Goals:
-- Expand differential testing against the original executable.
+- Begin systematic differential testing against the original executable only after the first playable Rust baseline exists.
 - Run deterministic replay and logical-state regression suites.
 - Maintain golden rendering tests separately from gameplay tests.
 - Test timing, RNG, focus loss, pause, resize, audio-device loss, and save/config edge cases.
@@ -238,7 +248,7 @@ These apply throughout the roadmap:
 
 ## What is deliberately not promised yet
 
-- A playable build or a release date.
+- A playable build or a release date; the first playable milestone and the later original-executable parity milestone are separate deliverables.
 - Exact compatibility for mechanics that have not been validated against the original executable.
 - Redistribution of original game assets or executable data.
 - Browser/mobile support before desktop architecture and packaging are proven.

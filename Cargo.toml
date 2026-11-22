@@ -1,0 +1,15 @@
+[package]
+name = "street-chaves-rust"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+description = "Evidence-driven Rust reconstruction of Street Chaves combat rules"
+license = "MIT"
+
+[lib]
+name = "street_chaves"
+path = "src/lib.rs"
+
+[dependencies]
+
+[dev-dependencies]

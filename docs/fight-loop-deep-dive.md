@@ -2,14 +2,14 @@
 
 ## Scope
 
-This is a source-level comparison of the fight path in the two SDL projects. It focuses on the parts most likely to affect compatibility in a Rust implementation.
+This is a source-level comparison of the fight path in the two SDL projects. For the Rust reconstruction, Pascal/OpenStreetChaves is the normative source; C17/SDL3 is comparative only. Any conflict is recorded and left for later original-executable verification rather than resolved by silently preferring C.
 
 Primary sources inspected:
 
 - Pascal/SDL2: `source/ChavesSDL.pas`, `source/ChavesJogo.pas`, `source/game/Estado7_Luta.inc`, `source/game/Estado7_Golpes.inc`, `source/game/Comum_Quadro.inc`, and `source/game/Comum_Sprites.inc`.
 - C17/SDL3: `src/fight/fight.c`, `fighter.c`, `combat.c`, `selector.c`, `effects.c`, and `render/fight_draw.c`.
 
-This is not yet a byte-for-byte differential validation against the original executable. The C project contains a reverse-engineered specification and decompiler-derived annotations; the Pascal project documents a port/reconstruction from the original. Both are evidence, not infallible truth.
+This is not yet a byte-for-byte differential validation against the original executable. Pascal is normative for the Rust project by explicit policy, and the pinned project build requirement identifies FPC 3.2.2. C's decompiler-derived annotations remain useful comparative evidence, but they do not override Pascal. The original executable may justify a later, explicitly documented correction.
 
 ---
 
@@ -155,7 +155,9 @@ The Pascal drawing path uses `Random` for jitter, stage animation placement, and
 
 If the original shares one RNG stream between gameplay and presentation, moving cosmetic randomness to a separate renderer RNG may change later gameplay randomness. Conversely, keeping all cosmetic RNG in the renderer would make headless simulation nondeterministic relative to the original.
 
-**Open compatibility task:** map every RNG call in the fight path, classify it as gameplay-affecting or presentation-only, and determine whether the original uses one shared stream. Do not split RNG streams until this is established.
+**Important RNG distinction:** this Pascal project is built with Free Pascal/Lazarus. Its ChavesRoteiro.SortearValor wrapper calls FPC System.Random, whose RTL documentation describes a Mersenne Twister implementation. The original Delphi 5 executable uses a different 32-bit generator; the C project implements the Delphi 5 LCG recurrence. Therefore the Pascal port's emitted random values are not a valid sequence oracle for the original.
+
+**Open compatibility task:** map every RNG call in the fight path, classify it as gameplay-affecting or presentation-only, and determine whether the original uses one shared stream. Do not split RNG streams until this is established. See [RNG compatibility](rng-compatibility.md) for the recurrence, seed caveats, and references.
 
 ---
 
