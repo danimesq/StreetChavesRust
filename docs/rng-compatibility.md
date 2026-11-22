@@ -20,8 +20,9 @@ DelphiRng now provides:
 - A caller-supplied 32-bit RandSeed.
 - Wrapping multiplication and addition, explicitly modulo 2^32.
 - Multiply-high range reduction.
-- A sequential draw counter.
+- A 64-bit sequential draw counter, so trace indices do not saturate at a 32-bit boundary.
 - A RandomSource implementation, allowing the same trace interface as FixtureRng.
+- A range guard enforcing Delphi's non-negative signed LongInt domain (`0..=i32::MAX`).
 - State advancement even when the requested range is zero.
 
 Tests pin a known sequence from seed zero:
