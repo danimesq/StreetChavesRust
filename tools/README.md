@@ -81,7 +81,7 @@ static sites, symbolic action/tick guards, loop context, and IDs of control
 observations from its script invocation. Match statuses are `Unique`,
 `Ambiguous`, `Unmatched`, and `NonRotSource`. The full deterministic
 scenario is covered by the CI workflow in
-[Pascal runtime trace #45039290385](https://github.com/danimesq/StreetChavesRust/actions/runs/45039290385).
+[Pascal runtime trace #45039596658](https://github.com/danimesq/StreetChavesRust/actions/runs/45039290385).
 The Python validator remains a developer-only helper; the project's Rust-only
 policy for tooling is still an open design decision.
 
