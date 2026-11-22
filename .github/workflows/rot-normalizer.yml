@@ -5,6 +5,8 @@ on:
     paths:
       - "tools/rot-normalize.py"
       - "tools/test_rot_normalize.py"
+      - "tools/validate-pascal-rng-jsonl.py"
+      - "tools/test_pascal_rng_jsonl.py"
       - "tools/fpc-argument-order-probe.pas"
       - "research/pascal-rot/**"
       - ".github/workflows/rot-normalizer.yml"
@@ -12,6 +14,8 @@ on:
     paths:
       - "tools/rot-normalize.py"
       - "tools/test_rot_normalize.py"
+      - "tools/validate-pascal-rng-jsonl.py"
+      - "tools/test_pascal_rng_jsonl.py"
       - "tools/fpc-argument-order-probe.pas"
       - "research/pascal-rot/**"
       - ".github/workflows/rot-normalizer.yml"
