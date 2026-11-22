@@ -11,7 +11,7 @@ Evidence labels:
 - **[Original validation pending]**: not confirmed against the original executable.
 
 Pinned Pascal reference: `OpenStreetChaves`, commit `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`.
-Pinned C reference from roster research: `open-street-chaves`, commit `e76ad2188af6844f2a5ca5464aafd23c2107d3d1`.
+Pinned C reference from roster research: `open-street-chaves`, commit `e76ad2188af6842ff6618ecdb8f425bba61c9183`.
 
 ## Matrix format
 
@@ -305,11 +305,11 @@ Do not label a mismatch as an original-game bug. It is a difference between two 
 
 ### Cross-roster validation backlog
 
-- [ ] Inspect all 15 Pascal `[Quadro]` blocks and build a complete frame/timer/event table for every special.
-- [ ] Inspect all 15 Pascal `[IA]` blocks and compare each condition/probability against C `05d-cpu-table.txt`.
-- [ ] Expand every character's Pascal `[Ataque]` rows into structured action/timer/hitbox records; correlate with C generated hit tables only where evidence supports it.
+- [x] Inspect all 15 Pascal `[Quadro]` blocks and publish a first-pass frame/timer/effect/sound event index in [frame, AI and hitbox comparison](frame-ai-hitbox-comparison.md).\n- [ ] Expand the index into full ordered per-move event timelines with branch conditions and RNG order.
+- [x] Inspect all 15 Pascal `[IA]` blocks and compare character-specific conditions/move IDs against C `05d-cpu-table.txt`; shared CPU prelude and difficulty-scale equivalence remain open.
+- [x] Normalize all 379 Pascal `[Ataque]` rows against all 379 C hit rows by action/timer key and rectangle coordinates.\n- [ ] Decode the remaining hit metadata and map action IDs to named moves.
 - [ ] Map sound/effect IDs to resource definitions for both projects.
-- [ ] Resolve C special-move setup IDs for Seu Madruga, Sr. Furtado and Jaiminho without assuming common-slot semantics.
+- [x] Resolve Seu Madruga move 22/23 and Sr. Furtado move 22 as character-specific setup paths; identify Jaiminho move 26 as extra2/final-like.\n- [ ] Resolve Jaiminho move 24/25, which appear in the command map but not the cited per-character setup table.
 - [ ] Confirm whether C duration and Pascal action timer advance at the same simulation cadence.
 - [ ] Validate representative and exceptional moves against the original executable.
 - [ ] Add deterministic tests for parser order, sequence timeout, button matching, eligibility, and chained actions.
@@ -318,11 +318,11 @@ Do not label a mismatch as an original-game bug. It is a difference between two 
 
 | ID | Fighter | Inventory | Pascal action rules | C setup/AI | Original executable |
 |---:|---|---|---|---|---|
-| 1 | Chaves | Documented | Detailed first pass | Setup/AI cross-reference begun | Pending |
-| 2 | Seu Madruga | Documented | Duration and special chaining noted | Setup/AI table available | Pending |
-| 3 | Chiquinha | Documented | Duration differences noted | Setup/AI table available | Pending |
-| 4 | Quico | Documented | Duration differences noted | Setup/AI table available | Pending |
-| 5 | Dona Florinda | Documented | Duration differences noted | Setup/AI table available | Pending |
+| 1 | Chaves | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI cross-reference | Pending |
+| 2 | Seu Madruga | Documented | Frame/event index; AI compared; hitboxes normalized | Move 22/23 exception mapped | Pending |
+| 3 | Chiquinha | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
+| 4 | Quico | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
+| 5 | Dona Florinda | Documented | Frame/event index; AI compared; hitboxes normalized | Setup/AI compared | Pending |
 | 6 | Prof. Girafales | Documented | Duration inventory | Setup/AI table available | Pending |
 | 7 | Sr. Barriga | Documented | Duration inventory | Setup/AI table available | Pending |
 | 8 | Bruxa do 71 | Documented | Air-only special noted | Setup/AI table available | Pending |
@@ -333,3 +333,6 @@ Do not label a mismatch as an original-game bug. It is a difference between two 
 | 13 | Jaiminho | Documented | Extra 1/2 and grouped final exception | Move ID 26 exception noted | Pending |
 | 14 | Dona Neves | Documented | Jump-only special noted | Setup/AI table available | Pending |
 | 15 | Glória | Documented | Duration inventory | Setup/AI table available | Pending |
+
+
+See also: [Frame, AI and hitbox comparison](frame-ai-hitbox-comparison.md) for the complete 15-fighter first-pass index, the 379/379 rectangle match, CPU comparisons, and exceptional-ID findings.
