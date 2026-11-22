@@ -259,6 +259,19 @@ class PascalRngJsonlTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("script_draw_index", result.stderr)
 
+    def test_accepts_captured_pascal_tick316_fixture(self) -> None:
+        fixture = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "pascal-runtime-schema-v2-tick316.jsonl"
+        result = subprocess.run(
+            [sys.executable, str(VALIDATOR), str(fixture)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("1 ticks, 1 script executions, 1 branch/loop records", result.stdout)
+        self.assertIn("1 SortearValor calls", result.stdout)
+        self.assertIn("1 wrapper-scoped MT word(s)", result.stdout)
+
     def test_rejects_missing_session_header(self) -> None:
         result = self.run_validator([tick_start()])
         self.assertEqual(result.returncode, 1)
