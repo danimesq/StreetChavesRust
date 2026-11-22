@@ -83,6 +83,43 @@ def validate_trace(path: Path) -> dict[str, Any]:
                 if not isinstance(session_id, str) or not session_id:
                     raise TraceValidationError(f"line {line_number}: session_id must be non-empty text")
                 _integer(record, "rand_seed_initial", line_number)
+                # Window fixtures preserve original event records and declare the
+                # cursors at which that consecutive excerpt begins.
+                for offset_key, counter_name in (
+                    ("tick_index_start", "tick"),
+                    ("script_execution_id_start", "script"),
+                    ("control_event_index_start", "control"),
+                    ("api_call_index_start", "api"),
+                    ("first_mt_word_index_start", "mt"),
+                ):
+                    offset = record.get(offset_key, 0)
+                    if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+                        raise TraceValidationError(
+                            f"line {line_number}: {offset_key} must be a non-negative integer"
+                        )
+                    if counter_name == "tick":
+                        next_tick = offset
+                    elif counter_name == "script":
+                        next_script_id = offset
+                    elif counter_name == "control":
+                        next_control_id = offset
+                    elif counter_name == "api":
+                        next_api_call = offset
+                    elif counter_name == "mt":
+                        next_mt_word = offset
+                if record.get("record_scope", "full_trace") not in (
+                    "full_trace", "consecutive_tick_window"
+                ):
+                    raise TraceValidationError(f"line {line_number}: unsupported record_scope")
+                if record.get("record_scope") == "consecutive_tick_window":
+                    required_offsets = (
+                        "tick_index_start", "script_execution_id_start",
+                        "control_event_index_start",
+                    )
+                    if any(key not in record for key in required_offsets):
+                        raise TraceValidationError(
+                            f"line {line_number}: consecutive tick window is missing cursor offsets"
+                        )
                 scope = record.get("raw_word_index_scope")
                 if not isinstance(scope, str) or "SortearValor-only" not in scope:
                     raise TraceValidationError(
