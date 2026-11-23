@@ -962,7 +962,6 @@ impl RotExecutionFrame {
     }
 }
 
-
 /// Live bindings exposed to a ROT action invocation.
 ///
 /// The host owns authoritative fighter/global state and the shared fight RNG.
@@ -970,20 +969,24 @@ impl RotExecutionFrame {
 /// as inert values.
 pub trait RotExecutionHost {
     fn read_fighter_field(&self, base: char, name: &str) -> Result<RotValue, String>;
-    fn write_fighter_field(&mut self, base: char, name: &str, value: RotValue)
-        -> Result<(), String>;
+    fn write_fighter_field(
+        &mut self,
+        base: char,
+        name: &str,
+        value: RotValue,
+    ) -> Result<(), String>;
 
     fn read_identifier(&self, _name: &str) -> Option<RotValue> {
         None
     }
 
     fn write_identifier(&mut self, name: &str, _value: RotValue) -> Result<(), String> {
-        Err(format!("global identifier {name} has no writable host binding"))
+        Err(format!(
+            "global identifier {name} has no writable host binding"
+        ))
     }
 
-    fn call_function(&mut self, name: &str, _arguments: &[RotValue])
-        -> Result<RotValue, String>
-    {
+    fn call_function(&mut self, name: &str, _arguments: &[RotValue]) -> Result<RotValue, String> {
         Err(format!("ROT helper {name} has no host binding"))
     }
 }
