@@ -1,65 +1,73 @@
-# 🌈 ROT parser contract
+# 🌈 ROT parser and local execution contract
 
 ## 🌈 Status and scope
 
-The Rust crate contains a source-preserving lexer/parser and an initial **M2 scalar/local execution core** for the pinned Pascal ROT dialect. M1 parses every pinned section. The M2 subset supports typed call-local storage, scalar expressions, sets, pure math/conversion functions, local assignment, blocks, if, for, while, repeat and case. It does not bind fighter/global state, invoke engine helpers or consume random numbers.
+The Rust crate contains a source-preserving lexer/parser for the pinned Pascal ROT dialect and an **M2 scalar/local execution subset**. M1 parses every section in `Comum.rot` and `C01.rot` through `C15.rot`. M2 evaluates typed expressions and executes local assignments, blocks, conditionals, loops and `case` statements.
 
-The normative input is the Pascal reconstruction in [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves), pinned at commit \`e1b025c35ecbc2b14d8635564aafd23c2107d3d1\`. The checked-in files under \`research/pascal-rot/\` remain the reproducible input set.
+**This is not yet a character action-script runtime.** The executor deliberately stops before fighter/global state, RNG and game-engine helpers. No real character `[Acao]` script is currently executed end to end.
+
+The normative source is [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves), pinned at commit `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`. The checked-in files under `research/pascal-rot/` are the reproducible input set.
 
 ## 🌈 Rust API
 
-- \`RotDocument::from_str(source, text)\` extracts INI-style sections while preserving their source order and original line locations.
-- \`RotDocument::section(name)\` finds a section case-insensitively.
-- \`RotDocument::parse_optional(name)\` returns \`None\` when an optional section does not exist. It never synthesizes an empty script for a missing section.
-- \`RotSection::parse()\` returns a \`RotProgram\` or a \`RotError\` carrying the source name, line, column, and message.
-- \`RotProgram\` contains local declarations and a source-ordered statement tree. \`SourceSpan\` records start/end line and column plus byte offsets within the extracted section text.
+- `RotDocument::from_str(source, text)` extracts INI-style sections in source order while preserving original line locations.
+- `RotDocument::section(name)` finds a section case-insensitively.
+- `RotDocument::parse_optional(name)` returns `None` when a section is absent. It never invents a script for a missing section.
+- `RotSection::parse()` returns a `RotProgram` or a `RotError` carrying source name, line, column and message.
+- `RotProgram` contains local declarations and a source-ordered statement tree. `SourceSpan` records line/column ranges and byte offsets.
+- `RotExecutionFrame::new(program, jog, codigo)` creates fresh locals and initializes `Jog`, byte-narrowed `Codigo` and `Desloc` (0 for player 1, 50 for player 2).
+- `RotExecutionFrame::set_symbol(name, value)` supplies host-owned constants or readable global symbols. Local names take precedence.
+- `RotExecutionFrame::set_local(name, value)` applies the declared Pascal assignment conversion.
+- `RotExecutionFrame::evaluate(expression)` evaluates one supported expression.
+- `RotExecutionFrame::execute(program)` runs the supported local subset with a default one-million-step budget. `execute_with_step_limit` accepts an explicit host budget.
 
-The AST retains typed literal values, declared Pascal types, P/O fighter-field references, function calls, unary/binary expressions, sets/ranges, assignments, blocks, conditionals, loops, and ordered case arms.
+## 🌈 Parsed syntax
 
-## 🌈 Supported syntax
-
-The lexer handles identifiers, decimal and hexadecimal integers, decimal/exponent real literals, quoted strings with doubled-quote escaping, the ROT operators and punctuation, and the source comment forms \`//\`, \`{...}\`, and \`(*...*)\`.
+The lexer handles identifiers, decimal and hexadecimal integers, decimal/exponent real literals, quoted strings with doubled-quote escaping, ROT operators and punctuation, and `//`, `{...}` and `(*...*)` comments.
 
 The parser handles:
 
-- \`var\` declarations for Byte, ShortInt, SmallInt, Word, Integer/LongInt, Int64, Double, Boolean, and explicitly retained unknown type names;
+- `var` declarations for Byte, ShortInt, SmallInt, Word, Integer/LongInt, Int64, Double and Boolean. Unknown type names are retained in the AST and rejected when a frame needs to instantiate them.
 - assignment and procedure/function calls;
-- \`begin/end\`, \`if/then/else\`, \`for/to/downto/do\`, \`while/do\`, and \`repeat/until\`;
-- \`case/of/else\`, set literals, ranges, and \`in\`;
-- Pascal expression precedence for comparisons, arithmetic, integer division/modulo, shifts, bitwise operators, and unary operators.
+- `begin/end`, `if/then/else`, `for/to/downto/do`, `while/do` and `repeat/until`;
+- `case/of/else`, set literals, ranges and `in`;
+- Pascal expression precedence for comparisons, arithmetic, integer division/modulo, shifts, bitwise operators and unary operators.
 
-Whole-line semicolon comments are removed as the Pascal loader does, while preserving the corresponding newline so later source locations remain stable.
+Whole-line semicolon comments are removed as the Pascal loader does, while their newline is preserved so later source locations remain stable.
 
-## 🌈 Deliberate execution boundary
+## 🌈 M2 value and execution semantics
 
-Parsing does not establish runtime compatibility. The following remain separate evaluator/integration work:
+The value model distinguishes integer values with a separate Int64-width flag, real values, Booleans, strings and evaluated integer sets. Integer assignment narrows/wraps to Byte, ShortInt, SmallInt, Word or Integer. Int64 remains wide. Integer-to-Double and real-to-Double assignment are accepted; real-to-integer and Boolean/numeric conversions are rejected.
 
-- Pascal integer widths, overflow and assignment conversions;
-- Boolean short-circuit versus integer bitwise evaluation;
-- the measured FPC 3.2.2 right-to-left function-argument evaluation profile;
-- local-frame initialization and nested \`AcaoJogador\` calls;
-- the shared RNG cursor and LongInt/Int64 \`Random\` behavior;
-- typed P/O/global state access and engine helpers such as \`CriaEfeito\`, \`ExisteEfeito\`, \`Empurra\`, and \`AplicarCaixas\`;
-- the action lifecycle \`Comum [Acao] → character [Acao] → Comum [AcaoFim]\`.
+Boolean `and/or` short-circuit. Integer `and/or/xor` are bitwise operations and evaluate both operands. Comparisons reject mixing strings, Booleans and numbers. Set membership supports scalar values and inclusive integer ranges.
 
-No field is returned as a fabricated zero merely because the current simulation model does not yet expose it. No unsupported statement/helper is silently treated as a no-op. The temporary research plan tracks those later milestones.
+The pure functions `Round`, `Trunc`, `Abs`, `Cos`, `Sin` and `ShortInt` are implemented. The pinned FPC 3.2.2 profile uses ties-to-even rounding for `Round`; the evaluator implements that profile.
+
+Statement execution preserves source order. `for` bounds are evaluated once, lower bound first. `while` checks before its body; `repeat/until` checks after its body. `case` evaluates its selector once, scans arms in source order and enters the first matching arm. Each arm's labels are evaluated in order before its match decision.
+
+The step budget is a host safety guard to stop non-terminating scripts. It is not claimed to be a Pascal language rule.
+
+## 🌈 Deliberate runtime boundary
+
+The following are not yet connected:
+
+- `P.*` / `O.*` fighter-field reads or writes;
+- game-global reads or writes;
+- `Random`, including LongInt/Int64 width and the shared nested RNG cursor;
+- engine helpers `ExisteEfeito`, `CriaEfeito`, `Empurra`, `AcaoJogador` and `AplicarCaixas`;
+- the complete lifecycle `Comum [Acao]` → character `[Acao]` → `Comum [AcaoFim]` inside the interpreter.
+
+These operations return source-located errors rather than fabricated zeros or silent no-ops. The host adapter must use the authoritative `CombatState`, effects and shared RNG, not a parallel script-only state.
+
+Rust currently represents real values as `f64`, while the Pascal interpreter uses `Extended` internally. High-precision differential validation remains open. No floating-point equivalence is claimed.
 
 ## 🌈 Validation
 
-The parser unit tests compile every section in the pinned \`Comum.rot\` and \`C01.rot\` through \`C15.rot\` files. They also cover nested control flow, sets/ranges, calls, string escaping, hexadecimal literals, typed declarations, optional-section absence, source offsets, and readable source-located errors.
+The test suite parses every section in all 16 pinned ROT files. It also covers literal parsing, source spans/errors, typed local defaults and assignment conversions, arithmetic/operators, sets, Boolean short-circuiting, pure functions, local statement execution, loop/control-flow order, unsupported host-bound operations and the step limit.
 
-Run the repository checks from the root:
+Run the checks from the repository root:
 
-\`\`\`sh
+```sh
 cargo fmt --all -- --check
 cargo test --all-targets
-\`\`\`
-
-
-## 🌈 Expression-evaluation boundary
-
-The M2 expression core preserves the integer-versus-Int64 width flag used by the pinned interpreter, wraps assignments to Byte/ShortInt/SmallInt/Word/Integer, keeps Int64 values wide, and converts integer/real values to Double only on assignment. Boolean values remain distinct from numbers. Boolean `and/or` short-circuit; integer `and/or/xor` are bitwise. Comparisons enforce the source's string/Boolean/numeric type rules. Set membership evaluates scalar elements and inclusive integer ranges.
-
-The pure functions `Round`, `Trunc`, `Abs`, `Cos`, `Sin` and `ShortInt` are supported. The pinned FPC 3.2.2 profile uses ties-to-even rounding for `Round`; the evaluator implements that behavior. Rust's current real-number representation is `f64`, whereas the Pascal source uses `Extended` internally, so high-precision differential validation remains a required gate before execution compatibility is claimed.
-
-Explicitly unsupported at this stage: P/O field access and assignment, global reads/writes, RNG, effect/movement helpers and nested `AcaoJogador`. These operations return source-located errors rather than fabricated values or no-op results. The step budget is a host safeguard, not a behavior inferred from the original Pascal engine.
+```
