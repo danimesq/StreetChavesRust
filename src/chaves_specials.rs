@@ -246,7 +246,7 @@ impl CombatState {
         if matches!(
             command,
             ChavesSpecialCommand::Esp3Weak | ChavesSpecialCommand::Esp3Strong
-        ) && (f64::from(context.ground_y) - 90.0 > fighter.y)
+        ) && !(f64::from(context.ground_y) - 90.0 <= fighter.y)
         {
             return Ok(ChavesSpecialOutcome::rejected(
                 ChavesSpecialRejection::TooFarAboveGround,
