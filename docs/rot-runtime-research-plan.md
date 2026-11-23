@@ -258,7 +258,7 @@ The pinned C07.rot [Acao] section uses only fighter fields/constants already map
 
 ### C08 — Bruxa (active bounded roster slice)
 
-The pinned C08.rot [Acao] section routes commands 14–24 through the real interpreter. Esp1 and Esp2 are guarded by active effect types 18 and 19. Those projectile types now have source-backed creation, variant RNG, owner-facing movement, hitboxes and animation sprite sequences from the pinned Dados/Efeitos.ini. Focused tests cover victory/pose, special 1/2 accepted entries, special 3/4 entries, final-special power/sprite/flash/sound writes, and real active-effect rejection for both guards. CI validation is pending.
+The pinned C08.rot [Acao] section routes commands 14–24 through the real interpreter. Esp1 and Esp2 are guarded by active effect types 18 and 19. Those projectile types now have source-backed creation, variant RNG, owner-facing movement, hitboxes and animation sprite sequences from the pinned Dados/Efeitos.ini. Focused tests cover victory/pose, special 1/2 accepted entries, special 3/4 entries, final-special power/sprite/flash/sound writes, and real active-effect rejection for both guards. CI passed on code commit `fbb02c6b9ad7b319b621b5e76ecb2a56f8761089`: formatting and all test targets are green (96 library tests plus integration targets 12, 2, 29, 7, 13, 5 and 5).
 
 ## 7. C01 and C13 regression strategy
 
