@@ -28,6 +28,7 @@ This directory records the research and engineering decisions for an independent
 - [Ordered frame event ledger](ordered-frame-event-ledger.md): source-ordered frame/timer, effect, sound, RNG, and simulation-mutation statements from all 15 Pascal [Quadro] blocks.
 - [Combat tick contracts](combat-tick-contract.md): Rust contracts for ordered events, normative FPC 3.2.2 MTwist RNG, collision geometry, and box records.
 - [C01 character-action slice](c01-character-action-slice.md): source-derived contract and bounded implementation plan for the first character-specific action commands.
+- [C01 special-command entry and AI](chaves-special-entry-contract.md): C01 command dispatch, live effect guard, Pascal-ordered CPU special selection and separation between [Acao] and [Quadro].
 - [Box lifecycle deep dive](box-lifecycle-deep-dive.md): exact C selector and Pascal AplicarCaixas behavior, including retain-on-miss, inactive rows, ordered strength variants, and a port divergence.
 - [RNG compatibility](rng-compatibility.md): normative FPC 3.2.2 MTwist implementation, one-word LongInt and two-word Int64 behavior; experimental Delphi LCG candidate remains separate.
 - [Pascal reference trace harness](pascal-reference-trace-harness.md): deterministic --gravar regression, schema-v2 tick/script/control/RNG JSONL, repeatability evidence, and Rust reconciliation CLI.
