@@ -12,7 +12,8 @@ This directory records the research and engineering decisions for an independent
 - [Rust architecture proposal](rust-architecture.md): a proposed separation of deterministic game logic from SDL3 presentation and platform services.
 - [Rendering backends and WebAssembly/Canvas architecture](rendering-backends-wasm-canvas.md): one shared Rust engine with replaceable native SDL3 and browser Canvas 2D adapters, build boundaries, timing, resources, tests and staged implementation.
 - [Construct 2/3 integration: embedded WASM + Canvas](construct-wasm-canvas-integration.md): embedding the Rust engine's own Canvas into exported Construct projects, overlay/underlay composition, generic plugin boundaries, host commands/events, and external sprite registration.
-  
+- [Reusable WASM Canvas host compatibility contract](wasm-canvas-host-compatibility.md): the application-side requirements for interoperating with a generic host, including facade operations, version negotiation, lifecycle, viewport, resources, events and a minimum compatibility fixture.
+
 ## Research documents
 
 - [Original executable reverse engineering](original-executable-reverse-engineering.md): preliminary PE/toolchain findings and the investigation plan for embedded resources, external assets, gameplay cross-references, and final compatibility fixtures.
