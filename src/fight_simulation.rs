@@ -330,7 +330,8 @@ impl RotExecutionHost for RotCombatHost<'_> {
                 };
                 let x = rot_value_real(&arguments[3])?;
                 let y = rot_value_real(&arguments[4])?;
-                let (state, rng) = (&mut self.state, &mut self.rng);
+                let state = &mut *self.state;
+                let rng = &mut *self.rng;
                 state
                     .effects
                     .spawn(effect_type, variant, owner, owner_facing, x, y, rng)
