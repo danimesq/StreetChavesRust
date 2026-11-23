@@ -741,6 +741,202 @@ impl RotExecutionFrame {
         evaluate_expression(self, expression)
     }
 
+    /// Execute the scalar/local subset of a parsed ROT program.
+    ///
+    /// A host-side step limit prevents a malformed script from running forever.
+    /// It is a safety boundary, not a Pascal language rule.
+    pub fn execute(&mut self, program: &RotProgram) -> Result<(), RotError> {
+        self.execute_with_step_limit(program, 1_000_000)
+    }
+
+    pub fn execute_with_step_limit(
+        &mut self,
+        program: &RotProgram,
+        step_limit: usize,
+    ) -> Result<(), RotError> {
+        if program.source != self.source || program.section != self.section {
+            return Err(self.error(
+                program.body.span,
+                "execution frame belongs to a different ROT source section",
+            ));
+        }
+        let mut remaining = step_limit;
+        self.execute_statement(&program.body, &mut remaining)
+    }
+
+    fn consume_step(
+        &self,
+        span: SourceSpan,
+        remaining: &mut usize,
+    ) -> Result<(), RotError> {
+        if *remaining == 0 {
+            return Err(self.error(span, "ROT execution step limit exceeded"));
+        }
+        *remaining -= 1;
+        Ok(())
+    }
+
+    fn assign_local_at_span(
+        &mut self,
+        name: &str,
+        value: RotValue,
+        assignment_span: SourceSpan,
+    ) -> Result<(), RotError> {
+        let key = name.to_ascii_lowercase();
+        let declared_type = self
+            .locals
+            .get(&key)
+            .map(|slot| slot.declared_type.clone())
+            .ok_or_else(|| self.error(assignment_span, format!("unknown local variable {name}")))?;
+        let converted = convert_assignment(
+            &self.source,
+            assignment_span,
+            &declared_type,
+            value,
+        )?;
+        self.locals
+            .get_mut(&key)
+            .expect("local slot was checked")
+            .value = converted;
+        Ok(())
+    }
+
+    fn execute_statement(
+        &mut self,
+        statement: &Statement,
+        remaining: &mut usize,
+    ) -> Result<(), RotError> {
+        self.consume_step(statement.span, remaining)?;
+        match &statement.kind {
+            StatementKind::Block(statements) => {
+                for child in statements {
+                    self.execute_statement(child, remaining)?;
+                }
+                Ok(())
+            }
+            StatementKind::Assign { target, value } => {
+                let ExpressionKind::Identifier(name) = &target.kind else {
+                    return Err(self.error(
+                        target.span,
+                        "assignment target needs a bound local variable",
+                    ));
+                };
+                let value = self.evaluate(value)?;
+                self.assign_local_at_span(name, value, target.span)
+            }
+            StatementKind::Call(call) => {
+                self.evaluate(call)?;
+                Ok(())
+            }
+            StatementKind::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let condition_value = self.evaluate(condition)?;
+                if require_boolean(self, condition.span, condition_value)? {
+                    self.execute_statement(then_branch, remaining)
+                } else if let Some(else_branch) = else_branch {
+                    self.execute_statement(else_branch, remaining)
+                } else {
+                    Ok(())
+                }
+            }
+            StatementKind::For {
+                variable,
+                direction,
+                first,
+                last,
+                body,
+            } => {
+                // The bounds are evaluated once, in source order, before iteration.
+                let first_value = self.evaluate(first)?;
+                let (mut current, _) = require_integer(self, first.span, first_value)?;
+                let last_value = self.evaluate(last)?;
+                let (last, _) = require_integer(self, last.span, last_value)?;
+
+                loop {
+                    let in_range = match direction {
+                        ForDirection::To => current <= last,
+                        ForDirection::DownTo => current >= last,
+                    };
+                    if !in_range {
+                        break;
+                    }
+                    self.consume_step(statement.span, remaining)?;
+                    self.assign_local_at_span(
+                        variable,
+                        integer(current, false),
+                        statement.span,
+                    )?;
+                    self.execute_statement(body, remaining)?;
+                    current = match direction {
+                        ForDirection::To => current.wrapping_add(1),
+                        ForDirection::DownTo => current.wrapping_sub(1),
+                    };
+                }
+                Ok(())
+            }
+            StatementKind::While { condition, body } => loop {
+                self.consume_step(statement.span, remaining)?;
+                let condition_value = self.evaluate(condition)?;
+                if !require_boolean(self, condition.span, condition_value)? {
+                    break Ok(());
+                }
+                self.execute_statement(body, remaining)?;
+            },
+            StatementKind::RepeatUntil { body, condition } => loop {
+                self.consume_step(statement.span, remaining)?;
+                for child in body {
+                    self.execute_statement(child, remaining)?;
+                }
+                let condition_value = self.evaluate(condition)?;
+                if require_boolean(self, condition.span, condition_value)? {
+                    break Ok(());
+                }
+            },
+            StatementKind::Case {
+                selector,
+                arms,
+                otherwise,
+            } => {
+                let selector_value = self.evaluate(selector)?;
+                let (selector, _) = require_integer(self, selector.span, selector_value)?;
+                for arm in arms {
+                    let mut matched = false;
+                    // Evaluate every label in an arm before deciding to enter it.
+                    for label in &arm.labels {
+                        let label_matches = match label {
+                            SetElement::Value(value) => {
+                                let value_result = self.evaluate(value)?;
+                                let (value, _) =
+                                    require_integer(self, value.span, value_result)?;
+                                selector == value
+                            }
+                            SetElement::Range { low, high, span } => {
+                                let low_result = self.evaluate(low)?;
+                                let (low, _) = require_integer(self, *span, low_result)?;
+                                let high_result = self.evaluate(high)?;
+                                let (high, _) = require_integer(self, *span, high_result)?;
+                                selector >= low && selector <= high
+                            }
+                        };
+                        matched |= label_matches;
+                    }
+                    if matched {
+                        return self.execute_statement(&arm.body, remaining);
+                    }
+                }
+                if let Some(default) = otherwise {
+                    for child in default {
+                        self.execute_statement(child, remaining)?;
+                    }
+                }
+                Ok(())
+            }
+        }
+    }
+
     fn error(&self, span: SourceSpan, message: impl Into<String>) -> RotError {
         RotError::new(
             &format!("{} [{}]", self.source, self.section),
@@ -2186,6 +2382,71 @@ else
             frame.evaluate(only_assignment_value(&program)).unwrap(),
             integer(44, false)
         );
+    }
+
+    #[test]
+    fn executes_local_assignments_conditionals_and_typed_conversions() {
+        let section = RotSection {
+            name: "Acao".to_owned(),
+            source: "execute.rot".to_owned(),
+            first_line: 1,
+            text: "var I: Integer; var D: Double; var Flag: Boolean; begin I := 1 + 2 * 3; D := I / 2; if I = 7 then Flag := True else Flag := False; end;".to_owned(),
+        };
+        let program = section.parse().unwrap();
+        let mut frame = RotExecutionFrame::new(&program, 1, 0).unwrap();
+        frame.execute(&program).unwrap();
+        assert_eq!(frame.local("I"), Some(&integer(7, false)));
+        assert_eq!(frame.local("D"), Some(&RotValue::Real(3.5)));
+        assert_eq!(frame.local("Flag"), Some(&RotValue::Boolean(true)));
+    }
+
+    #[test]
+    fn executes_for_while_repeat_and_case_in_source_order() {
+        let section = RotSection {
+            name: "Acao".to_owned(),
+            source: "control.rot".to_owned(),
+            first_line: 1,
+            text: "var I: Integer; var Sum: Integer; var Choice: Integer; begin Sum := 0; for I := 1 to 3 do Sum := Sum + I; I := 0; while I < 2 do I := I + 1; repeat I := I - 1; until I = 0; case Sum of 5: Choice := 1; 6: Choice := 2; else Choice := 3; end; end;".to_owned(),
+        };
+        let program = section.parse().unwrap();
+        let mut frame = RotExecutionFrame::new(&program, 1, 0).unwrap();
+        frame.execute(&program).unwrap();
+        assert_eq!(frame.local("Sum"), Some(&integer(6, false)));
+        assert_eq!(frame.local("I"), Some(&integer(0, false)));
+        assert_eq!(frame.local("Choice"), Some(&integer(2, false)));
+    }
+
+    #[test]
+    fn statement_execution_rejects_unbound_fighter_fields_and_helpers() {
+        for text in [
+            "P.Acao := 2;",
+            "CriaEfeito(2, 'A', Jog, 1, 2);",
+        ] {
+            let section = RotSection {
+                name: "Acao".to_owned(),
+                source: "unsupported.rot".to_owned(),
+                first_line: 7,
+                text: text.to_owned(),
+            };
+            let program = section.parse().unwrap();
+            let mut frame = RotExecutionFrame::new(&program, 1, 0).unwrap();
+            assert!(frame.execute(&program).is_err(), "program: {text}");
+        }
+    }
+
+    #[test]
+    fn statement_execution_enforces_a_host_step_limit() {
+        let section = RotSection {
+            name: "Acao".to_owned(),
+            source: "loop.rot".to_owned(),
+            first_line: 12,
+            text: "var I: Integer; while True do I := I + 1;".to_owned(),
+        };
+        let program = section.parse().unwrap();
+        let mut frame = RotExecutionFrame::new(&program, 1, 0).unwrap();
+        let error = frame.execute_with_step_limit(&program, 8).unwrap_err();
+        assert!(error.message.contains("step limit"));
+        assert_eq!(frame.local("I"), Some(&integer(3, false)));
     }
 
     #[test]
