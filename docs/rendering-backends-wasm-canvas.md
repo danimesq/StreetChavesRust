@@ -293,3 +293,16 @@ These decisions must be made from implementation evidence. Do not add WebGL/WebG
 A separate integration proposal describes embedding the WASM + Canvas subsystem inside an exported Construct project. Construct acts as the host/orchestrator, while the Rust engine owns fight simulation and its dedicated Canvas surface. The proposal includes overlay/underlay composition, a generic Construct plugin, a versioned host API, and one-time registration of externally supplied sprites through stable resource IDs.
 
 See [Construct 2/3 integration: embedded WASM + Canvas](construct-wasm-canvas-integration.md) for the full design, including the browser-side resource registry and Petmals Pink&Dark SyncFight use case.
+
+
+## Alternative SDL3/Emscripten WebAssembly route
+
+The Canvas 2D backend above remains the proposed direct browser-renderer route. It is not the only viable way to place the Rust game on an HTML Canvas.
+
+A Rust build targeting `wasm32-unknown-emscripten` can interoperate with Emscripten's SDL ecosystem. SDL3's Emscripten renderer uses GLES2 mapped to WebGL and can select a specific HTML Canvas with `SDL_HINT_EMSCRIPTEN_CANVAS_SELECTOR`. This retains SDL-facing code where the selected Rust SDL3 crate/build integration supports it, but the resulting context is WebGL, not Canvas 2D.
+
+The direct `wasm32-unknown-unknown` + `wasm-bindgen`/web bindings route is different: SDL is replaced at the browser boundary by a browser renderer, which may target Canvas 2D or WebGL. SDL calls are not automatically translated into Canvas 2D operations.
+
+Do not choose between these routes from assumptions. The [Web rendering backend study](web-rendering-backend-study.md) defines the two feasibility spikes and a shared-scene benchmark plan. It also records Construct 2/3 integration constraints, including the C3 worker/DOM boundary and SDL/Emscripten's main-thread rendering requirement.
+
+No SDL3/Emscripten Rust build or browser performance result is claimed by this documentation.
