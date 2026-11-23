@@ -420,11 +420,8 @@ impl FightSimulation {
         // L7_Entrada processes player one, then player two. Directional commands
         // precede button edges exactly as in the Pascal input routine.
         for fighter_index in 0..2 {
-            self.dispatch_directional_input(fighter_index, inputs[fighter_index]);
-        // Pascal L7_Entrada handles fighter 1, then fighter 2. Special-table rows
-        // for each button are all dispatched in file order before the basic action.
-        for fighter_index in 0..2 {
             let input = inputs[fighter_index];
+            self.dispatch_directional_input(fighter_index, input);
             let Some(button_rules) = self.command_rules[fighter_index]
                 .as_ref()
                 .map(|rules| rules.buttons.clone())
