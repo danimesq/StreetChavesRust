@@ -114,9 +114,9 @@ The migration now routes C01 commands 16–24, C02 commands 16–23, C03 command
 
 - Pinned source revision: OpenStreetChaves commit `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`.
 - `research/pascal-rot/C13.rot`, `C14.rot` and `C15.rot` were byte-compared with their respective pinned upstream files; all three are byte-identical.
-- C13 / Jaiminho now routes commands 14–26. The source's command 24 maps to `acEspecial4` with `fgEspecial`; Extra1 (25) maps to `acEspecial4` with force 4; Extra2 (26) is the 30-frame final and performs the source's airborne/power/sprite/flash/sound writes.
-- C14 / Dona Neves now routes commands 14–24. Special 3 is accepted only from `acPulo`; the final is 70 frames and uses the source's power, sprite, flash and sound writes.
-- C15 / Glória now routes commands 14–24. Special 3 retains the source's standing/strong-kick-frame cancel guard; the final is 30 frames and uses sprite offset +12.
-- Focused tests exercise every routed command entry, assert action/frame/duration and the source-specific state writes, and verify that each command is reported as a real ROT execution without runtime errors.
+- C13 / Jaiminho now routes commands 14 and 16–26. The source's command 24 maps to `acEspecial4` with `fgEspecial`; Extra1 (25) maps to `acEspecial4` with force 4; Extra2 (26) is the 30-frame final and performs the source's airborne/power/sprite/flash/sound writes.
+- C14 / Dona Neves now routes commands 14 and 16–24. Special 3 is accepted only from `acPulo`; the final is 70 frames and uses the source's power, sprite, flash and sound writes.
+- C15 / Glória now routes commands 14 and 16–24. Special 3 retains the source's standing/strong-kick-frame cancel guard; the final is 30 frames and uses sprite offset +12.
+- Command 15 is not routed because these character scripts have no character-specific pose branch. Focused tests exercise every routed command entry, assert action/frame/duration and the source-specific state writes, and verify that each command is reported as a real ROT execution without runtime errors.
 - These tests do not claim execution of [Quadro], [IA] or [Acerto], nor do they claim Pascal differential parity. The active-effect guard paths are executed by the real `ExisteEfeito` host helper, but the source effect types 26/28/29/33 are not yet configured in the effect arena, so no synthetic active-effect fixtures are claimed.
 - Structural interpreter limitations remain deferred as agreed.
