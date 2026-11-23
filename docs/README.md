@@ -18,7 +18,7 @@ This directory records the research and engineering decisions for an independent
 - [Fixed 28 ms simulation clock](fixed-timestep-clock.md): shared integer-nanosecond tick accumulator, host-loop order, catch-up policy, and 60/144 Hz validation.
 - [Headless FightSimulation](headless-fight-simulation.md): the first concrete SimulationTick implementation, C01 command/frame integration, live effect advancement, report snapshots and remaining boundaries.
 - [Mercedes action-dispatch slice](mercedes-action-dispatch.md): common basic attack entry, C13 extra commands 25/26, and the source-audited gaps for the other character ROT scripts and charge counters.
-- [ROT parser contract](rot-runtime.md): the Rust source-preserving ROT lexer/parser, AST shape, section loading, source spans and the explicit boundary between parsing and execution.
+- [ROT parser contract](rot-runtime.md): the Rust source-preserving ROT lexer/parser, typed expression evaluator, AST shape, section loading, source spans and the explicit boundary before statement execution.
 - [Temporary ROT runtime research and delivery plan](rot-runtime-research-plan.md): detailed interpreter semantics, exact action-call order, C02-C15 script audit, C01/C13 regression gates, counter investigation and progressive removal criteria. Temporary PR planning document.
 
 ## Research documents

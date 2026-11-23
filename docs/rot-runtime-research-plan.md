@@ -6,7 +6,7 @@
 
 - Target: [PR #20 — runtime: common actions and C13 extra commands](https://github.com/danimesq/StreetChavesRust/pull/20)
 - Research date: 2026-11-23
-- Status: M0 baseline and M1 parser are delivered on the PR branch. `src/rot_runtime.rs` parses every section in the pinned `Comum.rot` and C01-C15 files into a source-located AST. This is parsing only; no script evaluator or action-script execution is claimed.
+- Status: M0 baseline and M1 parser are delivered; M2 expression evaluation is in progress. `src/rot_runtime.rs` parses every section in the pinned `Comum.rot` and C01-C15 files and evaluates a bounded expression subset. No statement execution, game-helper bridge or character action-script execution is claimed.
 - Normative Pascal source: [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves), commit `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`.
 - Scope: `Comum.rot [Acao]`, character `C01.rot` through `C15.rot [Acao]`, and `Comum.rot [AcaoFim]`; execute real character action scripts, including C02-C15 specials, through the Rust simulation.
 - Out of scope for this delivery: implementing all `[Quadro]`, `[IA]`, or `[Acerto]` sections as part of the action-entry milestone; C16 Chapolin; claiming equivalence with the original Delphi 5 executable.
@@ -390,8 +390,8 @@ A fixture with only a final action ID is insufficient. Compare every registered 
 | Milestone | Deliverable | Acceptance evidence | Remove from this temporary document when... |
 |---|---|---|---|
 | M0 — branch/source baseline | **Delivered.** Reconciled the PR branch with current `main`, verified the pinned source manifest, and reran baseline CI. | Initial comparison: 12 ahead / 0 behind; the original Rust workflow passed. After M1 and its regression fixes, the current PR branch is 15 commits ahead / 0 behind. | Baseline facts are recorded in permanent provenance docs and implementation branch is synchronized. |
-| M1 — ROT parser | **Delivered.** Added `src/rot_runtime.rs`: source-preserving lexer, section loader, typed literal/declaration AST, and parser for the pinned ROT statement/expression grammar. | Tests parse every section in `Comum.rot` and C01-C15; nested grammar, literal, type, optional-section, span and error-location tests. `cargo fmt --all -- --check` and `cargo test --all-targets` both passed on head `a363d1f5bfefcebf8fadc0acaf45a68b53a07ad3`. | Parser contract and supported grammar are documented in `docs/rot-runtime.md`. |
-| M2 — evaluator | Typed values, assignments, operators, loops, sets/case and Pascal evaluation order. | Evaluator semantic tests, FPC behavior probes and error tests pass. | Durable semantic contract is moved to permanent runtime docs. |
+| M1 — ROT parser | **Delivered.** Added `src/rot_runtime.rs`: source-preserving lexer, section loader, typed literal/declaration AST, and parser for the pinned ROT statement/expression grammar. | Tests parse every section in `Comum.rot` and C01-C15; nested grammar, literal, type, optional-section, span and error-location tests. `cargo fmt --all -- --check` and `cargo test --all-targets` both passed on head `a363d1f5bfefcebf8fadc0acaf45a68b53a07ad3`. | Parser and current expression-evaluation boundaries are documented in `docs/rot-runtime.md`. |
+| M2 — evaluator | **In progress.** Added typed per-call local frames, Pascal assignment narrowing, scalar/Boolean/string values, integer/real operators, set membership and pure math/conversion functions. | Expression tests cover integer width propagation, arithmetic, shifts, comparison, sets, Boolean short-circuit, helper-boundary errors, local defaults/narrowing and FPC ties-to-even `Round`. Statement execution, helper calls, RNG and full Extended-precision equivalence remain open. | Full expression semantics and differential evidence are moved to permanent runtime docs. |
 | M3 — execution context and helpers | P/O/local/global bindings, engine helper bridge, error context and one shared RNG cursor. | Helper integration tests and nested-call/RNG tests pass. | Runtime API and bridge ownership are documented in permanent architecture docs. |
 | M4 — action lifecycle | Common `[Acao]` → character `[Acao]` → common `[AcaoFim]`. | Common prelude/epilogue ordering tests, including rejected commands. | Lifecycle is implemented and permanently documented beside fight simulation. |
 | M5 — roster execution | Execute actual C01-C15 `[Acao]` scripts, including C02-C15 specials. | Per-character fixtures, state diffs, side-effect/RNG comparisons; no generic fallback. | All 15 action scripts pass their gates and the roster matrix is updated. |
@@ -402,7 +402,7 @@ A fixture with only a final action ID is insufficient. Compare every registered 
 
 - [x] The PR branch is reconciled with the current base and the pinned source manifest is verified.
 - [x] Rust parses the actual `Comum.rot` and C01-C15 action sections into ASTs. (M1 parser acceptance; execution remains pending.)
-- [ ] Rust evaluator matches the pinned Pascal value/type/control-flow semantics.
+- [ ] Rust evaluator matches the complete pinned Pascal value/type/control-flow semantics. (M2 expression subset is implemented; statement execution and full differential validation remain open.)
 - [ ] P/O/local/global access covers every field/function reachable from the action scripts.
 - [ ] `Random` preserves LongInt/Int64 width, range and the single nested RNG cursor.
 - [ ] `ExisteEfeito`, `CriaEfeito`, `Empurra` and nested `AcaoJogador` use authoritative simulation state.

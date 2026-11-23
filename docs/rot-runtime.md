@@ -2,7 +2,7 @@
 
 ## 🌈 Status and scope
 
-The Rust crate now contains a source-preserving lexer and parser for the pinned Pascal ROT dialect used by Street Chaves. This is **M1: parsing only**. It does not execute a script, evaluate a condition, mutate a fighter, call a game helper, or consume random numbers.
+The Rust crate contains a source-preserving lexer/parser for the pinned Pascal ROT dialect and an initial **M2 expression-evaluation core**. M1 parses every pinned section. The evaluator supports typed call-local storage, scalar values, operators, sets and the pure math/conversion functions. It does not execute statement trees, bind fighter/global state, invoke engine helpers or consume random numbers.
 
 The normative input is the Pascal reconstruction in [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves), pinned at commit \`e1b025c35ecbc2b14d8635564aafd23c2107d3d1\`. The checked-in files under \`research/pascal-rot/\` remain the reproducible input set.
 
@@ -54,3 +54,12 @@ Run the repository checks from the root:
 cargo fmt --all -- --check
 cargo test --all-targets
 \`\`\`
+
+
+## 🌈 Expression-evaluation boundary
+
+The M2 expression core preserves the integer-versus-Int64 width flag used by the pinned interpreter, wraps assignments to Byte/ShortInt/SmallInt/Word/Integer, keeps Int64 values wide, and converts integer/real values to Double only on assignment. Boolean values remain distinct from numbers. Boolean `and/or` short-circuit; integer `and/or/xor` are bitwise. Comparisons enforce the source's string/Boolean/numeric type rules. Set membership evaluates scalar elements and inclusive integer ranges.
+
+The pure functions `Round`, `Trunc`, `Abs`, `Cos`, `Sin` and `ShortInt` are supported. The pinned FPC 3.2.2 profile uses ties-to-even rounding for `Round`; the evaluator implements that behavior. Rust's current real-number representation is `f64`, whereas the Pascal source uses `Extended` internally, so high-precision differential validation remains a required gate before execution compatibility is claimed.
+
+Explicitly unsupported at this stage: statement execution, assignments in the AST, loops/branches/case execution, P/O field access, global reads/writes, RNG, effect/movement helpers and nested `AcaoJogador`. These operations return source-located errors rather than fabricated values or no-op results.
