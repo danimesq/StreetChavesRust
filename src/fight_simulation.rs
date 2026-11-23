@@ -1484,7 +1484,15 @@ mod rot_runtime_integration_tests {
         fight
             .state
             .effects
-            .spawn(13, Some('A'), 1, EFFECT_SIDE_RIGHT, 100.0, 100.0, &mut fight.rng)
+            .spawn(
+                13,
+                Some('A'),
+                1,
+                EFFECT_SIDE_RIGHT,
+                100.0,
+                100.0,
+                &mut fight.rng,
+            )
             .unwrap();
         let mut report = FightTickReport::default();
 
