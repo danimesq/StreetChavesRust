@@ -1,13 +1,17 @@
 //! First concrete, renderer-free fight orchestrator.
 use crate::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome};
 use crate::combat_runtime::{
-    C01FrameResult, CombatState, VictoryAnimationContext, ACTION_POSE, ACTION_SPECIAL1,
-    ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL, ACTION_VICTORY,
+    C01FrameResult, CombatState, VictoryAnimationContext, ACTION_AIR_STRONG_KICK,
+    ACTION_AIR_STRONG_PUNCH, ACTION_AIR_WEAK_KICK, ACTION_AIR_WEAK_PUNCH, ACTION_CROUCHING,
+    ACTION_CROUCH_STRONG_KICK, ACTION_CROUCH_STRONG_PUNCH, ACTION_CROUCH_WEAK_KICK,
+    ACTION_CROUCH_WEAK_PUNCH, ACTION_DEFENDING, ACTION_IDLE, ACTION_JUMPING, ACTION_LOW_DEFENDING,
+    ACTION_POSE, ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4,
+    ACTION_SPECIAL_FINAL, ACTION_STRONG_KICK, ACTION_STRONG_PUNCH, ACTION_VICTORY, ACTION_WALKING,
 };
 use crate::command_recognition::{AttackButton, CommandRecognizer};
 use crate::effect_runtime::{EffectTickContext, EffectTickResult};
 use crate::fighter_command_data::{embedded_character_command_rules, CharacterCommandRules};
-use crate::input::InputFrame;
+use crate::input::{Direction, InputFrame};
 use crate::runtime::SimulationTick;
 use crate::Fpc322Rng;
 
@@ -137,8 +141,7 @@ impl FightSimulation {
             command_code,
         });
 
-        // This is the only per-character action dispatcher currently implemented:
-        // Chaves (C01), commands cmEsp1..cmEspFinal (16..24).
+        // C01 special commands use the already-audited hand-port.
         if self.state.fighters[fighter_index].character_id == 1
             && ChavesSpecialCommand::from_pascal_code(command_code).is_some()
         {
@@ -152,6 +155,10 @@ impl FightSimulation {
                     "C01 [Acao] fighter {fighter_index}, command {command_code}: {error}"
                 )),
             }
+        } else if self.state.fighters[fighter_index].character_id == 13
+            && matches!(command_code, 25 | 26)
+        {
+            self.dispatch_c13_extra(command_code, fighter_index, report);
         } else {
             report.unhandled_commands.push(UnhandledCommand {
                 fighter_index,
@@ -162,7 +169,257 @@ impl FightSimulation {
         }
     }
 
+    /// Execute the C13 [Acao] branches for cmEspExtra1/2 from C13.rot.
+    fn dispatch_c13_extra(
+        &mut self,
+        command_code: u8,
+        fighter_index: usize,
+        report: &mut FightTickReport,
+    ) {
+        let fighter = &mut self.state.fighters[fighter_index];
+        let sprite_offset = (fighter_index as i32) * 50;
+        match command_code {
+            25 => {
+                if !matches!(
+                    fighter.action_id,
+                    ACTION_IDLE | ACTION_WALKING | ACTION_JUMPING | ACTION_DEFENDING | ACTION_LOW_DEFENDING
+                ) {
+                    return;
+                }
+                fighter.action_id = ACTION_SPECIAL4;
+                fighter.action_frame = 0;
+                fighter.action_duration = 30;
+                if fighter.charge_power < self.config.special.charge_max {
+                    fighter.charge_power += 5.0 * self.config.special.charge_gain;
+                }
+                // C13.rot assigns the literal force value 4 for cmEspExtra1.
+                fighter.force_strength = 4;
+            }
+            26 => {
+                if !matches!(
+                    fighter.action_id,
+                    ACTION_IDLE
+                        | ACTION_WALKING
+                        | ACTION_CROUCHING
+                        | ACTION_JUMPING
+                        | ACTION_DEFENDING
+                        | ACTION_LOW_DEFENDING
+                        | ACTION_SPECIAL3
+                ) || !(fighter.health <= 15.0 || fighter.power > 0)
+                {
+                    return;
+                }
+                fighter.action_id = ACTION_SPECIAL_FINAL;
+                fighter.action_frame = 0;
+                fighter.action_duration = 30;
+                fighter.in_air = false;
+                fighter.jump_direction = 0;
+                fighter.vertical_velocity = 0;
+                if fighter.power == 3 {
+                    fighter.charge_power = 0.0;
+                }
+                fighter.power = fighter.power.wrapping_sub(1);
+                fighter.sprite_frame = sprite_offset + 37;
+                self.state.screen_flash = 22;
+                self.state.pending_sound = Some(crate::chaves_specials::SOUND_FINAL_SPECIAL);
+            }
+            _ => return,
+        }
+        let _ = report;
+    }
+
+    /// Shared Pascal [Acao] for commands 3..6, followed by [AcaoFim].
+    fn dispatch_common_basic_action(
+        &mut self,
+        fighter_index: usize,
+        button: AttackButton,
+        command_code: u8,
+        report: &mut FightTickReport,
+    ) {
+        report.command_matches.push(CommandMatch {
+            fighter_index,
+            button,
+            command_code,
+        });
+        let context = self.config.special;
+        let fighter = &mut self.state.fighters[fighter_index];
+        fighter.defending = false;
+        let action = fighter.action_id;
+        let grounded = fighter.vertical_velocity == 0;
+        let mut next = None;
+        let mut duration = 0;
+        let mut charge = 0.0;
+        let mut sound = None;
+
+        match command_code {
+            3 => {
+                if grounded && matches!(action, ACTION_IDLE | ACTION_WALKING | ACTION_DEFENDING) {
+                    next = Some(ACTION_WEAK_PUNCH);
+                    duration = 6;
+                    charge = 1.0;
+                    sound = Some(5);
+                } else if matches!(action, ACTION_CROUCHING | ACTION_LOW_DEFENDING) {
+                    next = Some(ACTION_CROUCH_WEAK_PUNCH);
+                    duration = 6;
+                    charge = 1.0;
+                    sound = Some(5);
+                } else if action == ACTION_JUMPING {
+                    next = Some(ACTION_AIR_WEAK_PUNCH);
+                    duration = 15;
+                    charge = 1.0;
+                    sound = Some(5);
+                }
+            }
+            4 => {
+                if grounded
+                    && (matches!(action, ACTION_IDLE | ACTION_WALKING | ACTION_DEFENDING)
+                        || (action == ACTION_WEAK_PUNCH && fighter.action_frame >= 2))
+                {
+                    next = Some(ACTION_WEAK_KICK);
+                    duration = 6;
+                    charge = 1.0;
+                    sound = Some(5);
+                } else if matches!(action, ACTION_CROUCHING | ACTION_LOW_DEFENDING)
+                    || (action == ACTION_CROUCH_WEAK_PUNCH && fighter.action_frame >= 2)
+                {
+                    next = Some(ACTION_CROUCH_WEAK_KICK);
+                    duration = 6;
+                    charge = 1.0;
+                    sound = Some(5);
+                } else if action == ACTION_JUMPING {
+                    next = Some(ACTION_AIR_WEAK_KICK);
+                    duration = 15;
+                    charge = 1.0;
+                    sound = Some(5);
+                }
+            }
+            5 => {
+                if grounded
+                    && (matches!(action, ACTION_IDLE | ACTION_WALKING | ACTION_DEFENDING)
+                        || (matches!(action, ACTION_WEAK_PUNCH | ACTION_WEAK_KICK)
+                            && fighter.action_frame >= 2))
+                {
+                    next = Some(ACTION_STRONG_PUNCH);
+                    duration = 11;
+                    charge = 2.0;
+                    sound = Some(6);
+                } else if matches!(action, ACTION_CROUCHING | ACTION_LOW_DEFENDING)
+                    || (matches!(action, ACTION_CROUCH_WEAK_PUNCH | ACTION_CROUCH_WEAK_KICK)
+                        && fighter.action_frame >= 2)
+                {
+                    next = Some(ACTION_CROUCH_STRONG_PUNCH);
+                    duration = 11;
+                    charge = 2.0;
+                    sound = Some(6);
+                } else if action == ACTION_JUMPING {
+                    next = Some(ACTION_AIR_STRONG_PUNCH);
+                    duration = 11;
+                    charge = 2.0;
+                    sound = Some(6);
+                }
+            }
+            6 => {
+                if grounded
+                    && !fighter.in_air
+                    && matches!(action, ACTION_IDLE | ACTION_WALKING | ACTION_DEFENDING)
+                {
+                    next = Some(ACTION_STRONG_KICK);
+                    duration = 11;
+                    charge = 2.0;
+                    sound = Some(6);
+                } else if matches!(action, ACTION_CROUCHING | ACTION_LOW_DEFENDING)
+                    || (action == ACTION_CROUCH_WEAK_KICK && fighter.action_frame >= 2)
+                {
+                    next = Some(ACTION_CROUCH_STRONG_KICK);
+                    duration = 11;
+                    charge = 2.0;
+                    fighter.is_kick = true;
+                    sound = Some(6);
+                } else if action == ACTION_JUMPING {
+                    next = Some(ACTION_AIR_STRONG_KICK);
+                    duration = 11;
+                    charge = 2.0;
+                    sound = Some(6);
+                }
+            }
+            _ => {}
+        }
+
+        if let Some(action_id) = next {
+            fighter.action_id = action_id;
+            fighter.action_frame = 0;
+            fighter.action_duration = duration;
+            if fighter.charge_power < context.charge_max {
+                fighter.charge_power += charge * context.charge_gain;
+            }
+            if let Some(sound_id) = sound {
+                self.state.pending_sound = Some(sound_id);
+            }
+        }
+        let _ = self.state.finish_common_action(fighter_index);
+    }
+
+    /// Apply the directional portion of Pascal L7_Entrada before attack buttons.
+    fn dispatch_directional_input(&mut self, fighter_index: usize, input: InputFrame) {
+        let fighter = &mut self.state.fighters[fighter_index];
+        let direction = input.direction;
+        let down = matches!(direction, Direction::Down | Direction::DownLeft | Direction::DownRight);
+        let horizontal = match direction {
+            Direction::Left | Direction::UpLeft | Direction::DownLeft => Some(-1.0),
+            Direction::Right | Direction::UpRight | Direction::DownRight => Some(1.0),
+            _ => None,
+        };
+
+        if !down {
+            if let Some(sign) = horizontal {
+                if matches!(fighter.action_id, ACTION_IDLE | ACTION_WALKING) {
+                    fighter.x += sign * fighter.speed;
+                    fighter.action_id = ACTION_WALKING;
+                    fighter.action_duration = 99;
+                    let _ = self.state.finish_common_action(fighter_index);
+                }
+            }
+        } else if matches!(fighter.action_id, ACTION_IDLE | ACTION_WALKING) {
+            fighter.action_id = ACTION_CROUCHING;
+            fighter.action_duration = 99;
+            let _ = self.state.finish_common_action(fighter_index);
+        }
+        if !down && fighter.action_id == ACTION_CROUCHING {
+            fighter.action_id = ACTION_IDLE;
+        }
+
+        if matches!(direction, Direction::Up | Direction::UpLeft | Direction::UpRight)
+            && matches!(
+                fighter.action_id,
+                ACTION_IDLE | ACTION_WALKING | ACTION_DEFENDING | ACTION_LOW_DEFENDING
+            )
+            && fighter.vertical_velocity == 0
+            && !fighter.in_air
+        {
+            fighter.vertical_velocity = -32;
+            fighter.in_air = true;
+            fighter.action_id = ACTION_JUMPING;
+            fighter.action_frame = 0;
+            fighter.action_duration = 99;
+            fighter.defending = false;
+            fighter.jump_direction = match direction {
+                Direction::UpLeft => 2,
+                Direction::UpRight => 3,
+                _ => 1,
+            };
+        }
+
+        if horizontal.is_none() && !down && fighter.action_id == ACTION_WALKING {
+            fighter.action_id = ACTION_IDLE;
+            fighter.action_frame = 0;
+        }
+    }
+
     fn dispatch_input_commands(&mut self, inputs: [InputFrame; 2], report: &mut FightTickReport) {
+        // L7_Entrada processes player one, then player two. Directional commands
+        // precede button edges exactly as in the Pascal input routine.
+        for fighter_index in 0..2 {
+            self.dispatch_directional_input(fighter_index, inputs[fighter_index]);
         // Pascal L7_Entrada handles fighter 1, then fighter 2. Special-table rows
         // for each button are all dispatched in file order before the basic action.
         for fighter_index in 0..2 {
@@ -191,9 +448,7 @@ impl FightSimulation {
                 }
             }
 
-            // Pascal always sends the corresponding ordinary punch/kick after
-            // processing [Botoes]. The common action pipeline is not ported yet,
-            // so report these IDs rather than silently pretending to execute them.
+            // L7_Entrada calls golpe() first, then AcaoJogador() for the same edge.
             for (button, command_code) in [
                 (AttackButton::WeakPunch, 3),
                 (AttackButton::WeakKick, 4),
@@ -201,12 +456,12 @@ impl FightSimulation {
                 (AttackButton::StrongKick, 6),
             ] {
                 if input.was_pressed(button.input_button()) {
-                    report.unhandled_commands.push(UnhandledCommand {
+                    self.dispatch_common_basic_action(
                         fighter_index,
                         button,
                         command_code,
-                        source: UnhandledCommandSource::BasicButtonAction,
-                    });
+                        report,
+                    );
                 }
             }
         }
