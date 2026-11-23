@@ -1501,9 +1501,8 @@ mod rot_runtime_integration_tests {
         for command_code in [16, 17, 18, 19] {
             let mut fight = simulation();
             fight.state.fighters[0].character_id = 6;
-            let mut rng = ScriptedRng::with_values(&[1]);
             fight.state.effects
-                .spawn(15, Some('A'), 1, EFFECT_SIDE_RIGHT, 100.0, 100.0, &mut rng)
+                .spawn(15, Some('A'), 1, EFFECT_SIDE_RIGHT, 100.0, 100.0, &mut fight.rng)
                 .unwrap();
             let mut report = FightTickReport::default();
 
