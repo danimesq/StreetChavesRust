@@ -5,8 +5,7 @@
 //! remains an injected child-script seam; unsupported behavior is not fabricated.
 
 use crate::effect_runtime::{
-    EffectArena, EffectSpawnError, EffectTickContext, EffectTickResult, EFFECT_SIDE_LEFT,
-    EFFECT_SIDE_RIGHT,
+    EffectArena, EffectSpawnError, EffectTickContext, EffectTickResult, EFFECT_SIDE_RIGHT,
 };
 use crate::pascal_replay::PascalRandomSource;
 use serde_json::json;
