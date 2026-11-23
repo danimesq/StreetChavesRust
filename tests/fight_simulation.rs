@@ -180,7 +180,10 @@ fn input_is_delivered_to_fight_tick_without_inventing_button_commands() {
 
     assert!(fight.last_report().input.is_held(Button(3)));
     assert!(fight.last_report().input.was_pressed(Button(3)));
-    assert_eq!(fight.state.fighters[0].action_id, street_chaves::combat_runtime::ACTION_STRONG_KICK);
+    assert_eq!(
+        fight.state.fighters[0].action_id,
+        street_chaves::combat_runtime::ACTION_STRONG_KICK
+    );
     assert_eq!(fight.state.fighters[0].action_duration, 11);
 }
 
