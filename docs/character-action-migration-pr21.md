@@ -80,12 +80,12 @@ cargo test --all-targets
 
 Do not mark a command migrated based only on its final action ID. Do not claim roster-wide or universal runtime compatibility until the relevant source branches and evidence exist.
 
-## Delivery ledger
+## Current implementation snapshot (PR #21 branch)\n\nThe first migration slice now routes C01 commands 16–24 and C13 commands 25/26 through `execute_character_rot_action`, alongside the existing C04/C09 routes. Focused tests were added for C01 special 3, C01 final special, C13 extra 1 and C13 extra 2. These tests have been authored but must pass CI before this slice is considered validated. The old C01 compatibility API remains in the crate for now, but `FightSimulation` no longer dispatches C01 specials through it. The C13-specific hand-port was removed from the fight dispatcher.\n\n## Delivery ledger
 
-- [ ] C01 commands 16–24 execute through ROT with focused parity coverage.
-- [ ] C01 hand-port is removed/reduced only after parity is proven.
-- [ ] C13 commands 25/26 execute through ROT with focused parity coverage.
-- [ ] C13 hand-port is removed/reduced only after parity is proven.
+- [x] C01 commands 16–24 are routed through ROT with focused entry-state regression tests; differential parity validation remains pending.
+- [x] C01 special-command hand-port is no longer used by FightSimulation; the compatibility API remains available until differential parity is proven.
+- [x] C13 commands 25/26 are routed through ROT with focused entry-state regression tests; differential parity validation remains pending.
+- [x] C13 extra-command hand-port was removed from FightSimulation after routing commands 25/26 through the real ROT sections.
 - [ ] At least one additional source-audited character command is migrated.
 - [ ] Runtime contract and documentation reflect the exact implemented boundary.
 - [ ] Formatting and all test targets pass.
