@@ -132,6 +132,56 @@ fn type7_uses_weak_ini_values_and_consumes_one_random_five() {
 }
 
 #[test]
+fn types13_and15_use_their_source_hitboxes_rng_and_sprite_sequences() {
+    for (effect_type, expected_bounds, first_sprite, second_sprite) in [
+        (
+            13,
+            EffectBounds { left: -25, top: -10, right: 25, bottom: 80 },
+            34,
+            35,
+        ),
+        (
+            15,
+            EffectBounds { left: -25, top: -25, right: 25, bottom: 37 },
+            39,
+            40,
+        ),
+    ] {
+        let mut arena = EffectArena::default();
+        let mut rng = ScriptedRng::with_values(&[0]);
+        assert_eq!(
+            arena.spawn(
+                effect_type,
+                Some('A'),
+                1,
+                EFFECT_SIDE_LEFT,
+                245.0,
+                300.0,
+                &mut rng,
+            ).unwrap(),
+            Some(0)
+        );
+        assert_eq!(rng.cursor, 1);
+        let effect = arena.instance(0).unwrap();
+        assert_eq!(effect.duration, 5);
+        assert!(effect.can_hit);
+        assert!(effect.variant_flag);
+        assert_eq!(effect.facing, EFFECT_SIDE_LEFT);
+        assert_eq!(effect.horizontal_velocity, 8);
+        assert_eq!(effect.damage, 12);
+        assert_eq!(effect.guard_damage, 3);
+        assert_eq!(effect.bounds, expected_bounds);
+
+        let first = arena.advance(tick_context());
+        assert_eq!(first.render_snapshots[0].sprite, first_sprite);
+        assert_eq!(first.render_snapshots[0].x, 237.0);
+        arena.advance(tick_context());
+        let third = arena.advance(tick_context());
+        assert_eq!(third.render_snapshots[0].sprite, second_sprite);
+    }
+}
+
+#[test]
 fn type2_uses_ini_sprite_boundaries_and_moves_before_snapshot() {
     let mut arena = EffectArena::default();
     let mut rng = ScriptedRng::default();
