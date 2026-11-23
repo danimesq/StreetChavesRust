@@ -53,7 +53,22 @@ pub struct FighterState {
     pub y: f64,
     pub speed: f64,
     pub distance_ai: i32,
-    pub health: i32,
+    /// Pascal TLutador.Vida (Double).
+    pub health: f64,
+    /// Pascal TLutador.Quadro (Byte), the currently selected sprite frame.
+    pub sprite_frame: u8,
+    /// Pascal TLutador.Poder (Word).
+    pub power: u16,
+    /// Pascal TLutador.CargaPoder (Double).
+    pub charge_power: f64,
+    /// Pascal TLutador.ForcaGolpe (Byte): 0 none, 1 weak, 2 strong, 3 special.
+    pub attack_strength: u8,
+    /// Pascal TLutador.DirPulo (Byte).
+    pub jump_direction: u8,
+    /// Pascal TLutador.TempoBaixo (Byte).
+    pub low_time: u8,
+    /// Pascal TLutador.SeqEstado (Byte).
+    pub sequence_state: u8,
     pub body: BodyBox,
 }
 
@@ -63,6 +78,10 @@ pub struct CombatState {
     pub game_state: u8,
     pub camera_x: f64,
     pub clock_stopped: bool,
+    /// Pascal global FlashTela (Byte).
+    pub screen_flash: u8,
+    /// Pascal global SomPendente (Byte); zero means no pending sound.
+    pub pending_sound: u8,
     pub fighters: [FighterState; 2],
 }
 
