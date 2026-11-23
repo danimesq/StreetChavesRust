@@ -16,7 +16,7 @@ This slice implements the mechanics needed by the Pascal `RegraVale` and `sequen
 
 Character-specific rules still must be loaded from each fighter's `[Botoes]` and `[Sequencias]` INI sections. This PR does not invent button mappings, populate a character table from guesses, or connect command results to `FightSimulation`'s action dispatcher. That integration follows after the rule loader and shared action pipeline are source-audited.
 
-The grounded condition currently assumes the state coordinates use the caller's configured ground Y of 240. This constant is an interim limitation and will be replaced with a ground-Y parameter before wiring it into FightSimulation.
+Ground-Y is passed explicitly to condition evaluation, avoiding a hard-coded stage coordinate.
 
 ## Validation
 
