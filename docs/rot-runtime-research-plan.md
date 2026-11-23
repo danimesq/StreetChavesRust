@@ -254,7 +254,7 @@ The complete pinned C06.rot [Acao] section has been audited. Commands 14–24 ar
 
 ### C07 — Sr. Barriga (active bounded roster slice)
 
-The pinned C07.rot [Acao] section uses only fighter fields/constants already mapped by the live host for commands 14–24: CargaSoco reset, jump-direction reset, landing-height guard, air-state/velocity writes, power consumption, sprite, flash and sound. No new helper or effect dependency is required for this action-entry slice. Commands 14–24 now route through the real interpreter, with tests for victory/pose, weak/strong special entries, punch-charge reset, special 3/4 jump-state writes and final-special state. CI validation is pending.
+The pinned C07.rot [Acao] section uses only fighter fields/constants already mapped by the live host for commands 14–24: CargaSoco reset, jump-direction reset, landing-height guard, air-state/velocity writes, power consumption, sprite, flash and sound. No new helper or effect dependency is required for this action-entry slice. Commands 14–24 now route through the real interpreter, with tests for victory/pose, weak/strong special entries, punch-charge reset, special 3/4 jump-state writes and final-special state. CI passed on code commit `324094b475926bbc19085606c7f2c7ecb159c101`: formatting and all test targets are green (93 library tests plus integration targets 12, 2, 29, 7, 13, 5 and 5).
 
 ## 7. C01 and C13 regression strategy
 
@@ -424,7 +424,7 @@ A fixture with only a final action ID is insufficient. Compare every registered 
 - [ ] C01 hand-port regression matches actual C01.rot action execution.
 - [ ] C13 Extra1/Extra2 hand-port regression matches actual C13.rot action execution.
 - [ ] C02-C15 specials execute their real scripts, including all per-character guards and side effects.
-- [ ] C07 commands 14–24 pass formatting and focused ROT action-entry tests in CI.
+- [x] C07 commands 14–24 pass formatting and focused ROT action-entry tests in CI (code commit `324094b475926bbc19085606c7f2c7ecb159c101`).
 - [x] C05 commands 14–24 execute the actual C05.rot [Acao] section; victory/pose, weak/strong, landing-height, charge-reset and final-special tests pass CI.
 - [x] C05 Esp1's `ExisteEfeito(13, Jog)` rejection guard is covered with a real effect-type-13 instance created by the source-backed effect arena.
 - [ ] Pascal-derived fixtures compare state mutations, effects, sounds, globals and RNG, not only final action IDs.
