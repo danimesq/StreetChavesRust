@@ -1615,19 +1615,31 @@ mod rot_runtime_integration_tests {
             match command_code {
                 16 | 17 => {
                     assert_eq!(fighter.charge_power, 5.0);
-                    assert_eq!(fighter.force_strength, if command_code == 16 { 1 } else { 2 });
+                    assert_eq!(
+                        fighter.force_strength,
+                        if command_code == 16 { 1 } else { 2 }
+                    );
                 }
                 18 | 19 => {
                     assert_eq!(fighter.charge_power, 6.0);
-                    assert_eq!(fighter.force_strength, if command_code == 18 { 1 } else { 2 });
+                    assert_eq!(
+                        fighter.force_strength,
+                        if command_code == 18 { 1 } else { 2 }
+                    );
                 }
                 20 | 21 => {
                     assert_eq!(fighter.charge_power, 5.0);
-                    assert_eq!(fighter.force_strength, if command_code == 20 { 1 } else { 2 });
+                    assert_eq!(
+                        fighter.force_strength,
+                        if command_code == 20 { 1 } else { 2 }
+                    );
                 }
                 22 | 23 => {
                     assert_eq!(fighter.charge_power, 5.0);
-                    assert_eq!(fighter.force_strength, if command_code == 22 { 1 } else { 2 });
+                    assert_eq!(
+                        fighter.force_strength,
+                        if command_code == 22 { 1 } else { 2 }
+                    );
                 }
                 24 => {
                     assert_eq!(fighter.power, 0);
