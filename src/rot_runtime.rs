@@ -764,11 +764,7 @@ impl RotExecutionFrame {
         self.execute_statement(&program.body, &mut remaining)
     }
 
-    fn consume_step(
-        &self,
-        span: SourceSpan,
-        remaining: &mut usize,
-    ) -> Result<(), RotError> {
+    fn consume_step(&self, span: SourceSpan, remaining: &mut usize) -> Result<(), RotError> {
         if *remaining == 0 {
             return Err(self.error(span, "ROT execution step limit exceeded"));
         }
@@ -788,12 +784,7 @@ impl RotExecutionFrame {
             .get(&key)
             .map(|slot| slot.declared_type.clone())
             .ok_or_else(|| self.error(assignment_span, format!("unknown local variable {name}")))?;
-        let converted = convert_assignment(
-            &self.source,
-            assignment_span,
-            &declared_type,
-            value,
-        )?;
+        let converted = convert_assignment(&self.source, assignment_span, &declared_type, value)?;
         self.locals
             .get_mut(&key)
             .expect("local slot was checked")
@@ -864,11 +855,7 @@ impl RotExecutionFrame {
                         break;
                     }
                     self.consume_step(statement.span, remaining)?;
-                    self.assign_local_at_span(
-                        variable,
-                        integer(current, false),
-                        statement.span,
-                    )?;
+                    self.assign_local_at_span(variable, integer(current, false), statement.span)?;
                     self.execute_statement(body, remaining)?;
                     current = match direction {
                         ForDirection::To => current.wrapping_add(1),
@@ -909,8 +896,7 @@ impl RotExecutionFrame {
                         let label_matches = match label {
                             SetElement::Value(value) => {
                                 let value_result = self.evaluate(value)?;
-                                let (value, _) =
-                                    require_integer(self, value.span, value_result)?;
+                                let (value, _) = require_integer(self, value.span, value_result)?;
                                 selector == value
                             }
                             SetElement::Range { low, high, span } => {
@@ -2418,10 +2404,7 @@ else
 
     #[test]
     fn statement_execution_rejects_unbound_fighter_fields_and_helpers() {
-        for text in [
-            "P.Acao := 2;",
-            "CriaEfeito(2, 'A', Jog, 1, 2);",
-        ] {
+        for text in ["P.Acao := 2;", "CriaEfeito(2, 'A', Jog, 1, 2);"] {
             let section = RotSection {
                 name: "Acao".to_owned(),
                 source: "unsupported.rot".to_owned(),
