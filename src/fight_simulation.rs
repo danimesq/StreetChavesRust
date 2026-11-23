@@ -505,9 +505,7 @@ impl FightSimulation {
             command_code,
         });
 
-        if self.state.fighters[fighter_index].character_id == 3
-            && matches!(command_code, 16..=24)
-        {
+        if self.state.fighters[fighter_index].character_id == 3 && matches!(command_code, 16..=24) {
             match self.execute_character_rot_action(fighter_index, 3, command_code) {
                 Ok(()) => report
                     .rot_action_executions
@@ -1663,5 +1661,4 @@ mod rot_runtime_integration_tests {
         assert_eq!(report.rot_action_executions, vec![(0, 3, 24)]);
         assert!(report.errors.is_empty());
     }
-
 }
