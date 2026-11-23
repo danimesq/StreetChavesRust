@@ -705,6 +705,8 @@ impl FightSimulation {
             11 => ("C11.rot", include_str!("../research/pascal-rot/C11.rot")),
             12 => ("C12.rot", include_str!("../research/pascal-rot/C12.rot")),
             13 => ("C13.rot", include_str!("../research/pascal-rot/C13.rot")),
+            14 => ("C14.rot", include_str!("../research/pascal-rot/C14.rot")),
+            15 => ("C15.rot", include_str!("../research/pascal-rot/C15.rot")),
             _ => {
                 return Err(format!(
                     "character C{character_id:02} has no live ROT route"
