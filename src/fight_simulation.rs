@@ -1533,5 +1533,4 @@ mod rot_runtime_integration_tests {
         assert_eq!(report.rot_action_executions, vec![(0, 2, 23)]);
         assert!(report.errors.is_empty());
     }
-
 }
