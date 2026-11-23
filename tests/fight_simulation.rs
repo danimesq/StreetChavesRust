@@ -5,7 +5,7 @@ use std::time::Duration;
 use street_chaves::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext};
 use street_chaves::combat_runtime::{
     BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_IDLE, ACTION_SPECIAL1,
-    FORCE_WEAK, SIDE_RIGHT,
+    FORCE_WEAK, SIDE_RIGHT, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL, ACTION_WEAK_PUNCH,
 };
 use street_chaves::effect_runtime::EFFECT_SIDE_RIGHT;
 use street_chaves::fight_simulation::{FightSimulation, FightSimulationConfig};
@@ -275,4 +275,55 @@ fn sequence_timeout_is_paused_during_hitstop_and_resets_after_nine_ticks() {
     fight.tick(InputFrame::default());
     assert_eq!(fight.state.fighters[0].sequence_state, 0);
     assert_eq!(fight.state.fighters[0].sequence_timer, 0);
+}
+
+#[test]
+fn common_weak_punch_executes_with_pascal_duration_charge_and_sound() {
+    let mut fight = simulation_for_character(2, ACTION_IDLE, 0);
+    fight.tick(InputFrame {
+        pressed_buttons: 1,
+        ..InputFrame::default()
+    });
+
+    let fighter = &fight.state.fighters[0];
+    assert_eq!(fighter.action_id, ACTION_WEAK_PUNCH);
+    assert_eq!(fighter.action_frame, 0);
+    assert_eq!(fighter.action_duration, 6);
+    assert_eq!(fighter.charge_power, 1.0);
+    assert_eq!(fight.state.pending_sound, Some(5));
+    assert!(fight.last_report().unhandled_commands.is_empty());
+}
+
+#[test]
+fn c13_extra1_uses_its_character_specific_force_and_special4_entry() {
+    let mut fight = simulation_for_character(13, ACTION_IDLE, 0);
+    fight.state.fighters[0].sequence_state = 6;
+    fight.tick(InputFrame {
+        pressed_buttons: 8,
+        ..InputFrame::default()
+    });
+
+    let fighter = &fight.state.fighters[0];
+    assert_eq!(fighter.action_id, ACTION_SPECIAL4);
+    assert_eq!(fighter.action_duration, 30);
+    assert_eq!(fighter.force_strength, 4);
+    assert_eq!(fighter.charge_power, 5.0);
+}
+
+#[test]
+fn c13_extra2_consumes_power_and_enters_final_special() {
+    let mut fight = simulation_for_character(13, ACTION_IDLE, 0);
+    fight.state.fighters[0].sequence_state = 10;
+    fight.state.fighters[0].power = 1;
+    fight.tick(InputFrame {
+        pressed_buttons: 1,
+        ..InputFrame::default()
+    });
+
+    let fighter = &fight.state.fighters[0];
+    assert_eq!(fighter.action_id, ACTION_SPECIAL_FINAL);
+    assert_eq!(fighter.action_duration, 30);
+    assert_eq!(fighter.power, 0);
+    assert_eq!(fighter.sprite_frame, 37);
+    assert_eq!(fight.state.screen_flash, 22);
 }
