@@ -212,7 +212,7 @@ fn types13_15_18_and19_use_source_hitboxes_rng_and_sprite_sequences() {
 
         let first = arena.advance(tick_context());
         assert_eq!(first.render_snapshots[0].sprite, first_sprite);
-        assert_eq!(first.render_snapshots[0].x, 237.0);
+        assert_eq!(first.render_snapshots[0].x, 245.0 - f64::from(velocity));
         arena.advance(tick_context());
         let third = arena.advance(tick_context());
         assert_eq!(third.render_snapshots[0].sprite, second_sprite);
