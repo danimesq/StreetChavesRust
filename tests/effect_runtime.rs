@@ -99,7 +99,7 @@ fn type7_uses_weak_ini_values_and_consumes_one_random_five() {
     assert!(effect.bottom_anchor);
     assert!(effect.variant_flag);
     assert_eq!(effect.facing, EFFECT_SIDE_LEFT);
-    assert_eq!(effect.horizontal_velocity, 8);
+    assert_eq!(effect.horizontal_velocity, velocity);
     assert_eq!(effect.damage, 12);
     assert_eq!(effect.guard_damage, 3);
     assert_eq!(
@@ -133,28 +133,34 @@ fn type7_uses_weak_ini_values_and_consumes_one_random_five() {
 
 #[test]
 fn types13_and15_use_their_source_hitboxes_rng_and_sprite_sequences() {
-    for (effect_type, expected_bounds, first_sprite, second_sprite) in [
+    for (effect_type, expected_bounds, velocity, first_sprite, second_sprite) in [
         (
             13,
-            EffectBounds {
-                left: -25,
-                top: -10,
-                right: 25,
-                bottom: 80,
-            },
+            EffectBounds { left: -25, top: -10, right: 25, bottom: 80 },
+            8,
             34,
             35,
         ),
         (
             15,
-            EffectBounds {
-                left: -25,
-                top: -25,
-                right: 25,
-                bottom: 37,
-            },
+            EffectBounds { left: -25, top: -25, right: 25, bottom: 37 },
+            8,
             39,
             40,
+        ),
+        (
+            18,
+            EffectBounds { left: -30, top: -10, right: 30, bottom: 80 },
+            8,
+            47,
+            48,
+        ),
+        (
+            19,
+            EffectBounds { left: -12, top: -10, right: 12, bottom: 20 },
+            5,
+            49,
+            50,
         ),
     ] {
         let mut arena = EffectArena::default();
