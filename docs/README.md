@@ -15,6 +15,8 @@ This directory records the research and engineering decisions for an independent
 - [Reusable WASM Canvas host compatibility contract](wasm-canvas-host-compatibility.md): the application-side requirements for interoperating with a generic host, including facade operations, version negotiation, lifecycle, viewport, resources, events and a minimum compatibility fixture.
 - [Web rendering backend study: SDL3, Emscripten and Construct hosts](web-rendering-backend-study.md): compares SDL3/Emscripten WebGL with a direct Rust browser renderer, documents Construct C2/C3 constraints, and defines a feasibility/benchmark plan.
 
+- [Fixed 28 ms simulation clock](fixed-timestep-clock.md): shared integer-nanosecond tick accumulator, host-loop order, catch-up policy, and 60/144 Hz validation.
+
 ## Research documents
 
 - [Original executable reverse engineering](original-executable-reverse-engineering.md): preliminary PE/toolchain findings and the investigation plan for embedded resources, external assets, gameplay cross-references, and final compatibility fixtures.
