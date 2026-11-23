@@ -22,6 +22,17 @@ Required host-side steps, once an SDL host exists:
 
 No SDL scancode-to-special mapping is declared here because the Rust host/input layer does not yet exist and the mapping/recognition needs a source audit.
 
+
+## 1a. Shared logical input sampler (Rust foundation)
+
+**Status: implemented in `src/input.rs`; physical host adapters and source command recognition remain pending.**
+
+The shared core now exposes host-neutral `Direction`, 32 logical button slots, normalized `InputEvent`, immutable per-tick `InputFrame`, and `InputSampler`. It tracks held state, one-shot pressed/released edges and saturating hold ticks. Duplicate host down events are ignored, and a reset event clears state for focus loss/controller disconnect.
+
+The module deliberately has no SDL, browser, scancode, key-name, device ID, or fighter-command mapping. SDL/native and browser hosts must map their physical controls to the same logical slots. Command recognition, command sequence counters and gating still require the source audit and simulation integration. This foundation advances compatibility without adding SDL or browser dependencies to the native core.
+
+Tests cover edge-once behavior, per-logical-tick hold counters, reset, and invalid slot rejection. Host adapters must additionally test key/controller mapping, simultaneous direction composition, focus/device lifecycle, and tick-boundary sampling.
+
 ## 2. Melee hit-resolution integration
 
 **Status: hitbox/hurtbox contracts and C01 reaction hook exist; no Rust melee resolution loop yet.**
