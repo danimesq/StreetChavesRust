@@ -18,7 +18,6 @@ use crate::rot_runtime::{RotDocument, RotExecutionFrame, RotExecutionHost, RotVa
 use crate::runtime::SimulationTick;
 use crate::Fpc322Rng;
 
-
 /// Bridge from Pascal ROT field/helper names to the authoritative fight state.
 struct RotCombatHost<'a> {
     state: &'a mut CombatState,
