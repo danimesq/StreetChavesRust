@@ -467,3 +467,10 @@ Current Rust branch:
 - `docs/c01-character-action-slice.md`
 - `docs/c01-remaining-integration-gates.md`
 
+
+
+## 2026-11-23 — C11 and C12 action-entry slice
+
+- C11 / Godines: audited pinned `[Acao]`, byte-compared the checked-in ROT file to upstream, routed commands 14–24 through the live interpreter, and added command-by-command action-entry assertions.
+- C12 / Sr. Furtado: audited pinned `[Acao]`, byte-compared the checked-in ROT file to upstream, and routed only commands 14–17 and 20–22. Commands 18/19 remain unhandled until `GolpeAtivo` has an authoritative live-state binding; no default is invented.
+- No [Quadro], [IA], or [Acerto] route is claimed. Structural interpreter limitations remain deferred as agreed.

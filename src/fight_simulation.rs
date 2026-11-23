@@ -602,6 +602,28 @@ impl FightSimulation {
                     "C10 [Acao] fighter {fighter_index}, command {command_code}: {error}"
                 )),
             }
+        } else if self.state.fighters[fighter_index].character_id == 11
+            && matches!(command_code, 14..=24)
+        {
+            match self.execute_character_rot_action(fighter_index, 11, command_code) {
+                Ok(()) => report
+                    .rot_action_executions
+                    .push((fighter_index, 11, command_code)),
+                Err(error) => report.errors.push(format!(
+                    "C11 [Acao] fighter {fighter_index}, command {command_code}: {error}"
+                )),
+            }
+        } else if self.state.fighters[fighter_index].character_id == 12
+            && matches!(command_code, 14..=17 | 20..=22)
+        {
+            match self.execute_character_rot_action(fighter_index, 12, command_code) {
+                Ok(()) => report
+                    .rot_action_executions
+                    .push((fighter_index, 12, command_code)),
+                Err(error) => report.errors.push(format!(
+                    "C12 [Acao] fighter {fighter_index}, command {command_code}: {error}"
+                )),
+            }
         } else if self.state.fighters[fighter_index].character_id == 9
             && matches!(command_code, 14 | 15 | 20 | 21)
         {
@@ -658,6 +680,8 @@ impl FightSimulation {
             8 => ("C08.rot", include_str!("../research/pascal-rot/C08.rot")),
             9 => ("C09.rot", include_str!("../research/pascal-rot/C09.rot")),
             10 => ("C10.rot", include_str!("../research/pascal-rot/C10.rot")),
+            11 => ("C11.rot", include_str!("../research/pascal-rot/C11.rot")),
+            12 => ("C12.rot", include_str!("../research/pascal-rot/C12.rot")),
             13 => ("C13.rot", include_str!("../research/pascal-rot/C13.rot")),
             _ => {
                 return Err(format!(
@@ -1557,6 +1581,97 @@ mod rot_runtime_integration_tests {
         assert_eq!(fight.state.pending_sound, Some(19));
         assert_eq!(report.rot_action_executions, vec![(0, 8, 24)]);
         assert!(report.errors.is_empty());
+    }
+
+    #[test]
+    fn c11_godines_routes_victory_pose_and_all_special_entries() {
+        for (command_code, button, action, duration) in [
+            (14, AttackButton::WeakPunch, ACTION_VICTORY, 250),
+            (15, AttackButton::WeakPunch, ACTION_POSE, 20),
+            (16, AttackButton::WeakPunch, ACTION_SPECIAL1, 28),
+            (17, AttackButton::StrongPunch, ACTION_SPECIAL1, 28),
+            (18, AttackButton::WeakPunch, ACTION_SPECIAL2, 30),
+            (19, AttackButton::StrongPunch, ACTION_SPECIAL2, 30),
+            (20, AttackButton::WeakKick, ACTION_SPECIAL3, 9),
+            (21, AttackButton::StrongKick, ACTION_SPECIAL3, 15),
+            (22, AttackButton::WeakKick, ACTION_SPECIAL4, 12),
+            (23, AttackButton::StrongKick, ACTION_SPECIAL4, 12),
+            (24, AttackButton::WeakPunch, ACTION_SPECIAL_FINAL, 45),
+        ] {
+            let mut fight = simulation();
+            fight.state.fighters[0].character_id = 11;
+            if command_code == 24 {
+                fight.state.fighters[0].power = 1;
+            }
+            let mut report = FightTickReport::default();
+            fight.dispatch_character_command(0, button, command_code, &mut report);
+            let fighter = &fight.state.fighters[0];
+            assert_eq!(fighter.action_id, action, "C11 command {command_code}");
+            assert_eq!(fighter.action_frame, 0);
+            assert_eq!(fighter.action_duration, duration);
+            assert_eq!(report.rot_action_executions, vec![(0, 11, command_code)]);
+            assert!(report.unhandled_commands.is_empty());
+            assert!(report.errors.is_empty());
+            match command_code {
+                16 | 17 => {
+                    assert_eq!(fighter.charge_power, 5.0);
+                    assert_eq!(fighter.force_strength, if command_code == 16 { 1 } else { 2 });
+                }
+                18 | 19 => {
+                    assert_eq!(fighter.charge_power, 6.0);
+                    assert_eq!(fighter.force_strength, if command_code == 18 { 1 } else { 2 });
+                }
+                20 | 21 => {
+                    assert_eq!(fighter.charge_power, 5.0);
+                    assert_eq!(fighter.force_strength, if command_code == 20 { 1 } else { 2 });
+                }
+                22 | 23 => {
+                    assert_eq!(fighter.charge_power, 5.0);
+                    assert_eq!(fighter.force_strength, if command_code == 22 { 1 } else { 2 });
+                }
+                24 => {
+                    assert_eq!(fighter.power, 0);
+                    assert_eq!(fighter.sprite_frame, 6);
+                    assert_eq!(fight.state.screen_flash, 22);
+                    assert_eq!(fight.state.pending_sound, Some(19));
+                }
+                _ => {}
+            }
+        }
+    }
+
+    #[test]
+    fn c12_srfurtado_routes_supported_action_entries_and_preserves_final_special_writes() {
+        for (command_code, button, action, duration) in [
+            (14, AttackButton::WeakPunch, ACTION_VICTORY, 250),
+            (15, AttackButton::WeakPunch, ACTION_POSE, 20),
+            (16, AttackButton::WeakPunch, ACTION_SPECIAL1, 28),
+            (17, AttackButton::StrongPunch, ACTION_SPECIAL1, 28),
+            (20, AttackButton::WeakKick, ACTION_SPECIAL3, 28),
+            (21, AttackButton::StrongKick, ACTION_SPECIAL3, 28),
+            (22, AttackButton::WeakKick, ACTION_SPECIAL4, 32),
+        ] {
+            let mut fight = simulation();
+            fight.state.fighters[0].character_id = 12;
+            if command_code == 22 {
+                fight.state.fighters[0].power = 1;
+            }
+            let mut report = FightTickReport::default();
+            fight.dispatch_character_command(0, button, command_code, &mut report);
+            let fighter = &fight.state.fighters[0];
+            assert_eq!(fighter.action_id, action, "C12 command {command_code}");
+            assert_eq!(fighter.action_frame, 0);
+            assert_eq!(fighter.action_duration, duration);
+            assert_eq!(report.rot_action_executions, vec![(0, 12, command_code)]);
+            assert!(report.unhandled_commands.is_empty());
+            assert!(report.errors.is_empty());
+            if command_code == 22 {
+                assert_eq!(fighter.power, 0);
+                assert_eq!(fighter.sprite_frame, 38);
+                assert_eq!(fight.state.screen_flash, 22);
+                assert_eq!(fight.state.pending_sound, Some(19));
+            }
+        }
     }
 
     #[test]
