@@ -36,14 +36,14 @@ fn one_second_produces_the_same_ticks_at_60_and_144_render_callbacks() {
     let mut at_60_hz = FixedTimestepClock::new();
     for frame in 0..60 {
         // 60 intervals sum to exactly one second.
-        let nanos = 16_666_666 + u64::from(frame < 40);
+        let nanos = 16_666_666 + (if frame < 40 { 1 } else { 0 });
         at_60_hz.advance(Duration::from_nanos(nanos));
     }
 
     let mut at_144_hz = FixedTimestepClock::new();
     for frame in 0..144 {
         // 144 intervals also sum to exactly one second.
-        let nanos = 6_944_444 + u64::from(frame < 64);
+        let nanos = 6_944_444 + (if frame < 64 { 1 } else { 0 });
         at_144_hz.advance(Duration::from_nanos(nanos));
     }
 
