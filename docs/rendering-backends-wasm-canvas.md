@@ -286,3 +286,10 @@ These decisions must be made from implementation evidence. Do not add WebGL/WebG
 - Using Canvas APIs inside the game core.
 - Requiring WebGL/WebGPU for the first browser build.
 - Claiming full game parity or a playable Web version before the corresponding systems and assets exist.
+
+
+## Construct 2/3 embedding
+
+A separate integration proposal describes embedding the WASM + Canvas subsystem inside an exported Construct project. Construct acts as the host/orchestrator, while the Rust engine owns fight simulation and its dedicated Canvas surface. The proposal includes overlay/underlay composition, a generic Construct plugin, a versioned host API, and one-time registration of externally supplied sprites through stable resource IDs.
+
+See [Construct 2/3 integration: embedded WASM + Canvas](construct-wasm-canvas-integration.md) for the full design, including the browser-side resource registry and Petmals Pink&Dark SyncFight use case.
