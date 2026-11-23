@@ -249,7 +249,8 @@ impl CombatState {
             ));
         }
 
-        if command == ChavesSpecialCommand::Final && !(fighter.health <= 15.0 || fighter.power > 0) {
+        if command == ChavesSpecialCommand::Final && !(fighter.health <= 15.0 || fighter.power > 0)
+        {
             return Ok(ChavesSpecialOutcome::rejected(
                 ChavesSpecialRejection::FinalUnavailable,
             ));
