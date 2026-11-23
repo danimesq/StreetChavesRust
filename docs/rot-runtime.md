@@ -1,10 +1,12 @@
-# 🌈 ROT parser and local execution contract
+# 🌈 ROT interpreter and live action-execution contract
 
 ## 🌈 Status and scope
 
-The Rust crate contains a source-preserving lexer/parser for the pinned Pascal ROT dialect and an **M2 scalar/local execution subset**. M1 parses every section in `Comum.rot` and `C01.rot` through `C15.rot`. M2 evaluates typed expressions and executes local assignments, blocks, conditionals, loops and `case` statements.
+The Rust crate contains a source-preserving lexer/parser, typed local execution, and a host-aware execution path for live fight state. M1 parses every section in `Comum.rot` and `C01.rot` through `C15.rot`. The scalar executor handles local assignments, blocks, conditionals, loops and `case`; the host executor additionally binds fighter fields, game globals, RNG and engine helpers through an explicit adapter.
 
-**This is not yet a character action-script runtime.** The executor deliberately stops before fighter/global state, RNG and game-engine helpers. No real character `[Acao]` script is currently executed end to end.
+The first end-to-end character path is C09 (Paty) command `cmEsp3Fraco` / `cmEsp3Forte`. `FightSimulation` executes the pinned scripts in source order: common `[Acao]`, C09 `[Acao]`, then common `[AcaoFim]`. The invocation uses the live `CombatState`, maps `P` and `O` to the actual fighters, consumes the fight's shared `Fpc322Rng`, and routes `ExisteEfeito`, `CriaEfeito` and `Empurra` to their existing simulation components.
+
+**This is a first bounded character integration, not yet a roster-wide runtime.** Only the explicitly mapped fighter fields, globals, helpers and C09 command paths are executable. Unsupported field/helper access returns a source-located error instead of being fabricated or ignored.
 
 The normative source is [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves), pinned at commit `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`. The checked-in files under `research/pascal-rot/` are the reproducible input set.
 
@@ -19,7 +21,8 @@ The normative source is [OpenStreetChaves](https://github.com/danimesq/OpenStree
 - `RotExecutionFrame::set_symbol(name, value)` supplies host-owned constants or readable global symbols. Local names take precedence.
 - `RotExecutionFrame::set_local(name, value)` applies the declared Pascal assignment conversion.
 - `RotExecutionFrame::evaluate(expression)` evaluates one supported expression.
-- `RotExecutionFrame::execute(program)` runs the supported local subset with a default one-million-step budget. `execute_with_step_limit` accepts an explicit host budget.
+- `RotExecutionFrame::execute(program)` runs the local subset with a default one-million-step budget. `execute_with_step_limit` accepts an explicit host budget.
+- `RotExecutionFrame::execute_with_host(program, host)` runs the same AST through `RotExecutionHost`, which supplies live fighter/global reads and writes, helper calls and the shared RNG connection.
 
 ## 🌈 Parsed syntax
 
@@ -49,21 +52,24 @@ The step budget is a host safety guard to stop non-terminating scripts. It is no
 
 ## 🌈 Deliberate runtime boundary
 
-The following are not yet connected:
+The following limitations remain:
 
-- `P.*` / `O.*` fighter-field reads or writes;
-- game-global reads or writes;
-- `Random`, including LongInt/Int64 width and the shared nested RNG cursor;
-- engine helpers `ExisteEfeito`, `CriaEfeito`, `Empurra`, `AcaoJogador` and `AplicarCaixas`;
-- the complete lifecycle `Comum [Acao]` → character `[Acao]` → `Comum [AcaoFim]` inside the interpreter.
+- Only explicitly mapped `P.*` / `O.*` fields are exposed by the fight host. Unknown fields fail with a source-located error.
+- Only the globals used by the first action path and currently mapped constants are bound. Other globals fail explicitly.
+- `Random` currently supports the LongInt call path used by C09's action script. Int64 RNG calls are not yet exposed by the fight host.
+- `ExisteEfeito`, `CriaEfeito` and `Empurra` are connected to the live effect arena and combat state. `AcaoJogador` and `AplicarCaixas` are not yet connected.
+- C09 command codes 14, 15, 20 and 21 are routed through ROT. Other characters and C09's remaining command paths retain their existing bounded ports/unhandled reporting.
+- Nested character action calls do not yet recursively invoke the complete Pascal `AcaoJogador` lifecycle.
 
-These operations return source-located errors rather than fabricated zeros or silent no-ops. The host adapter must use the authoritative `CombatState`, effects and shared RNG, not a parallel script-only state.
+The host adapter uses the authoritative `CombatState`, effect arena and same `Fpc322Rng` owned by `FightSimulation`; it does not create a parallel script-only fighter state or random generator.
 
 Rust currently represents real values as `f64`, while the Pascal interpreter uses `Extended` internally. High-precision differential validation remains open. No floating-point equivalence is claimed.
 
 ## 🌈 Validation
 
 The test suite parses every section in all 16 pinned ROT files. It also covers literal parsing, source spans/errors, typed local defaults and assignment conversions, arithmetic/operators, sets, Boolean short-circuiting, pure functions, local statement execution, loop/control-flow order, unsupported host-bound operations and the step limit.
+
+Fight integration tests execute C09's real `[Acao]` section through the normal command dispatcher and assert live action state, charge, sound, five effect allocations, ten shared RNG draws and the common prelude/epilogue behavior.
 
 Run the checks from the repository root:
 
