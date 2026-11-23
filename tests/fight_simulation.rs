@@ -304,6 +304,9 @@ fn common_weak_punch_executes_with_pascal_duration_charge_and_sound() {
 fn jaiminho_crouched_strong_kick_uses_the_18_tick_pascal_duration() {
     let mut fight = simulation_for_character(13, ACTION_CROUCHING, 0);
     fight.tick(InputFrame {
+        // L7_Entrada processes direction before button edges. Holding Down
+        // prevents the neutral-input crouch-release path from running first.
+        direction: Direction::Down,
         pressed_buttons: 8,
         ..InputFrame::default()
     });
