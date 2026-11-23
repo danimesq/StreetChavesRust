@@ -35,6 +35,9 @@ pub mod fixed_timestep;
 /// Shared headless bridge from normalized host input to logical simulation ticks.
 pub mod runtime;
 
+/// Concrete renderer-free fight orchestrator implementing SimulationTick.
+pub mod fight_simulation;
+
 /// Stable fighter identifier from the researched roster.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FighterId(pub u8);
