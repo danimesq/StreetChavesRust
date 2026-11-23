@@ -130,7 +130,7 @@ pub fn rule_matches(
             ConditionAtom::Airborne => fighter.vertical_velocity != 0,
             ConditionAtom::PunchCharge(n) => {
                 fighter.punch_charge >= n.min(u16::from(u8::MAX)) as u8
-            },
+            }
             ConditionAtom::KickCharge(n) => fighter.kick_charge >= n.min(u16::from(u8::MAX)) as u8,
         };
         v != c.negated
