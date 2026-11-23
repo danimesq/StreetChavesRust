@@ -1481,11 +1481,10 @@ mod rot_runtime_integration_tests {
     fn c05_active_effect_13_rejects_esp1_without_writing_action_state() {
         let mut fight = simulation();
         fight.state.fighters[0].character_id = 5;
-        let mut rng = ScriptedRng::with_values(&[1]);
         fight
             .state
             .effects
-            .spawn(13, Some('A'), 1, EFFECT_SIDE_RIGHT, 100.0, 100.0, &mut rng)
+            .spawn(13, Some('A'), 1, EFFECT_SIDE_RIGHT, 100.0, 100.0, &mut fight.rng)
             .unwrap();
         let mut report = FightTickReport::default();
 
