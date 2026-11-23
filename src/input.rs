@@ -147,7 +147,10 @@ mod tests {
             down: true,
         });
         // Repeated host down events (including OS key repeat) do not create edges.
-        sampler.apply_event(InputEvent::ButtonChanged { button: attack, down: true });
+        sampler.apply_event(InputEvent::ButtonChanged {
+            button: attack,
+            down: true,
+        });
 
         let first = sampler.sample_tick();
         assert!(first.was_pressed(attack));
