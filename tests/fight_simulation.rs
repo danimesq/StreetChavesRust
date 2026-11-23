@@ -4,8 +4,9 @@ use std::time::Duration;
 
 use street_chaves::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext};
 use street_chaves::combat_runtime::{
-    BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_IDLE, ACTION_SPECIAL1,
-    FORCE_WEAK, SIDE_RIGHT,
+    BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_CROUCHING,
+    ACTION_CROUCH_STRONG_KICK, ACTION_IDLE, ACTION_SPECIAL1, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL,
+    ACTION_WEAK_PUNCH, FORCE_WEAK, SIDE_RIGHT,
 };
 use street_chaves::effect_runtime::EFFECT_SIDE_RIGHT;
 use street_chaves::fight_simulation::{FightSimulation, FightSimulationConfig};
@@ -180,8 +181,11 @@ fn input_is_delivered_to_fight_tick_without_inventing_button_commands() {
 
     assert!(fight.last_report().input.is_held(Button(3)));
     assert!(fight.last_report().input.was_pressed(Button(3)));
-    assert_eq!(fight.state.fighters[0].action_id, ACTION_IDLE);
-    assert_eq!(fight.state.fighters[0].action_frame, 0);
+    assert_eq!(
+        fight.state.fighters[0].action_id,
+        street_chaves::combat_runtime::ACTION_STRONG_KICK
+    );
+    assert_eq!(fight.state.fighters[0].action_duration, 11);
 }
 
 #[test]
@@ -228,11 +232,11 @@ fn real_c01_sequence_and_button_rules_reach_the_c01_dispatcher() {
         },
         InputFrame::default(),
     ]);
-    assert_eq!(fight.last_report().command_matches.len(), 1);
+    assert_eq!(fight.last_report().command_matches.len(), 2);
     assert_eq!(fight.last_report().command_matches[0].command_code, 16);
     assert_eq!(fight.last_report().special_outcomes.len(), 1);
     assert_eq!(fight.state.fighters[0].action_id, ACTION_SPECIAL1);
-    assert!(fight.last_report().unhandled_commands.iter().any(|item| {
+    assert!(!fight.last_report().unhandled_commands.iter().any(|item| {
         item.command_code == 3
             && item.source
                 == street_chaves::fight_simulation::UnhandledCommandSource::BasicButtonAction
@@ -252,7 +256,9 @@ fn real_character_data_exposes_unimplemented_commands_without_faking_execution()
         .command_matches
         .iter()
         .any(|item| item.command_code == 25));
-    assert!(fight
+    assert_eq!(fight.state.fighters[0].action_id, ACTION_SPECIAL4);
+    assert_eq!(fight.state.fighters[0].force_strength, 4);
+    assert!(!fight
         .last_report()
         .unhandled_commands
         .iter()
@@ -275,4 +281,72 @@ fn sequence_timeout_is_paused_during_hitstop_and_resets_after_nine_ticks() {
     fight.tick(InputFrame::default());
     assert_eq!(fight.state.fighters[0].sequence_state, 0);
     assert_eq!(fight.state.fighters[0].sequence_timer, 0);
+}
+
+#[test]
+fn common_weak_punch_executes_with_pascal_duration_charge_and_sound() {
+    let mut fight = simulation_for_character(2, ACTION_IDLE, 0);
+    fight.tick(InputFrame {
+        pressed_buttons: 1,
+        ..InputFrame::default()
+    });
+
+    let fighter = &fight.state.fighters[0];
+    assert_eq!(fighter.action_id, ACTION_WEAK_PUNCH);
+    assert_eq!(fighter.action_frame, 0);
+    assert_eq!(fighter.action_duration, 6);
+    assert_eq!(fighter.charge_power, 1.0);
+    assert_eq!(fight.state.pending_sound, Some(5));
+    assert!(fight.last_report().unhandled_commands.is_empty());
+}
+
+#[test]
+fn jaiminho_crouched_strong_kick_uses_the_18_tick_pascal_duration() {
+    let mut fight = simulation_for_character(13, ACTION_CROUCHING, 0);
+    fight.tick(InputFrame {
+        // L7_Entrada processes direction before button edges. Holding Down
+        // prevents the neutral-input crouch-release path from running first.
+        direction: Direction::Down,
+        pressed_buttons: 8,
+        ..InputFrame::default()
+    });
+
+    let fighter = &fight.state.fighters[0];
+    assert_eq!(fighter.action_id, ACTION_CROUCH_STRONG_KICK);
+    assert_eq!(fighter.action_duration, 18);
+    assert!(fighter.is_kick);
+}
+
+#[test]
+fn c13_extra1_uses_its_character_specific_force_and_special4_entry() {
+    let mut fight = simulation_for_character(13, ACTION_IDLE, 0);
+    fight.state.fighters[0].sequence_state = 6;
+    fight.tick(InputFrame {
+        pressed_buttons: 8,
+        ..InputFrame::default()
+    });
+
+    let fighter = &fight.state.fighters[0];
+    assert_eq!(fighter.action_id, ACTION_SPECIAL4);
+    assert_eq!(fighter.action_duration, 30);
+    assert_eq!(fighter.force_strength, 4);
+    assert_eq!(fighter.charge_power, 5.0);
+}
+
+#[test]
+fn c13_extra2_consumes_power_and_enters_final_special() {
+    let mut fight = simulation_for_character(13, ACTION_IDLE, 0);
+    fight.state.fighters[0].sequence_state = 10;
+    fight.state.fighters[0].power = 1;
+    fight.tick(InputFrame {
+        pressed_buttons: 1,
+        ..InputFrame::default()
+    });
+
+    let fighter = &fight.state.fighters[0];
+    assert_eq!(fighter.action_id, ACTION_SPECIAL_FINAL);
+    assert_eq!(fighter.action_duration, 30);
+    assert_eq!(fighter.power, 0);
+    assert_eq!(fighter.sprite_frame, 37);
+    assert_eq!(fight.state.screen_flash, 22);
 }
