@@ -969,8 +969,7 @@ impl SimulationTick for FightSimulation {
 #[cfg(test)]
 mod rot_runtime_integration_tests {
     use super::*;
-    use crate::combat_runtime::{BodyBox, FighterState, ACTION_SPECIAL3, ACTION_WALKING};
-    use crate::command_recognition::AttackButton;
+    use crate::combat_runtime::{BodyBox, FighterState};
 
     fn fighter(character_id: u8, action_id: u16) -> FighterState {
         FighterState {
