@@ -486,3 +486,5 @@ Current Rust branch:
 - Command 15 is not routed because the character scripts do not define a character-specific pose branch. Tests cover every routed command entry and the distinct duration/state writes. No [Quadro], [IA] or [Acerto] execution is added.
 - The scripts' `ExisteEfeito` checks remain live helper calls. The arena does not yet define effect types 26, 28, 29 or 33, so this slice does not claim active-instance guard fixtures or frame-script effect creation.
 - Broader interpreter limitations and Pascal differential validation remain outside this batch.
+
+- Validation for the C13–C15 action-entry batch: [GitHub Actions run 45286642440](https://github.com/danimesq/StreetChavesRust/actions/runs/45286642440) passed formatting and all test targets on `ffabd727fffb860a1e9534d9d00d87e04872ecc9` (178 tests, 0 failures).
