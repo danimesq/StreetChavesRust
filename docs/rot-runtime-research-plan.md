@@ -246,7 +246,7 @@ Additional roster-wide observations:
 
 The complete pinned C05.rot [Acao] section has been audited and command codes 14–24 are now routed through the real interpreter on this branch. The source contains cmVitoria (14), cmPose (15), four weak/strong specials (16–23), and cmEspFinal (24). Candidate branches appear to use existing host capabilities: mapped fighter fields, GanhoCarga/CargaMax/ChaoY, SomPendente/FlashTela, and ExisteEfeito. The Esp3 branch must preserve its ChaoY - 90 landing guard and ordered Y/VelY/NoAr/TempoBaixo writes; Esp4 resets CargaChute. Do not include [Quadro], [IA], or [Acerto] in this action-entry migration.
 
-Acceptance evidence still pending: CI must pass the authored tests for victory/pose entry, weak/strong distinctions, accepted/rejected Esp3 height boundary, Esp4 counter reset, final-special power/sprite/flash/sound writes, and source dispatch reporting. Add a dedicated live-effect fixture for the Esp1 ExisteEfeito(13, Jog) rejection guard. If any dependency proves unmapped, leave that command unsupported and document the exact blocker.
+CI passed on commit f463ef7482cf3b94bd6b8abc88c62903b554f395: formatting and all test targets are green (87 library tests; integration targets 12, 2, 29, 6, 13, 5 and 5). The C05 tests cover victory/pose entry, weak/strong distinctions, accepted/rejected Esp3 height boundary, Esp4 counter reset, final-special power/sprite/flash/sound writes, and source dispatch reporting. A dedicated live-effect fixture for the Esp1 ExisteEfeito(13, Jog) rejection guard remains an explicit follow-up; current tests do not claim that branch's rejection parity. If any dependency proves unmapped, leave that command unsupported and document the exact blocker.
 
 ## 7. C01 and C13 regression strategy
 
@@ -416,7 +416,7 @@ A fixture with only a final action ID is insufficient. Compare every registered 
 - [ ] C01 hand-port regression matches actual C01.rot action execution.
 - [ ] C13 Extra1/Extra2 hand-port regression matches actual C13.rot action execution.
 - [ ] C02-C15 specials execute their real scripts, including all per-character guards and side effects.
-- [ ] C05 commands 14–24 execute the actual C05.rot [Acao] section, including victory/pose entry, effect guard, landing-height branch, kick-charge reset, and final-special writes. (Dispatch and focused tests for victory/pose and special entry have been added; CI and a dedicated live-effect rejection test for the Esp1 guard are still pending.)
+- [ ] C05 commands 14–24 execute the actual C05.rot [Acao] section, including victory/pose entry, effect guard, landing-height branch, kick-charge reset, and final-special writes. (Dispatch and focused tests for victory/pose and special entry have been added; CI is green. A dedicated live-effect rejection test for the Esp1 guard remains pending.)
 - [ ] Pascal-derived fixtures compare state mutations, effects, sounds, globals and RNG, not only final action IDs.
 - [ ] `CargaSoco`/`CargaChute` behavior is established from evidence or explicitly remains an unresolved input field; no guessed rule is merged.
 - [ ] Existing Rust tests, normalizer tests and relevant Pascal replay/differential checks pass.
