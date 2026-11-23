@@ -528,12 +528,23 @@ impl FightSimulation {
         } else if self.state.fighters[fighter_index].character_id == 9
             && matches!(command_code, 14 | 15 | 20 | 21)
         {
-            match self.execute_c09_rot_action(fighter_index, command_code) {
+            match self.execute_character_rot_action(fighter_index, 9, command_code) {
                 Ok(()) => report
                     .rot_action_executions
                     .push((fighter_index, 9, command_code)),
                 Err(error) => report.errors.push(format!(
                     "C09 [Acao] fighter {fighter_index}, command {command_code}: {error}"
+                )),
+            }
+        } else if self.state.fighters[fighter_index].character_id == 4
+            && command_code == 24
+        {
+            match self.execute_character_rot_action(fighter_index, 4, command_code) {
+                Ok(()) => report
+                    .rot_action_executions
+                    .push((fighter_index, 4, command_code)),
+                Err(error) => report.errors.push(format!(
+                    "C04 [Acao] fighter {fighter_index}, command {command_code}: {error}"
                 )),
             }
         } else {
@@ -550,23 +561,35 @@ impl FightSimulation {
         }
     }
 
-    /// Execute the pinned C09 [Acao] through shared and character ROT sections.
+    /// Execute one audited character [Acao] between the shared action sections.
     ///
-    /// C09 is the first live character host integration: common prelude, actual
-    /// character script, and shared epilogue all mutate the same fight state.
-    fn execute_c09_rot_action(
+    /// The common prelude, character script and common epilogue all share the
+    /// same live state, RNG stream and helper bridge, while each ROT invocation
+    /// receives its own Pascal local frame.
+    fn execute_character_rot_action(
         &mut self,
         fighter_index: usize,
+        character_id: u8,
         command_code: u8,
     ) -> Result<(), String> {
+        let (filename, source) = match character_id {
+            4 => (
+                "C04.rot",
+                include_str!("../research/pascal-rot/C04.rot"),
+            ),
+            9 => (
+                "C09.rot",
+                include_str!("../research/pascal-rot/C09.rot"),
+            ),
+            _ => return Err(format!("character C{character_id:02} has no live ROT route")),
+        };
         let common = RotDocument::from_str(
             "Comum.rot",
             include_str!("../research/pascal-rot/Comum.rot"),
         )
         .map_err(|error| error.to_string())?;
         let character =
-            RotDocument::from_str("C09.rot", include_str!("../research/pascal-rot/C09.rot"))
-                .map_err(|error| error.to_string())?;
+            RotDocument::from_str(filename, source).map_err(|error| error.to_string())?;
 
         let jog = (fighter_index + 1) as u8;
         let special = self.config.special;
@@ -579,8 +602,6 @@ impl FightSimulation {
             ground_y: special.ground_y,
         };
 
-        // AcaoJogador's source order is fixed: Common [Acao], C09 [Acao],
-        // then Common [AcaoFim]. Every section gets its own local variable frame.
         execute_rot_section(&common, "Acao", jog, command_code, &mut host)?;
         execute_rot_section(&character, "Acao", jog, command_code, &mut host)?;
         execute_rot_section(&common, "AcaoFim", jog, command_code, &mut host)?;
@@ -1143,11 +1164,39 @@ mod rot_runtime_integration_tests {
         // cmApanharAlto is rejected by the common grounded guard because
         // VelY != 0. The character script leaves the fighter walking; the
         // shared [AcaoFim] must still advance QuadroAcao.
-        fight.execute_c09_rot_action(0, 8).unwrap();
+        fight.execute_character_rot_action(0, 9, 8).unwrap();
 
         let fighter = &fight.state.fighters[0];
         assert_eq!(fighter.action_id, ACTION_WALKING);
         assert_eq!(fighter.action_frame, 7);
         assert!(!fighter.defending);
     }
+
+    #[test]
+    fn c04_final_special_executes_rot_and_writes_the_real_opponents_invulnerability() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 4;
+        fight.state.fighters[0].power = 1;
+        fight.state.fighters[1].invulnerable = true;
+        let mut report = FightTickReport::default();
+
+        // Pascal cmEspFinal = 24. C04.rot writes O.Invulneravel := False.
+        fight.dispatch_character_command(0, AttackButton::StrongKick, 24, &mut report);
+
+        let player = &fight.state.fighters[0];
+        let opponent = &fight.state.fighters[1];
+        assert_eq!(player.action_id, ACTION_SPECIAL_FINAL);
+        assert_eq!(player.action_frame, 0);
+        assert_eq!(player.action_duration, 13);
+        assert_eq!(player.force_strength, 2);
+        assert!(player.is_kick);
+        assert_eq!(player.power, 0);
+        assert!(!opponent.invulnerable);
+        assert_eq!(fight.state.screen_flash, 22);
+        assert_eq!(fight.state.pending_sound, Some(19));
+        assert_eq!(report.rot_action_executions, vec![(0, 4, 24)]);
+        assert!(report.unhandled_commands.is_empty());
+        assert!(report.errors.is_empty());
+    }
+
 }
