@@ -4,7 +4,9 @@
 //! movement, and the close-range probability chain. Character-specific ROT execution
 //! remains an injected child-script seam; unsupported behavior is not fabricated.
 
-use crate::chaves_specials::{ChavesCharacterActionScript, ChavesSpecialCommand, ChavesSpecialContext};
+use crate::chaves_specials::{
+    ChavesCharacterActionScript, ChavesSpecialCommand, ChavesSpecialContext,
+};
 use crate::effect_runtime::{
     EffectArena, EffectSpawnError, EffectTickContext, EffectTickResult, EFFECT_SIDE_RIGHT,
 };

@@ -161,7 +161,10 @@ fn special_one_queries_the_live_effect_arena_by_type_and_owner() {
     assert!(!result.applied);
     assert_eq!(result.rejection, Some(Rejection::Effect7AlreadyExists));
     assert_eq!(state.fighters[1].action_id, ACTION_DEFENDING);
-    assert!(!state.fighters[1].defending, "Common [Acao] clears this first");
+    assert!(
+        !state.fighters[1].defending,
+        "Common [Acao] clears this first"
+    );
     assert_eq!(result.events, vec![Event::CommonDefendingCleared]);
 }
 
@@ -182,7 +185,9 @@ fn special_one_starts_when_the_live_effect_slot_is_empty_and_records_source_orde
         result.events,
         vec![
             Event::CommonDefendingCleared,
-            Event::ActionChanged { value: ACTION_SPECIAL1 },
+            Event::ActionChanged {
+                value: ACTION_SPECIAL1
+            },
             Event::ActionFrameChanged { value: 0 },
             Event::ActionDurationChanged { value: 28 },
             Event::ChargePowerChanged { value: 20.0 },
@@ -269,18 +274,22 @@ fn final_special_preserves_word_wrap_flash_sound_and_player_offsets() {
     let mut low_health = state_with_action(ACTION_CROUCHING);
     low_health.fighters[1].health = 15.0;
     low_health.fighters[1].power = 0;
-    assert!(low_health
-        .dispatch_chaves_special(1, Command::Final, context())
-        .unwrap()
-        .applied);
+    assert!(
+        low_health
+            .dispatch_chaves_special(1, Command::Final, context())
+            .unwrap()
+            .applied
+    );
     assert_eq!(low_health.fighters[1].power, u16::MAX);
 
     let mut player_one = state_with_action(ACTION_IDLE);
     player_one.fighters[0] = fighter(CHARACTER_CHAVES, ACTION_IDLE);
-    assert!(player_one
-        .dispatch_chaves_special(0, Command::Final, context())
-        .unwrap()
-        .applied);
+    assert!(
+        player_one
+            .dispatch_chaves_special(0, Command::Final, context())
+            .unwrap()
+            .applied
+    );
     assert_eq!(player_one.fighters[0].sprite_frame, 36);
 }
 
@@ -360,7 +369,11 @@ fn c01_ai_projectile_and_long_distance_special_one_paths_are_distinct() {
         .commands
         .contains(&AiCommand::ChavesSpecial(Command::Esp1Strong)));
     assert_eq!(
-        projectile_tick.draws.iter().map(|draw| draw.range).collect::<Vec<_>>(),
+        projectile_tick
+            .draws
+            .iter()
+            .map(|draw| draw.range)
+            .collect::<Vec<_>>(),
         vec![13, 7, 2]
     );
 
@@ -376,7 +389,11 @@ fn c01_ai_projectile_and_long_distance_special_one_paths_are_distinct() {
         .commands
         .contains(&AiCommand::ChavesSpecial(Command::Esp1Weak)));
     assert_eq!(
-        long_range_tick.draws.iter().map(|draw| draw.range).collect::<Vec<_>>(),
+        long_range_tick
+            .draws
+            .iter()
+            .map(|draw| draw.range)
+            .collect::<Vec<_>>(),
         vec![13, 30, 2]
     );
 }

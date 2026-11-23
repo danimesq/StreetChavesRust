@@ -128,9 +128,10 @@ impl EffectArena {
 
     /// Match Pascal ExisteEfeito(tipo, Jog) against live slots and 1-based owner IDs.
     pub fn contains_type_for_owner(&self, effect_type: u8, owner: u8) -> bool {
-        self.slots.iter().flatten().any(|effect| {
-            effect.effect_type == effect_type && effect.owner == owner
-        })
+        self.slots
+            .iter()
+            .flatten()
+            .any(|effect| effect.effect_type == effect_type && effect.owner == owner)
     }
 
     pub fn instances_in_slot_order(&self) -> impl Iterator<Item = (usize, &EffectInstance)> {

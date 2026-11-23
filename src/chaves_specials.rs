@@ -249,9 +249,7 @@ impl CombatState {
             ));
         }
 
-        if command == ChavesSpecialCommand::Final
-            && !(fighter.health <= 15.0 || fighter.power > 0)
-        {
+        if command == ChavesSpecialCommand::Final && !(fighter.health <= 15.0 || fighter.power > 0) {
             return Ok(ChavesSpecialOutcome::rejected(
                 ChavesSpecialRejection::FinalUnavailable,
             ));
@@ -386,7 +384,9 @@ impl CombatState {
         fighter.defending = false;
 
         let mut outcome = self.start_chaves_special(fighter_index, command, context)?;
-        outcome.events.insert(0, ChavesSpecialEvent::CommonDefendingCleared);
+        outcome
+            .events
+            .insert(0, ChavesSpecialEvent::CommonDefendingCleared);
         Ok(outcome)
     }
 
@@ -408,11 +408,7 @@ fn set_action(fighter: &mut FighterState, value: u16, events: &mut Vec<ChavesSpe
     events.push(ChavesSpecialEvent::ActionChanged { value });
 }
 
-fn set_action_frame(
-    fighter: &mut FighterState,
-    value: u16,
-    events: &mut Vec<ChavesSpecialEvent>,
-) {
+fn set_action_frame(fighter: &mut FighterState, value: u16, events: &mut Vec<ChavesSpecialEvent>) {
     fighter.action_frame = value;
     events.push(ChavesSpecialEvent::ActionFrameChanged { value });
 }
@@ -485,7 +481,11 @@ impl ChavesCharacterActionScript {
         let command = match strength {
             0 => weak,
             1 => strong,
-            _ => return Err(RuntimeError::UnsupportedBranch("C01 [IA] Random(2) out of range")),
+            _ => {
+                return Err(RuntimeError::UnsupportedBranch(
+                    "C01 [IA] Random(2) out of range",
+                ))
+            }
         };
         self.dispatch_ai_special::<R>(state, fighter_index, command, commands)
     }
@@ -512,7 +512,9 @@ impl CharacterActionScript for ChavesCharacterActionScript {
         commands: &mut Vec<AiCommand>,
     ) -> Result<(), RuntimeError<R::Error>> {
         let Some(fighter) = state.fighters.get(fighter_index) else {
-            return Err(RuntimeError::UnsupportedBranch("C01 [IA] invalid fighter index"));
+            return Err(RuntimeError::UnsupportedBranch(
+                "C01 [IA] invalid fighter index",
+            ));
         };
         if fighter.character_id != CHARACTER_CHAVES || fighter.defending {
             return Ok(());
