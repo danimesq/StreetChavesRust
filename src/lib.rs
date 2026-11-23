@@ -25,6 +25,8 @@ pub mod effect_runtime;
 
 /// C01 special [Acao] entry and character-specific [IA] dispatch.
 pub mod chaves_specials;
+/// Pascal-style direction/button command recognition primitives.
+pub mod command_recognition;
 
 /// Host-independent logical input sampling with edge and hold-state tracking.
 pub mod input;
