@@ -416,7 +416,8 @@ A fixture with only a final action ID is insufficient. Compare every registered 
 - [ ] C01 hand-port regression matches actual C01.rot action execution.
 - [ ] C13 Extra1/Extra2 hand-port regression matches actual C13.rot action execution.
 - [ ] C02-C15 specials execute their real scripts, including all per-character guards and side effects.
-- [ ] C05 commands 14–24 execute the actual C05.rot [Acao] section, including victory/pose entry, effect guard, landing-height branch, kick-charge reset, and final-special writes. (Dispatch and focused tests for victory/pose and special entry have been added; CI is green. A dedicated live-effect rejection test for the Esp1 guard remains pending.)
+- [x] C05 commands 14–24 execute the actual C05.rot [Acao] section; victory/pose, weak/strong, landing-height, charge-reset and final-special tests pass CI.
+- [ ] Add a real active-effect fixture for C05 Esp1's `ExisteEfeito(13, Jog)` rejection guard. Effect type 13 is not yet spawnable by the current effect arena.
 - [ ] Pascal-derived fixtures compare state mutations, effects, sounds, globals and RNG, not only final action IDs.
 - [ ] `CargaSoco`/`CargaChute` behavior is established from evidence or explicitly remains an unresolved input field; no guessed rule is merged.
 - [ ] Existing Rust tests, normalizer tests and relevant Pascal replay/differential checks pass.
