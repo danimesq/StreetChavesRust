@@ -172,6 +172,13 @@ fn special_three_requires_ground_proximity_and_resets_jump_state_in_source_order
     assert_eq!(blocked.rejection, Some(Rejection::TooFarAboveGround));
     assert_eq!(too_high.fighters[0], before);
 
+    let mut unordered_y = state_with_player_action(ACTION_JUMPING);
+    unordered_y.fighters[0].y = f64::NAN;
+    let blocked_nan = unordered_y
+        .start_chaves_special(0, Command::Esp3Strong, context(false))
+        .unwrap();
+    assert_eq!(blocked_nan.rejection, Some(Rejection::TooFarAboveGround));
+
     let mut state = state_with_player_action(ACTION_JUMPING);
     state.fighters[0].y = 210.0;
     let result = state
