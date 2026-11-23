@@ -61,9 +61,7 @@ impl FixedTimestepClock {
     /// fractional remainder is retained for the next call. No time is rounded
     /// to a display-frame interval and no tick is discarded.
     pub fn advance(&mut self, elapsed: Duration) -> TickBatch {
-        self.accumulated_nanos = self
-            .accumulated_nanos
-            .saturating_add(elapsed.as_nanos());
+        self.accumulated_nanos = self.accumulated_nanos.saturating_add(elapsed.as_nanos());
 
         let ticks_due = self.accumulated_nanos / LOGICAL_TICK_NANOS;
         self.accumulated_nanos %= LOGICAL_TICK_NANOS;
