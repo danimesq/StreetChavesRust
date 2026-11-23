@@ -20,6 +20,7 @@ This directory records the research and engineering decisions for an independent
 - [Mercedes action-dispatch slice](mercedes-action-dispatch.md): common basic attack entry, C13 extra commands 25/26, and the source-audited gaps for the other character ROT scripts and charge counters.
 - [ROT parser contract](rot-runtime.md): the Rust source-preserving ROT lexer/parser, typed expression evaluator, AST shape, section loading, source spans and the explicit boundary before statement execution.
 - [Temporary ROT runtime research and delivery plan](rot-runtime-research-plan.md): detailed interpreter semantics, exact action-call order, C02-C15 script audit, C01/C13 regression gates, counter investigation and progressive removal criteria. Temporary PR planning document.
+- [PR #21 — Progressive character migration to the ROT runtime](character-action-migration-pr21.md): migration scope, C01/C13 hand-port retirement gates, roster expansion order and explicit runtime non-claims.
 
 ## Research documents
 
@@ -28,7 +29,7 @@ This directory records the research and engineering decisions for an independent
 - [Comparative analysis of the SDL implementations](comparative-analysis.md): the Pascal/SDL2 and C17/SDL3 projects, their architectures, strengths, differences, and limitations.
 - [Fight-loop deep dive](fight-loop-deep-dive.md): source-level comparison of the fight tick, fighter frame selection, hit resolution, effects, and physics.
 - [Source and data inventory](source-inventory.md): pinned reference revisions, repository structure, runtime entry points, data roots, generated tables, and subsystem ownership.
-- [Fighter data deep dive](fighter-data-deep-dive.md): INI/ROT semantics, the C specification-to-table pipeline, roster boundaries, and fighter-data differences.
+- [Fighter data deep dive](fighter-data-deep-dive.md): INI/ROT data, the C specification-to-table pipeline, roster boundaries, and fighter-data differences.
 - [Fighter roster matrix](fighter-roster-matrix.md): character IDs, Pascal/C coverage, optional sections, and the Chapolin extension.
 - [Frame, AI and hitbox comparison](frame-ai-hitbox-comparison.md): all 15 Pascal [Quadro]/[IA] blocks, C CPU comparison, exact 379/379 hitbox geometry+metadata and 305/305 hurtbox matches, and exceptional move-ID findings.
 - [Ordered frame event ledger](ordered-frame-event-ledger.md): source-ordered frame/timer, effect, sound, RNG, and simulation-mutation statements from all 15 Pascal [Quadro] blocks.

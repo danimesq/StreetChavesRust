@@ -234,7 +234,8 @@ fn real_c01_sequence_and_button_rules_reach_the_c01_dispatcher() {
     ]);
     assert_eq!(fight.last_report().command_matches.len(), 2);
     assert_eq!(fight.last_report().command_matches[0].command_code, 16);
-    assert_eq!(fight.last_report().special_outcomes.len(), 1);
+    assert_eq!(fight.last_report().rot_action_executions, vec![(0, 1, 16)]);
+    assert!(fight.last_report().special_outcomes.is_empty());
     assert_eq!(fight.state.fighters[0].action_id, ACTION_SPECIAL1);
     assert!(!fight.last_report().unhandled_commands.iter().any(|item| {
         item.command_code == 3

@@ -242,6 +242,28 @@ Additional roster-wide observations:
 - Victory entry is common across the original C01-C15 scripts: idle/walking/crouching eligibility, action = victory, action frame = 0, duration = 250. The separate victory `[Quadro]` behavior is character-specific and outside this action-entry scope.
 - C02-C15 have meaningful differences in allowed source actions, durations, force writes, charge increments, effect guards, movement resets, sound IDs and power use. The table is a map for focused tests; the scripts remain the executable truth.
 
+### C05 — Dona Florinda (active bounded roster slice)
+
+The complete pinned C05.rot [Acao] section has been audited and command codes 14–24 are now routed through the real interpreter on this branch. The source contains cmVitoria (14), cmPose (15), four weak/strong specials (16–23), and cmEspFinal (24). Candidate branches appear to use existing host capabilities: mapped fighter fields, GanhoCarga/CargaMax/ChaoY, SomPendente/FlashTela, and ExisteEfeito. The Esp3 branch must preserve its ChaoY - 90 landing guard and ordered Y/VelY/NoAr/TempoBaixo writes; Esp4 resets CargaChute. Do not include [Quadro], [IA], or [Acerto] in this action-entry migration.
+
+The C05 tests cover victory/pose entry, weak/strong distinctions, accepted/rejected Esp3 height boundary, Esp4 counter reset, final-special power/sprite/flash/sound writes, source dispatch reporting, and a real type-13 effect fixture proving the Esp1 `ExisteEfeito(13, Jog)` rejection guard. The complete suite, including this guard, passed CI on code commit `13f13a9af41ab2bce947499d7fbb2e6df535d637`.
+
+### C06 — Professor Girafales (active bounded roster slice)
+
+The complete pinned C06.rot [Acao] section has been audited. Commands 14–24 are routed through the real interpreter on this branch. Its Esp1 and Esp2 branches both reject while effect type 15 is active. The effect arena now has source-backed creation and animation support for effect types 13 and 15, allowing real guard fixtures for C05 and C06 rather than mocked ExisteEfeito results. C06 tests cover victory/pose, weak/strong specials 1–4, final-special airborne/power/sprite/flash/sound writes, and active-effect rejection for Esp1/Esp2. CI passed on code commit `f8bfdb1b03a4250082a1b24a4b2fad0216e0530b`: formatting and all test targets are green (91 library tests plus integration targets 12, 2, 29, 7, 13, 5 and 5).
+
+### C07 — Sr. Barriga (active bounded roster slice)
+
+The pinned C07.rot [Acao] section uses only fighter fields/constants already mapped by the live host for commands 14–24: CargaSoco reset, jump-direction reset, landing-height guard, air-state/velocity writes, power consumption, sprite, flash and sound. No new helper or effect dependency is required for this action-entry slice. Commands 14–24 now route through the real interpreter, with tests for victory/pose, weak/strong special entries, punch-charge reset, special 3/4 jump-state writes and final-special state. CI passed on code commit `324094b475926bbc19085606c7f2c7ecb159c101`: formatting and all test targets are green (93 library tests plus integration targets 12, 2, 29, 7, 13, 5 and 5).
+
+### C08 — Bruxa (active bounded roster slice)
+
+The pinned C08.rot [Acao] section routes commands 14–24 through the real interpreter. Esp1 and Esp2 are guarded by active effect types 18 and 19. Those projectile types now have source-backed creation, variant RNG, owner-facing movement, hitboxes and animation sprite sequences from the pinned Dados/Efeitos.ini. Focused tests cover victory/pose, special 1/2 accepted entries, special 3/4 entries, final-special power/sprite/flash/sound writes, and real active-effect rejection for both guards. CI passed on code commit `fbb02c6b9ad7b319b621b5e76ecb2a56f8761089`: formatting and all test targets are green (96 library tests plus integration targets 12, 2, 29, 7, 13, 5 and 5).
+
+### C10 — Nhonho (active bounded roster slice)
+
+The pinned `C10.rot` source is byte-identical to the upstream Pascal file at commit `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`. Its complete `[Acao]` section uses only existing host bindings: mapped fighter fields (`Acao`, `QuadroAcao`, `DuracaoAcao`, `CargaSoco`, `CargaPoder`, `ForcaGolpe`, `Y`, `NoAr`, `VelY`, `Vida`, `Poder`, `Quadro`), existing constants, and globals `GanhoCarga`, `CargaMax`, `ChaoY`, `SomPendente`, `FlashTela`. It requires no new helper, effect type, or RNG operation for this action-entry slice. Commands 14–24 route through the real interpreter. Tests cover victory/pose, weak/strong entry for all four specials, special 3 height acceptance/rejection and velocity/air writes, charge increments/reset, final-special power/charge/sprite/flash/sound writes, and final-special rejection without low health or power. CI passed on code commit `13f13a9af41ab2bce947499d7fbb2e6df535d637`: formatting and all test targets are green (100 library tests plus integration targets 12, 2, 29, 7, 13, 5 and 5).
+
 ## 7. C01 and C13 regression strategy
 
 ### 7.1 C01
@@ -410,6 +432,9 @@ A fixture with only a final action ID is insufficient. Compare every registered 
 - [ ] C01 hand-port regression matches actual C01.rot action execution.
 - [ ] C13 Extra1/Extra2 hand-port regression matches actual C13.rot action execution.
 - [ ] C02-C15 specials execute their real scripts, including all per-character guards and side effects.
+- [x] C07 commands 14–24 pass formatting and focused ROT action-entry tests in CI (code commit `324094b475926bbc19085606c7f2c7ecb159c101`).
+- [x] C05 commands 14–24 execute the actual C05.rot [Acao] section; victory/pose, weak/strong, landing-height, charge-reset and final-special tests pass CI.
+- [x] C05 Esp1's `ExisteEfeito(13, Jog)` rejection guard is covered with a real effect-type-13 instance created by the source-backed effect arena.
 - [ ] Pascal-derived fixtures compare state mutations, effects, sounds, globals and RNG, not only final action IDs.
 - [ ] `CargaSoco`/`CargaChute` behavior is established from evidence or explicitly remains an unresolved input field; no guessed rule is merged.
 - [ ] Existing Rust tests, normalizer tests and relevant Pascal replay/differential checks pass.
@@ -442,3 +467,24 @@ Current Rust branch:
 - `docs/c01-character-action-slice.md`
 - `docs/c01-remaining-integration-gates.md`
 
+
+
+## 2026-11-23 — C11 and C12 action-entry slice
+
+- C11 / Godines: audited pinned `[Acao]`, byte-compared the checked-in ROT file to upstream, routed commands 14–24 through the live interpreter, and added command-by-command action-entry assertions.
+- C12 / Sr. Furtado: audited pinned `[Acao]`, byte-compared the checked-in ROT file to upstream, and routed only commands 14–17 and 20–22. Commands 18/19 remain unhandled until `GolpeAtivo` has an authoritative live-state binding; no default is invented.
+- No [Quadro], [IA], or [Acerto] route is claimed. Structural interpreter limitations remain deferred as agreed.
+
+
+## 2026-11-23 — C13, C14 and C15 action-entry slice
+
+- Pinned Pascal source: OpenStreetChaves commit `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`.
+- The checked-in C13/C14/C15 ROT files were byte-compared against upstream and are identical.
+- C13 / Jaiminho: route commands 14 and 16–26 through the actual `[Acao]` script. Command 24 is source-mapped to `acEspecial4`/special force, while commands 25 and 26 preserve the existing Extra1/Extra2 mappings.
+- C14 / Dona Neves: route commands 14 and 16–24. Preserve the jump-only guard on commands 20/21 and the 70-frame final.
+- C15 / Glória: route commands 14 and 16–24. Preserve the strong-kick frame-cancel guard on commands 20/21 and the 30-frame final.
+- Command 15 is not routed because the character scripts do not define a character-specific pose branch. Tests cover every routed command entry and the distinct duration/state writes. No [Quadro], [IA] or [Acerto] execution is added.
+- The scripts' `ExisteEfeito` checks remain live helper calls. The arena does not yet define effect types 26, 28, 29 or 33, so this slice does not claim active-instance guard fixtures or frame-script effect creation.
+- Broader interpreter limitations and Pascal differential validation remain outside this batch.
+
+- Validation for the C13–C15 action-entry batch: [GitHub Actions run 45286642440](https://github.com/danimesq/StreetChavesRust/actions/runs/45286642440) passed formatting and all test targets on `ffabd727fffb860a1e9534d9d00d87e04872ecc9` (178 tests, 0 failures).
