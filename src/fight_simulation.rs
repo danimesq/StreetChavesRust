@@ -159,15 +159,21 @@ impl FightSimulation {
         } else if self.state.fighters[fighter_index].character_id == 13
             && matches!(command_code, 25 | 26)
         {
+            // Common [Acao] runs before the character-specific branch.
+            self.state.fighters[fighter_index].defending = false;
             self.dispatch_c13_extra(command_code, fighter_index, report);
             let _ = self.state.finish_common_action(fighter_index);
         } else {
+            // Even a rejected/unimplemented character command still executes
+            // Common [Acao] and Common [AcaoFim] in Pascal's AcaoJogador path.
+            self.state.fighters[fighter_index].defending = false;
             report.unhandled_commands.push(UnhandledCommand {
                 fighter_index,
                 button,
                 command_code,
                 source: UnhandledCommandSource::CharacterButtonRule,
             });
+            let _ = self.state.finish_common_action(fighter_index);
         }
     }
 
@@ -337,7 +343,7 @@ impl FightSimulation {
                     || (action == ACTION_CROUCH_WEAK_KICK && fighter.action_frame >= 2)
                 {
                     next = Some(ACTION_CROUCH_STRONG_KICK);
-                    duration = 11;
+                    duration = if fighter.character_id == 13 { 18 } else { 11 };
                     charge = 2.0;
                     fighter.is_kick = true;
                     sound = Some(6);
@@ -385,6 +391,10 @@ impl FightSimulation {
             let mut finish_common = false;
 
             if !down {
+                if horizontal.is_some() {
+                    // Common [Acao] clears defending even when its movement guard rejects.
+                    fighter.defending = false;
+                }
                 if let Some(sign) = horizontal {
                     finish_common = true;
                     if matches!(fighter.action_id, ACTION_IDLE | ACTION_WALKING) {
@@ -395,6 +405,8 @@ impl FightSimulation {
                 }
             } else {
                 finish_common = true;
+                // The shared action prelude runs before the crouch eligibility check.
+                fighter.defending = false;
                 if matches!(fighter.action_id, ACTION_IDLE | ACTION_WALKING) {
                     fighter.action_id = ACTION_CROUCHING;
                     fighter.action_duration = 99;

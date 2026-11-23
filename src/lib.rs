@@ -7,6 +7,9 @@
 
 use std::fmt;
 
+/// Source-preserving lexer and parser for the pinned Pascal ROT dialect.
+pub mod rot_runtime;
+
 /// Parse and conservatively reconcile concrete Pascal JSONL traces with static symbolic sites.
 pub mod trace_join;
 

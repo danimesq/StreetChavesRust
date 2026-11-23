@@ -5,7 +5,8 @@ use std::time::Duration;
 use street_chaves::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext};
 use street_chaves::combat_runtime::{
     BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_IDLE, ACTION_SPECIAL1,
-    ACTION_SPECIAL4, ACTION_SPECIAL_FINAL, ACTION_WEAK_PUNCH, FORCE_WEAK, SIDE_RIGHT,
+    ACTION_CROUCHING, ACTION_CROUCH_STRONG_KICK, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL,
+    ACTION_WEAK_PUNCH, FORCE_WEAK, SIDE_RIGHT,
 };
 use street_chaves::effect_runtime::EFFECT_SIDE_RIGHT;
 use street_chaves::fight_simulation::{FightSimulation, FightSimulationConfig};
@@ -297,6 +298,20 @@ fn common_weak_punch_executes_with_pascal_duration_charge_and_sound() {
     assert_eq!(fighter.charge_power, 1.0);
     assert_eq!(fight.state.pending_sound, Some(5));
     assert!(fight.last_report().unhandled_commands.is_empty());
+}
+
+#[test]
+fn jaiminho_crouched_strong_kick_uses_the_18_tick_pascal_duration() {
+    let mut fight = simulation_for_character(13, ACTION_CROUCHING, 0);
+    fight.tick(InputFrame {
+        pressed_buttons: 8,
+        ..InputFrame::default()
+    });
+
+    let fighter = &fight.state.fighters[0];
+    assert_eq!(fighter.action_id, ACTION_CROUCH_STRONG_KICK);
+    assert_eq!(fighter.action_duration, 18);
+    assert!(fighter.is_kick);
 }
 
 #[test]

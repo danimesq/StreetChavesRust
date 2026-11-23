@@ -42,3 +42,10 @@
 
 Integration tests cover a basic weak punch, C13 extra 1 and C13 extra 2.
 The full suite remains the CI gate for formatting, compilation and regression.
+
+
+## Source-order corrections
+
+The shared `Comum.rot [Acao]` prelude clears `P.Defendendo` before testing a command. The Rust dispatcher now preserves that write for C13 extra commands and for character commands that remain explicitly unimplemented; those paths also run the shared `[AcaoFim]` epilogue. Directional left/right/down calls clear the flag before evaluating their common movement guard.
+
+The common crouched strong-kick branch has one source-specific exception: `P.Personagem = pnJaiminho` sets `P.DuracaoAcao := 18`, while the normal duration is 11. The Rust common-action slice now preserves that C13/Jaiminho exception and has a dedicated regression test.
