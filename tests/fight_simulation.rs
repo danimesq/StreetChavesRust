@@ -122,7 +122,7 @@ fn queued_c01_command_enters_special_then_runs_its_frame_executor() {
 
     assert_eq!(fight.state.fighters[0].action_id, ACTION_SPECIAL1);
     assert_eq!(fight.state.fighters[0].sprite_frame, 36);
-    assert_eq!(fight.last_report().special_outcomes.len(), 1);
+    assert_eq!(fight.last_report().rot_action_executions, vec![(0, 1, 16)]);
     assert!(fight.last_report().special_outcomes[0].1.applied);
 }
 
