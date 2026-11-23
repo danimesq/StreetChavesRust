@@ -136,13 +136,23 @@ fn types13_and15_use_their_source_hitboxes_rng_and_sprite_sequences() {
     for (effect_type, expected_bounds, first_sprite, second_sprite) in [
         (
             13,
-            EffectBounds { left: -25, top: -10, right: 25, bottom: 80 },
+            EffectBounds {
+                left: -25,
+                top: -10,
+                right: 25,
+                bottom: 80,
+            },
             34,
             35,
         ),
         (
             15,
-            EffectBounds { left: -25, top: -25, right: 25, bottom: 37 },
+            EffectBounds {
+                left: -25,
+                top: -25,
+                right: 25,
+                bottom: 37,
+            },
             39,
             40,
         ),
@@ -150,15 +160,17 @@ fn types13_and15_use_their_source_hitboxes_rng_and_sprite_sequences() {
         let mut arena = EffectArena::default();
         let mut rng = ScriptedRng::with_values(&[0]);
         assert_eq!(
-            arena.spawn(
-                effect_type,
-                Some('A'),
-                1,
-                EFFECT_SIDE_LEFT,
-                245.0,
-                300.0,
-                &mut rng,
-            ).unwrap(),
+            arena
+                .spawn(
+                    effect_type,
+                    Some('A'),
+                    1,
+                    EFFECT_SIDE_LEFT,
+                    245.0,
+                    300.0,
+                    &mut rng,
+                )
+                .unwrap(),
             Some(0)
         );
         assert_eq!(rng.cursor, 1);
