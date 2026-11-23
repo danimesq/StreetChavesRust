@@ -1592,25 +1592,40 @@ mod rot_runtime_integration_tests {
                 16 | 17 => {
                     assert_eq!(fighter.punch_charge, 0);
                     assert_eq!(fighter.charge_power, 5.0);
-                    assert_eq!(fighter.force_strength, if command_code == 16 { 1 } else { 2 });
+                    assert_eq!(
+                        fighter.force_strength,
+                        if command_code == 16 { 1 } else { 2 }
+                    );
                     assert_eq!(fight.state.pending_sound, Some(47));
                 }
                 18 | 19 => {
                     assert_eq!(fighter.charge_power, 6.0);
-                    assert_eq!(fighter.force_strength, if command_code == 18 { 1 } else { 2 });
+                    assert_eq!(
+                        fighter.force_strength,
+                        if command_code == 18 { 1 } else { 2 }
+                    );
                     assert_eq!(fight.state.pending_sound, Some(48));
                 }
                 20 | 21 => {
                     assert_eq!(fighter.y, 190.0);
                     assert!(fighter.in_air);
-                    assert_eq!(fighter.vertical_velocity, if command_code == 20 { -25 } else { -28 });
+                    assert_eq!(
+                        fighter.vertical_velocity,
+                        if command_code == 20 { -25 } else { -28 }
+                    );
                     assert_eq!(fighter.charge_power, 5.0);
-                    assert_eq!(fighter.force_strength, if command_code == 20 { 1 } else { 2 });
+                    assert_eq!(
+                        fighter.force_strength,
+                        if command_code == 20 { 1 } else { 2 }
+                    );
                     assert_eq!(fight.state.pending_sound, Some(49));
                 }
                 22 | 23 => {
                     assert_eq!(fighter.charge_power, 5.0);
-                    assert_eq!(fighter.force_strength, if command_code == 22 { 1 } else { 2 });
+                    assert_eq!(
+                        fighter.force_strength,
+                        if command_code == 22 { 1 } else { 2 }
+                    );
                     assert_eq!(fight.state.pending_sound, Some(49));
                 }
                 _ => {}
