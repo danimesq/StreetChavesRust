@@ -1497,10 +1497,7 @@ mod rot_runtime_integration_tests {
 
     #[test]
     fn c08_active_effect_guards_reject_first_and_second_specials() {
-        for (command_code, effect_type, action) in [
-            (16, 18, ACTION_IDLE),
-            (18, 19, ACTION_JUMPING),
-        ] {
+        for (command_code, effect_type, action) in [(16, 18, ACTION_IDLE), (18, 19, ACTION_JUMPING)] {
             let mut fight = simulation();
             fight.state.fighters[0].character_id = 8;
             fight.state.fighters[0].action_id = action;
