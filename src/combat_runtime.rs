@@ -4,6 +4,10 @@
 //! movement, and the close-range probability chain. Character-specific ROT execution
 //! remains an injected child-script seam; unsupported behavior is not fabricated.
 
+use crate::effect_runtime::{
+    EffectArena, EffectSpawnError, EffectTickContext, EffectTickResult,
+    EFFECT_SIDE_LEFT, EFFECT_SIDE_RIGHT,
+};
 use crate::pascal_replay::PascalRandomSource;
 use serde_json::json;
 use std::fmt;
@@ -29,6 +33,15 @@ pub const ACTION_LOW_DEFENDING: u16 = 22;
 pub const ACTION_VICTORY: u16 = 23;
 /// Pascal `acPose`, verified from ChavesTipos.pas at the pinned source revision.
 pub const ACTION_POSE: u16 = 24;
+pub const ACTION_SPECIAL1: u16 = 25;
+pub const ACTION_SPECIAL2: u16 = 26;
+pub const ACTION_SPECIAL3: u16 = 27;
+pub const ACTION_SPECIAL4: u16 = 28;
+pub const ACTION_SPECIAL_FINAL: u16 = 29;
+pub const FORCE_NONE: u8 = 0;
+pub const FORCE_WEAK: u8 = 1;
+pub const FORCE_STRONG: u8 = 2;
+pub const FORCE_SPECIAL: u8 = 3;
 pub const ACTION_BOUNCING: u16 = 20;
 pub const SIDE_RIGHT: u8 = 1;
 pub const SIDE_LEFT: u8 = 2;
@@ -50,7 +63,12 @@ pub struct FighterState {
     pub action_frame: u16,
     pub action_duration: u16,
     pub facing: u8,
+    pub force_strength: u8,
     pub defending: bool,
+    pub invulnerable: bool,
+    pub hit_count: u8,
+    pub is_kick: bool,
+    pub recoil: u8,
     pub vertical_velocity: i8,
     pub in_air: bool,
     pub x: f64,
@@ -76,21 +94,26 @@ pub struct VictoryAnimationContext {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct VictoryParticle {
-    /// Pascal CriaEfeito type (C12 victory uses type 2).
-    pub effect_type: u8,
-    /// Empty Pascal effect variant string for this particle.
-    pub variant: &'static str,
-    /// Pascal effect owner/player argument (0 for C12 victory particles).
-    pub owner: u8,
-    pub x: f64,
-    pub y: f64,
+struct EffectSpawnRequest {
+    effect_type: u8,
+    variant: Option<char>,
+    owner: u8,
+    owner_facing: u8,
+    x: f64,
+    y: f64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VictoryAnimationResult {
     pub draws: Vec<RuntimeDraw>,
-    pub particles: Vec<VictoryParticle>,
+    /// Zero-based live arena slots allocated by this frame update.
+    pub spawned_effect_slots: Vec<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct C01FrameResult {
+    pub draws: Vec<RuntimeDraw>,
+    pub spawned_effect_slots: Vec<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -100,6 +123,12 @@ pub struct CombatState {
     pub camera_x: f64,
     pub clock_stopped: bool,
     pub fighters: [FighterState; 2],
+    /// Live fixed-capacity effect instances; never an event-only spawn queue.
+    pub effects: EffectArena,
+    /// Pascal SomPendente, consumed by the outer fight/audio phase.
+    pub pending_sound: Option<u16>,
+    /// Pascal TremorTela request from the C01 final special.
+    pub screen_shake: u16,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -152,6 +181,10 @@ pub enum RuntimeError<E> {
     Rng(E),
     UnsupportedBranch(&'static str),
     InvalidProbabilityRange { source_line: u32, range: i64 },
+    UnsupportedEffectType(u8),
+    InvalidEffectOwner(u8),
+    InvalidEffectFacing(u8),
+    InvalidEffectVariant(u8),
 }
 
 impl<E: fmt::Display> fmt::Display for RuntimeError<E> {
@@ -165,6 +198,14 @@ impl<E: fmt::Display> fmt::Display for RuntimeError<E> {
                 f,
                 "invalid Pascal probability range at Common.rot line {source_line}: {range}"
             ),
+            Self::UnsupportedEffectType(effect_type) => {
+                write!(f, "effect type {effect_type} is not implemented")
+            }
+            Self::InvalidEffectOwner(owner) => write!(f, "invalid effect owner {owner}"),
+            Self::InvalidEffectFacing(facing) => write!(f, "invalid effect facing {facing}"),
+            Self::InvalidEffectVariant(effect_type) => {
+                write!(f, "effect type {effect_type} requires a valid source variant")
+            }
         }
     }
 }
@@ -298,7 +339,8 @@ impl CombatState {
         R::Error: fmt::Display,
     {
         let mut rng = RecordingRandomSource::new(rng);
-        let mut particles = Vec::new();
+        let mut effect_requests = Vec::new();
+        {
         let fighter =
             self.fighters
                 .get_mut(fighter_index)
@@ -466,10 +508,11 @@ impl CombatState {
                 for _ in 0..5 {
                     let dx = rng.draw_longint(40).map_err(RuntimeError::Rng)?;
                     let dy = rng.draw_longint(10).map_err(RuntimeError::Rng)?;
-                    particles.push(VictoryParticle {
+                    effect_requests.push(EffectSpawnRequest {
                         effect_type: 2,
-                        variant: "",
+                        variant: None,
                         owner: 0,
+                        owner_facing: EFFECT_SIDE_RIGHT,
                         x: fighter.x - 30.0 + dx as f64,
                         y: fighter.y + dy as f64,
                     });
@@ -509,11 +552,370 @@ impl CombatState {
                 ))
             }
         }
+        }
+
+        let mut spawned_effect_slots = Vec::new();
+        for request in effect_requests {
+            if let Some(slot) = self.spawn_effect(
+                request.effect_type,
+                request.variant,
+                request.owner,
+                request.owner_facing,
+                request.x,
+                request.y,
+                &mut rng,
+            )? {
+                spawned_effect_slots.push(slot);
+            }
+        }
 
         Ok(VictoryAnimationResult {
             draws: rng.into_draws(),
-            particles,
+            spawned_effect_slots,
         })
+    }
+
+
+    /// Allocate one real effect instance through the fixed Pascal-compatible arena.
+    fn spawn_effect<R: PascalRandomSource>(
+        &mut self,
+        effect_type: u8,
+        variant: Option<char>,
+        owner: u8,
+        owner_facing: u8,
+        x: f64,
+        y: f64,
+        rng: &mut R,
+    ) -> Result<Option<usize>, RuntimeError<R::Error>>
+    where
+        R::Error: fmt::Display,
+    {
+        self.effects
+            .spawn(effect_type, variant, owner, owner_facing, x, y, rng)
+            .map_err(|error| match error {
+                EffectSpawnError::Rng(error) => RuntimeError::Rng(error),
+                EffectSpawnError::UnsupportedType(effect_type) => {
+                    RuntimeError::UnsupportedEffectType(effect_type)
+                }
+                EffectSpawnError::InvalidOwner(owner) => RuntimeError::InvalidEffectOwner(owner),
+                EffectSpawnError::InvalidFacing(facing) => {
+                    RuntimeError::InvalidEffectFacing(facing)
+                }
+                EffectSpawnError::InvalidVariant { effect_type } => {
+                    RuntimeError::InvalidEffectVariant(effect_type)
+                }
+            })
+    }
+
+    /// Run the C01 [Quadro] branch for the current special/victory/pose action.
+    ///
+    /// This is deliberately separate from command entry. The frame path owns
+    /// sprite writes, live effects, sounds, movement, invulnerability and the
+    /// on-hit [Acerto] recoil hook.
+    pub fn update_c01_character_frame<R: PascalRandomSource>(
+        &mut self,
+        fighter_index: usize,
+        context: VictoryAnimationContext,
+        rng: &mut R,
+    ) -> Result<C01FrameResult, RuntimeError<R::Error>>
+    where
+        R::Error: fmt::Display,
+    {
+        let (character_id, action_id, frame, force, facing) = {
+            let fighter = self
+                .fighters
+                .get(fighter_index)
+                .ok_or(RuntimeError::UnsupportedBranch(
+                    "C01 [Quadro]: invalid fighter index",
+                ))?;
+            (
+                fighter.character_id,
+                fighter.action_id,
+                fighter.action_frame,
+                fighter.force_strength,
+                fighter.facing,
+            )
+        };
+        if character_id != 1 {
+            return Err(RuntimeError::UnsupportedBranch(
+                "C01 [Quadro]: fighter is not C01",
+            ));
+        }
+
+        match action_id {
+            ACTION_VICTORY => {
+                let result = self.update_victory_animation(fighter_index, context, rng)?;
+                return Ok(C01FrameResult {
+                    draws: result.draws,
+                    spawned_effect_slots: result.spawned_effect_slots,
+                });
+            }
+            ACTION_POSE => {
+                self.update_pose_animation(fighter_index, context.sprite_offset);
+                return Ok(C01FrameResult {
+                    draws: Vec::new(),
+                    spawned_effect_slots: Vec::new(),
+                });
+            }
+            _ => {}
+        }
+
+        let player = u8::try_from(fighter_index + 1).map_err(|_| {
+            RuntimeError::UnsupportedBranch("C01 [Quadro]: invalid player index")
+        })?;
+        let offset = context.sprite_offset;
+        let mut rng = RecordingRandomSource::new(rng);
+        let mut spawned_effect_slots = Vec::new();
+
+        match action_id {
+            ACTION_SPECIAL1 => {
+                if frame == 0 {
+                    self.fighters[fighter_index].sprite_frame = offset + 36;
+                }
+                if frame == 4 {
+                    self.fighters[fighter_index].sprite_frame = offset + 37;
+                }
+                if frame == 7 {
+                    self.fighters[fighter_index].sprite_frame = offset + 38;
+                }
+                if frame == 10 {
+                    self.fighters[fighter_index].sprite_frame = offset + 39;
+                    let variant = match force {
+                        FORCE_WEAK => Some('A'),
+                        FORCE_STRONG => Some('B'),
+                        _ => None,
+                    };
+                    let x = match facing {
+                        SIDE_RIGHT => Some(self.fighters[fighter_index].x + 45.0),
+                        SIDE_LEFT => Some(self.fighters[fighter_index].x - 45.0),
+                        _ => None,
+                    };
+                    if let (Some(variant), Some(x)) = (variant, x) {
+                        if let Some(slot) = self.spawn_effect(
+                            7,
+                            Some(variant),
+                            player,
+                            facing,
+                            x,
+                            self.fighters[fighter_index].y,
+                            &mut rng,
+                        )? {
+                            spawned_effect_slots.push(slot);
+                        }
+                    }
+                    self.pending_sound = Some(14);
+                }
+            }
+            ACTION_SPECIAL2 => {
+                if frame == 0 {
+                    self.pending_sound = Some(15);
+                }
+                if frame == 0 {
+                    self.fighters[fighter_index].sprite_frame = offset + 40;
+                }
+                if frame == 6 && force == FORCE_WEAK {
+                    self.fighters[fighter_index].sprite_frame = offset + 41;
+                }
+                if frame == 10 && force == FORCE_STRONG {
+                    self.fighters[fighter_index].sprite_frame = offset + 41;
+                }
+                if frame == 12 && force == FORCE_WEAK {
+                    self.fighters[fighter_index].sprite_frame = offset + 42;
+                }
+                if frame == 19 && force == FORCE_STRONG {
+                    self.fighters[fighter_index].sprite_frame = offset + 42;
+                }
+
+                // Pascal checks the selected sprite frame, not just the action timer.
+                if self.fighters[fighter_index].sprite_frame == offset + 41 {
+                    for _ in 0..3 {
+                        let dx = rng.draw_longint(40).map_err(RuntimeError::Rng)?;
+                        let dy = rng.draw_longint(10).map_err(RuntimeError::Rng)?;
+                        let x = self.fighters[fighter_index].x - 20.0 + f64::from(dx);
+                        let y = self.fighters[fighter_index].y + f64::from(dy);
+                        if let Some(slot) = self.spawn_effect(
+                            2,
+                            None,
+                            0,
+                            EFFECT_SIDE_RIGHT,
+                            x,
+                            y,
+                            &mut rng,
+                        )? {
+                            spawned_effect_slots.push(slot);
+                        }
+                    }
+
+                    let push = match (facing, force) {
+                        (SIDE_RIGHT, FORCE_WEAK) => Some(19.0),
+                        (SIDE_LEFT, FORCE_WEAK) => Some(-19.0),
+                        (SIDE_RIGHT, FORCE_STRONG) => Some(21.0),
+                        (SIDE_LEFT, FORCE_STRONG) => Some(-21.0),
+                        _ => None,
+                    };
+                    if let Some(push) = push {
+                        self.push_fighter(fighter_index, push);
+                    }
+                }
+
+                if frame >= 9 {
+                    let side = self.fighters[fighter_index].facing;
+                    let origin_x = self.fighters[fighter_index].x;
+                    let origin_y = self.fighters[fighter_index].y;
+                    let x = match side {
+                        SIDE_RIGHT => Some(origin_x + 60.0),
+                        SIDE_LEFT => Some(origin_x - 60.0),
+                        _ => None,
+                    };
+                    if let Some(x) = x {
+                        if let Some(slot) = self.spawn_effect(
+                            16,
+                            None,
+                            player,
+                            side,
+                            x,
+                            origin_y - 85.0,
+                            &mut rng,
+                        )? {
+                            spawned_effect_slots.push(slot);
+                        }
+                    }
+                }
+                self.fighters[fighter_index].is_kick = true;
+            }
+            ACTION_SPECIAL3 => {
+                let opponent_index = 1 - fighter_index;
+                if self.fighters[fighter_index].hit_count >= 1 {
+                    self.fighters[opponent_index].invulnerable = false;
+                }
+                if self.fighters[fighter_index].hit_count >= 4 {
+                    self.fighters[opponent_index].invulnerable = true;
+                }
+                if frame > 7 {
+                    self.fighters[opponent_index].invulnerable = true;
+                }
+                if frame == 0 {
+                    self.pending_sound = Some(16);
+                }
+                if frame % 3 == 0 {
+                    let previous = self.fighters[fighter_index].sprite_frame;
+                    self.fighters[fighter_index].sprite_frame = if previous == offset + 43 {
+                        offset + 44
+                    } else {
+                        offset + 43
+                    };
+                }
+                self.fighters[fighter_index].y -= 10.0;
+                match facing {
+                    SIDE_RIGHT => self.push_fighter(fighter_index, 5.0),
+                    SIDE_LEFT => self.push_fighter(fighter_index, -5.0),
+                    _ => {}
+                }
+                if frame == 20 {
+                    self.fighters[fighter_index].in_air = true;
+                }
+                self.fighters[fighter_index].is_kick = true;
+            }
+            ACTION_SPECIAL4 => {
+                if frame == 0 {
+                    self.pending_sound = Some(17);
+                    self.fighters[fighter_index].sprite_frame = offset + 45;
+                }
+                if frame == 4 {
+                    self.fighters[fighter_index].sprite_frame = offset + 46;
+                }
+                if frame == 8 {
+                    self.fighters[fighter_index].sprite_frame = offset + 47;
+                }
+                if frame == 12 {
+                    self.fighters[fighter_index].sprite_frame = offset + 48;
+                }
+                if frame == 15 {
+                    self.fighters[fighter_index].sprite_frame = offset + 49;
+                }
+                if frame == 18 {
+                    self.fighters[fighter_index].sprite_frame = offset + 12;
+                }
+                if (4..=13).contains(&frame) {
+                    let push = match (facing, force) {
+                        (SIDE_RIGHT, FORCE_WEAK) => Some(17.0),
+                        (SIDE_LEFT, FORCE_WEAK) => Some(-17.0),
+                        (SIDE_RIGHT, FORCE_STRONG) => Some(21.0),
+                        (SIDE_LEFT, FORCE_STRONG) => Some(-21.0),
+                        _ => None,
+                    };
+                    if let Some(push) = push {
+                        self.push_fighter(fighter_index, push);
+                    }
+                }
+                if frame >= 12 {
+                    self.fighters[fighter_index].is_kick = true;
+                }
+            }
+            ACTION_SPECIAL_FINAL => {
+                if frame == 0 {
+                    self.fighters[fighter_index].sprite_frame = offset + 36;
+                }
+                if frame == 3 {
+                    self.fighters[fighter_index].sprite_frame = offset + 37;
+                }
+                if frame == 6 {
+                    self.fighters[fighter_index].sprite_frame = offset + 38;
+                }
+                if frame == 9 {
+                    self.pending_sound = Some(18);
+                    self.fighters[fighter_index].sprite_frame = offset + 39;
+                    let origin_x = self.fighters[fighter_index].x;
+                    let origin_y = self.fighters[fighter_index].y;
+                    let x = match facing {
+                        SIDE_RIGHT => Some(origin_x + 110.0),
+                        SIDE_LEFT => Some(origin_x - 110.0),
+                        _ => None,
+                    };
+                    if let Some(x) = x {
+                        if let Some(slot) = self.spawn_effect(
+                            8,
+                            None,
+                            player,
+                            facing,
+                            x,
+                            origin_y,
+                            &mut rng,
+                        )? {
+                            spawned_effect_slots.push(slot);
+                        }
+                    }
+                    self.screen_shake = 20;
+                }
+            }
+            _ => {}
+        }
+
+        Ok(C01FrameResult {
+            draws: rng.into_draws(),
+            spawned_effect_slots,
+        })
+    }
+
+    /// C01 [Acerto]: strong Esp2 gives the opponent the character-specific recoil.
+    pub fn apply_c01_hit_reaction(&mut self, attacker_index: usize) -> bool {
+        let Some(attacker) = self.fighters.get(attacker_index) else {
+            return false;
+        };
+        if attacker.character_id != 1
+            || attacker.action_id != ACTION_SPECIAL2
+            || attacker.force_strength != FORCE_STRONG
+            || attacker_index > 1
+        {
+            return false;
+        }
+        self.fighters[1 - attacker_index].recoil = 20;
+        true
+    }
+
+    /// Advance effects in slot order and return immutable render snapshots.
+    pub fn tick_effects(&mut self, context: EffectTickContext) -> EffectTickResult {
+        self.effects.advance(context)
     }
 
     /// Execute the source-backed C01-C12 pose [Quadro] frame writes.

@@ -78,13 +78,14 @@ Each fighter must be audited and validated independently. Mark an item complete 
 ## 🌈 Validation gates
 
 - [x] Add persistent `sprite_frame` and explicit victory animation context for sprite offset, ground and camera bounds.
-- [x] Execute audited C01-C15 victory-frame branches with ordered shared RNG and C12 particle requests.
+- [x] Execute audited C01-C15 victory-frame branches with ordered shared RNG; C12 now creates five type-2 live effect instances.
 - [x] Test C06, C09 and C14 using both possible previous sprite frames.
 - [x] Test C02's one-draw behavior, C12's ordered draw sequence/movement/effects, and C08/C13 ground-relative movement.
 - [ ] Complete the source audit for all 15 original fighters, recording absent sections and per-character exceptions.
 - [x] Verify the implemented Rust action mapping for pose against the Pascal enum (acPose = 24); other command mappings remain to be audited.
 - [x] Implement per-character victory-frame behavior and C01-C12 pose [Quadro] frame updates; C13-C15 remain unsupported for pose because their ROT files do not define `cmPose`.
-- [ ] Implement specials incrementally, with focused state-diff and RNG tests for every supported branch.
+- [x] Implement C01 [Quadro] specials 1-4 and final-special frame consequences with live effects, ordered RNG, movement, sound and invulnerability tests.
+- [ ] Continue the per-character special-frame implementation for C02-C15 with focused state-diff and RNG tests.
 - [ ] Verify common-action -> character-action -> common-action-end ordering.
 - [ ] Capture and replay at least one Pascal child-script RNG consumption case; prove shared cursor continuity across parent and child.
 - [ ] Add representative and edge-case Pascal/Rust state-differential fixtures; expand coverage across all 15 fighters.
@@ -140,7 +141,7 @@ The complete character [Quadro] victory branches were inspected at the pinned Pa
 | C14 | Every third action frame toggles between 33 and 34 based on current sprite frame | Same frame rule as C09, independently confirmed in C14 |
 | C15 | 33 while frame <=10; then 34 at frame 10; 35 at frame 14 | Independent source-ordered ifs mean frame 10 ends on 34 |
 
-The C02 and C12 branches consume RNG from the shared Pascal stream. C12 also moves the fighter, changes facing at camera-relative thresholds and requests five particle effects. These effects are now represented by the victory animation runtime API; dispatching them into the renderer/effect system and comparing them against a captured Pascal victory trace remain outstanding.
+The C02 and C12 branches consume RNG from the shared Pascal stream. C12 also moves the fighter, changes facing at camera-relative thresholds and now allocates five type-2 instances in the live effect arena. SDL rendering and comparison against a captured Pascal victory trace remain outstanding.
 
 ## 🌈 Verified pose enum and first runtime implementation
 
@@ -186,9 +187,7 @@ The operation must preserve these rules:
 
 ### Incremental implementation boundary
 
-The runtime now receives the explicit context and executes the previously blocked movement/RNG branches; rendering the returned C12 particle requests remains the responsibility of the effect system:
-
-- C12 particle requests are emitted as ordered data; the renderer/effect-system integration remains pending.
+The runtime now receives the explicit context and executes the previously blocked movement/RNG branches. C12's five type-2 effects are allocated in the live arena; the new C01 frame runtime also allocates types 2, 7, 8 and 16. The arena produces ordered snapshots for the future renderer, while SDL drawing and full collision consequences remain pending.
 
 C06, C09 and C14 are tested with both possible prior sprite frames and with a non-boundary action frame to verify that they neither overwrite the prior value nor consume RNG when the source condition is false.
 
@@ -222,9 +221,20 @@ Validation note: GitHub Actions passed formatting and `cargo test --all-targets`
 
 `CombatState::update_pose_animation(fighter_index, sprite_offset)` now executes the identical C01-C12 `[Quadro]` pose branch found in the pinned Pascal ROT files. It writes `sprite_offset + 12` when `QuadroAcao = 0`, then independently writes `sprite_offset + 30` when `QuadroAcao = 2`; all other action frames retain the previous `P.Quadro`. It rejects non-pose actions, invalid fighter indices, and C13-C15. Tests exercise both writes and the no-write interval for every supported fighter.
 
-## 🌈 Effect integration boundary
+## 🌈 Live effect-instance foundation
 
-The repository currently contains no concrete effect-instance store, effect update loop, or renderer to receive `CriaEfeito` calls. C12 victory still returns five ordered, fully parameterized spawn requests while consuming the source-ordered RNG calls. Converting those requests into a newly invented queue would only create another adapter, not integrate with the game's real effect runtime. Therefore renderer/effect-instance integration remains blocked on adding or locating that runtime; no completion claim is made.
+The Rust core now owns a fixed-capacity `EffectArena` with 80 ordered slots. Allocation uses the first free slot, reuses the first freed slot, and returns no effect when full. The full-pool path exits before type configuration and therefore consumes no RNG, matching the Pascal allocator's order.
+
+The first source-backed configurations are the C01-used effect types 2, 7, 8 and 16 from the pinned `Dados/Efeitos.ini`:
+
+- Type 2: 15-frame dust/cloud effect with the source bottom-anchor flag and ordered sprite changes; its animation also applies the one-pixel upward motion when not frozen.
+- Type 7: weak/strong C01 Esp1 projectile, with owner-facing, hitbox, damage, guard damage and the `1 em 5` variant roll. That roll uses the shared Pascal LongInt RNG cursor only after a free slot has been found.
+- Type 8: C01 final-special hit effect with the source damage, guard damage, terminating/variant flags and frame-dependent hitbox phases.
+- Type 16: short-lived C01 Esp2 trail with owner-facing and source sprite timing.
+
+C12 victory no longer returns detached particle requests. It allocates five live type-2 instances in the arena and returns the allocated slot indices. The new C01 frame executor is separate from command entry: it applies the [Quadro] branches for specials 1-4 and the final special, creates the source effect types, writes pending sounds, moves the fighter, updates opponent invulnerability, and exposes the strong Esp2 [Acerto] recoil hook.
+
+`tick_effects` advances supported live instances in slot order and returns immutable render snapshots before lifetime/culling cleanup, preserving the source's same-tick draw behavior. This is a simulation-side foundation, not a finished renderer: SDL sprite drawing, effect-vs-effect collision, effect-vs-fighter collision consequences, and the remaining effect-type catalog are still outstanding.
 
 ## 🌈 Pascal capture and nested RNG evidence boundary
 
