@@ -505,16 +505,13 @@ impl FightSimulation {
             command_code,
         });
 
-        // C01 special commands use the already-audited hand-port.
         if self.state.fighters[fighter_index].character_id == 1
             && ChavesSpecialCommand::from_pascal_code(command_code).is_some()
         {
-            match self.state.dispatch_chaves_special_code(
-                fighter_index,
-                command_code,
-                self.config.special,
-            ) {
-                Ok(outcome) => report.special_outcomes.push((fighter_index, outcome)),
+            match self.execute_character_rot_action(fighter_index, 1, command_code) {
+                Ok(()) => report
+                    .rot_action_executions
+                    .push((fighter_index, 1, command_code)),
                 Err(error) => report.errors.push(format!(
                     "C01 [Acao] fighter {fighter_index}, command {command_code}: {error}"
                 )),
@@ -522,10 +519,14 @@ impl FightSimulation {
         } else if self.state.fighters[fighter_index].character_id == 13
             && matches!(command_code, 25 | 26)
         {
-            // Common [Acao] runs before the character-specific branch.
-            self.state.fighters[fighter_index].defending = false;
-            self.dispatch_c13_extra(command_code, fighter_index, report);
-            let _ = self.state.finish_common_action(fighter_index);
+            match self.execute_character_rot_action(fighter_index, 13, command_code) {
+                Ok(()) => report
+                    .rot_action_executions
+                    .push((fighter_index, 13, command_code)),
+                Err(error) => report.errors.push(format!(
+                    "C13 [Acao] fighter {fighter_index}, command {command_code}: {error}"
+                )),
+            }
         } else if self.state.fighters[fighter_index].character_id == 9
             && matches!(command_code, 14 | 15 | 20 | 21)
         {
@@ -572,8 +573,10 @@ impl FightSimulation {
         command_code: u8,
     ) -> Result<(), String> {
         let (filename, source) = match character_id {
+            1 => ("C01.rot", include_str!("../research/pascal-rot/C01.rot")),
             4 => ("C04.rot", include_str!("../research/pascal-rot/C04.rot")),
             9 => ("C09.rot", include_str!("../research/pascal-rot/C09.rot")),
+            13 => ("C13.rot", include_str!("../research/pascal-rot/C13.rot")),
             _ => {
                 return Err(format!(
                     "character C{character_id:02} has no live ROT route"
@@ -603,69 +606,6 @@ impl FightSimulation {
         execute_rot_section(&character, "Acao", jog, command_code, &mut host)?;
         execute_rot_section(&common, "AcaoFim", jog, command_code, &mut host)?;
         Ok(())
-    }
-
-    /// Execute the C13 [Acao] branches for cmEspExtra1/2 from C13.rot.
-    fn dispatch_c13_extra(
-        &mut self,
-        command_code: u8,
-        fighter_index: usize,
-        report: &mut FightTickReport,
-    ) {
-        let fighter = &mut self.state.fighters[fighter_index];
-        let sprite_offset = (fighter_index as i32) * 50;
-        match command_code {
-            25 => {
-                if !matches!(
-                    fighter.action_id,
-                    ACTION_IDLE
-                        | ACTION_WALKING
-                        | ACTION_JUMPING
-                        | ACTION_DEFENDING
-                        | ACTION_LOW_DEFENDING
-                ) {
-                    return;
-                }
-                fighter.action_id = ACTION_SPECIAL4;
-                fighter.action_frame = 0;
-                fighter.action_duration = 30;
-                if fighter.charge_power < self.config.special.charge_max {
-                    fighter.charge_power += 5.0 * self.config.special.charge_gain;
-                }
-                // C13.rot assigns the literal force value 4 for cmEspExtra1.
-                fighter.force_strength = 4;
-            }
-            26 => {
-                if !matches!(
-                    fighter.action_id,
-                    ACTION_IDLE
-                        | ACTION_WALKING
-                        | ACTION_CROUCHING
-                        | ACTION_JUMPING
-                        | ACTION_DEFENDING
-                        | ACTION_LOW_DEFENDING
-                        | ACTION_SPECIAL3
-                ) || !(fighter.health <= 15.0 || fighter.power > 0)
-                {
-                    return;
-                }
-                fighter.action_id = ACTION_SPECIAL_FINAL;
-                fighter.action_frame = 0;
-                fighter.action_duration = 30;
-                fighter.in_air = false;
-                fighter.jump_direction = 0;
-                fighter.vertical_velocity = 0;
-                if fighter.power == 3 {
-                    fighter.charge_power = 0.0;
-                }
-                fighter.power = fighter.power.wrapping_sub(1);
-                fighter.sprite_frame = sprite_offset + 37;
-                self.state.screen_flash = 22;
-                self.state.pending_sound = Some(crate::chaves_specials::SOUND_FINAL_SPECIAL);
-            }
-            _ => return,
-        }
-        let _ = report;
     }
 
     /// Shared Pascal [Acao] for commands 3..6, followed by [AcaoFim].
@@ -1195,4 +1135,94 @@ mod rot_runtime_integration_tests {
         assert!(report.unhandled_commands.is_empty());
         assert!(report.errors.is_empty());
     }
+    #[test]
+    fn c01_special_three_executes_the_real_rot_action_section() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 1;
+        let mut report = FightTickReport::default();
+
+        fight.dispatch_character_command(0, AttackButton::WeakPunch, 20, &mut report);
+
+        let fighter = &fight.state.fighters[0];
+        assert_eq!(fighter.action_id, ACTION_SPECIAL3);
+        assert_eq!(fighter.action_frame, 0);
+        assert_eq!(fighter.action_duration, 10);
+        assert_eq!(fighter.force_strength, 1);
+        assert_eq!(fighter.charge_power, 6.0);
+        assert_eq!(fighter.y, 240.0);
+        assert!(!fighter.in_air);
+        assert!(!fighter.defending);
+        assert_eq!(report.rot_action_executions, vec![(0, 1, 20)]);
+        assert!(report.special_outcomes.is_empty());
+        assert!(report.unhandled_commands.is_empty());
+        assert!(report.errors.is_empty());
+    }
+
+    #[test]
+    fn c01_final_special_executes_real_rot_and_preserves_live_host_writes() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 1;
+        fight.state.fighters[0].power = 1;
+        let mut report = FightTickReport::default();
+
+        fight.dispatch_character_command(0, AttackButton::StrongKick, 24, &mut report);
+
+        let fighter = &fight.state.fighters[0];
+        assert_eq!(fighter.action_id, ACTION_SPECIAL_FINAL);
+        assert_eq!(fighter.action_frame, 0);
+        assert_eq!(fighter.action_duration, 38);
+        assert_eq!(fighter.force_strength, 3);
+        assert_eq!(fighter.power, 0);
+        assert_eq!(fighter.sprite_frame, 36);
+        assert_eq!(fight.state.screen_flash, 22);
+        assert_eq!(fight.state.pending_sound, Some(19));
+        assert_eq!(report.rot_action_executions, vec![(0, 1, 24)]);
+        assert!(report.errors.is_empty());
+    }
+
+    #[test]
+    fn c13_extra_one_executes_real_rot_instead_of_the_compatibility_port() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 13;
+        let mut report = FightTickReport::default();
+
+        fight.dispatch_character_command(0, AttackButton::WeakPunch, 25, &mut report);
+
+        let fighter = &fight.state.fighters[0];
+        assert_eq!(fighter.action_id, ACTION_SPECIAL4);
+        assert_eq!(fighter.action_frame, 0);
+        assert_eq!(fighter.action_duration, 30);
+        assert_eq!(fighter.force_strength, 4);
+        assert_eq!(fighter.charge_power, 5.0);
+        assert_eq!(report.rot_action_executions, vec![(0, 13, 25)]);
+        assert!(report.errors.is_empty());
+    }
+
+    #[test]
+    fn c13_extra_two_executes_real_rot_and_updates_live_opponent_and_globals() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 13;
+        fight.state.fighters[0].power = 1;
+        fight.state.fighters[0].in_air = true;
+        fight.state.fighters[0].vertical_velocity = -5;
+        fight.state.fighters[0].jump_direction = 2;
+        let mut report = FightTickReport::default();
+
+        fight.dispatch_character_command(0, AttackButton::StrongKick, 26, &mut report);
+
+        let fighter = &fight.state.fighters[0];
+        assert_eq!(fighter.action_id, ACTION_SPECIAL_FINAL);
+        assert_eq!(fighter.action_frame, 0);
+        assert_eq!(fighter.action_duration, 30);
+        assert_eq!(fighter.power, 0);
+        assert_eq!(fighter.sprite_frame, 37);
+        assert!(!fighter.in_air);
+        assert_eq!(fighter.vertical_velocity, 0);
+        assert_eq!(fighter.jump_direction, 0);
+        assert_eq!(fight.state.screen_flash, 22);
+        assert_eq!(fight.state.pending_sound, Some(19));
+        assert_eq!(report.rot_action_executions, vec![(0, 13, 26)]);
+        assert!(report.errors.is_empty());
+    }
+
 }
