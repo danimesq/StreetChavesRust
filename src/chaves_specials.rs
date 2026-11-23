@@ -112,6 +112,7 @@ pub enum ChavesSpecialEvent {
     ForceStrengthChanged { value: u8 },
     ScreenFlashChanged { value: u8 },
     PendingSoundChanged { value: u16 },
+    CommonWalkingFrameAdvanced { value: u16 },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -378,16 +379,26 @@ impl CombatState {
         command: ChavesSpecialCommand,
         context: ChavesSpecialContext,
     ) -> Result<ChavesSpecialOutcome, ChavesSpecialError> {
-        let fighter = self
-            .fighters
-            .get_mut(fighter_index)
-            .ok_or(ChavesSpecialError::FighterIndexOutOfRange(fighter_index))?;
-        fighter.defending = false;
+        {
+            let fighter = self
+                .fighters
+                .get_mut(fighter_index)
+                .ok_or(ChavesSpecialError::FighterIndexOutOfRange(fighter_index))?;
+            fighter.defending = false;
+        }
 
         let mut outcome = self.start_chaves_special(fighter_index, command, context)?;
         outcome
             .events
             .insert(0, ChavesSpecialEvent::CommonDefendingCleared);
+
+        // AcaoJogador runs Common [AcaoFim] after C01 [Acao]. This matters when
+        // a move is rejected and the fighter therefore remains in the walking state.
+        if let Some(frame) = self.finish_common_action(fighter_index) {
+            outcome
+                .events
+                .push(ChavesSpecialEvent::CommonWalkingFrameAdvanced { value: frame });
+        }
         Ok(outcome)
     }
 

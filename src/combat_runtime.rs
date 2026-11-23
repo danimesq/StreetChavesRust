@@ -1224,14 +1224,22 @@ impl CombatState {
         child_script.execute(self, fighter_index, command, rng)?;
 
         // Common.rot [AcaoFim]: only an action still walking advances here.
-        let fighter = &mut self.fighters[fighter_index];
-        if fighter.action_id == ACTION_WALKING {
-            fighter.action_frame = fighter.action_frame.saturating_add(1);
-            if fighter.action_frame > 16 {
-                fighter.action_frame = 0;
-            }
-        }
+        self.finish_common_action(fighter_index);
         Ok(())
+    }
+
+    /// Apply the Common.rot [AcaoFim] walk-frame update after any AcaoJogador call.
+    /// Returns the resulting frame only when the fighter remains in the walking action.
+    pub(crate) fn finish_common_action(&mut self, fighter_index: usize) -> Option<u16> {
+        let fighter = self.fighters.get_mut(fighter_index)?;
+        if fighter.action_id != ACTION_WALKING {
+            return None;
+        }
+        fighter.action_frame = fighter.action_frame.saturating_add(1);
+        if fighter.action_frame > 16 {
+            fighter.action_frame = 0;
+        }
+        Some(fighter.action_frame)
     }
 
     fn execute_common_command(&mut self, fighter_index: usize, command: AiCommand) {

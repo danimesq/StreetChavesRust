@@ -168,6 +168,33 @@ fn special_one_queries_the_live_effect_arena_by_type_and_owner() {
     assert_eq!(result.events, vec![Event::CommonDefendingCleared]);
 }
 
+
+#[test]
+fn rejected_special_runs_common_action_end_when_fighter_keeps_walking() {
+    let mut state = state_with_action(ACTION_WALKING);
+    state.fighters[1].action_frame = 16;
+
+    // A live type-7 owned by player 2 rejects Special 1 after Common [Acao].
+    let mut effect_rng = ScriptedRng::with_values(&[0]);
+    state
+        .effects
+        .spawn(7, Some('A'), 2, EFFECT_SIDE_RIGHT, 145.0, 240.0, &mut effect_rng)
+        .unwrap();
+
+    let result = state
+        .dispatch_chaves_special(1, Command::Esp1Weak, context())
+        .unwrap();
+
+    assert!(!result.applied);
+    assert_eq!(result.rejection, Some(Rejection::Effect7AlreadyExists));
+    assert_eq!(state.fighters[1].action_id, ACTION_WALKING);
+    assert_eq!(state.fighters[1].action_frame, 0, "frame 17 wraps to zero");
+    assert_eq!(
+        result.events.last(),
+        Some(&Event::CommonWalkingFrameAdvanced { value: 0 })
+    );
+}
+
 #[test]
 fn special_one_starts_when_the_live_effect_slot_is_empty_and_records_source_order() {
     let mut state = state_with_action(ACTION_DEFENDING);
