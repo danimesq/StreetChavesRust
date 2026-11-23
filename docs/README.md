@@ -68,3 +68,5 @@ These repositories are independent projects, not a parent/child chain. For the R
 7. Every behavior that can be tested should eventually have a deterministic test or replay fixture.
 
 - [C01 remaining integration gates](c01-remaining-integration-gates.md): SDL human input, platform-neutral logical sampler foundation, melee hit-resolution hook, effect collision consequences and Pascal checkpoint capture status.
+
+- [Pascal command recognition primitives](command-recognition.md): relative directions, held-direction counters, ordered INI-rule evaluation, button-edge commands and sequence transitions.
