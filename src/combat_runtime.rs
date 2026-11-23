@@ -330,8 +330,8 @@ impl CombatState {
     /// Execute one character's Pascal [Quadro] victory branch in source order.
     ///
     /// The caller supplies the same RNG cursor used by the enclosing game tick.
-    /// Particle requests are returned as ordered effects because the renderer/effect
-    /// system is outside this runtime slice; their RNG consumption is still replayed.
+    /// C12's ordered type-2 spawns are allocated into the live effect arena after
+    /// the character state borrow ends, without changing their RNG call order.
     pub fn update_victory_animation<R: PascalRandomSource>(
         &mut self,
         fighter_index: usize,
@@ -355,7 +355,7 @@ impl CombatState {
                     "victory animation requires ACTION_VICTORY",
                 ));
             }
-    
+
             let frame = fighter.action_frame;
             let offset = context.sprite_offset;
             match fighter.character_id {
@@ -483,14 +483,14 @@ impl CombatState {
                     } else {
                         fighter.sprite_frame = offset + 34;
                     }
-    
+
                     if fighter.facing == SIDE_RIGHT {
                         fighter.x += 12.0;
                     }
                     if fighter.facing == SIDE_LEFT {
                         fighter.x -= 12.0;
                     }
-    
+
                     let camera_relative_x = fighter.x - context.camera_x;
                     if camera_relative_x <= context.camera_left_limit {
                         fighter.facing = SIDE_RIGHT;
@@ -498,7 +498,7 @@ impl CombatState {
                     if camera_relative_x >= context.camera_right_limit {
                         fighter.facing = SIDE_LEFT;
                     }
-    
+
                     if frame % 8 == 0 && rng.draw_longint(2).map_err(RuntimeError::Rng)? == 0 {
                         if fighter.facing == SIDE_RIGHT {
                             fighter.facing = SIDE_LEFT;
@@ -506,7 +506,7 @@ impl CombatState {
                             fighter.facing = SIDE_RIGHT;
                         }
                     }
-    
+
                     // Pascal evaluates the two Random expressions for each effect in order.
                     for _ in 0..5 {
                         let dx = rng.draw_longint(40).map_err(RuntimeError::Rng)?;
@@ -555,7 +555,7 @@ impl CombatState {
                     ))
                 }
             }
-            }
+        }
 
         let mut spawned_effect_slots = Vec::new();
         for request in effect_requests {
