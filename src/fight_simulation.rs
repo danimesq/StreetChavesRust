@@ -113,7 +113,10 @@ impl FightSimulation {
         context.camera_x = self.state.camera_x;
         let frame_before = self.state.fighters[fighter_index].action_frame;
 
-        match self.state.update_c01_character_frame(fighter_index, context, &mut self.rng) {
+        match self
+            .state
+            .update_c01_character_frame(fighter_index, context, &mut self.rng)
+        {
             Ok(frame_result) => {
                 report.c01_frames.push((fighter_index, frame_result));
                 // The source [Quadro] executor owns frame writes; the outer
@@ -147,9 +150,9 @@ impl FightSimulation {
                     self.config.special,
                 ) {
                     Ok(outcome) => report.special_outcomes.push((fighter_index, outcome)),
-                    Err(error) => report.errors.push(format!(
-                        "C01 [Acao] fighter {fighter_index}: {error}"
-                    )),
+                    Err(error) => report
+                        .errors
+                        .push(format!("C01 [Acao] fighter {fighter_index}: {error}")),
                 }
             }
 
