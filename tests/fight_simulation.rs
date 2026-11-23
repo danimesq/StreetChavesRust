@@ -38,6 +38,7 @@ fn fighter(character_id: u8, action_id: u16, action_frame: u16) -> FighterState 
         charge_power: 0.0,
         jump_direction: 0,
         low_time: 0,
+        back_time: 0,
         sequence_state: 0,
         sequence_timer: 0,
         punch_charge: 0,
@@ -225,9 +226,9 @@ fn real_c01_sequence_and_button_rules_reach_the_c01_dispatcher() {
 fn real_character_data_exposes_unimplemented_commands_without_faking_execution() {
     let mut fight = simulation(ACTION_IDLE, 0);
     fight.state.fighters[0].character_id = 13;
-    fight.state.fighters[0].sequence_state = 10;
+    fight.state.fighters[0].sequence_state = 6;
     fight.tick(InputFrame {
-        pressed_buttons: 1,
+        pressed_buttons: 8,
         ..Default::default()
     });
     assert!(fight.last_report().command_matches.iter().any(|item| item.command_code == 25));

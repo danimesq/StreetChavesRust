@@ -86,6 +86,8 @@ pub struct FighterState {
     /// Pascal TLutador.DirPulo, TempoBaixo and SeqEstado (Byte).
     pub jump_direction: u8,
     pub low_time: u8,
+    /// Pascal TLutador.TempoTras.
+    pub back_time: u8,
     pub sequence_state: u8,
     /// Pascal TLutador.SeqTempo (9 ticks after a matching sequence transition).
     pub sequence_timer: u8,

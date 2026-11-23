@@ -155,6 +155,7 @@ impl CommandRecognizer {
             self.back_ticks -= 1;
         }
         fighter.low_time = self.down_ticks as u8;
+        fighter.back_time = self.back_ticks as u8;
     }
 
     pub fn counters(&self) -> (u16, u16) {

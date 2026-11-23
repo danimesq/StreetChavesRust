@@ -77,6 +77,7 @@ fn fighter(character_id: u8, action_id: u16) -> FighterState {
         charge_power: 10.0,
         jump_direction: 3,
         low_time: 8,
+        back_time: 0,
         sequence_state: 4,
         sequence_timer: 0,
         punch_charge: 0,

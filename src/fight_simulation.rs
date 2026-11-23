@@ -7,7 +7,7 @@ use crate::combat_runtime::{
 };
 use crate::effect_runtime::{EffectTickContext, EffectTickResult};
 use crate::fighter_command_data::{embedded_character_command_rules, CharacterCommandRules};
-use crate::input::{Button, InputFrame};
+use crate::input::InputFrame;
 use crate::runtime::SimulationTick;
 use crate::Fpc322Rng;
 
@@ -171,7 +171,10 @@ impl FightSimulation {
         // for each button are all dispatched in file order before the basic action.
         for fighter_index in 0..2 {
             let input = inputs[fighter_index];
-            let Some(rules) = self.command_rules[fighter_index].as_ref() else {
+            let Some(button_rules) = self.command_rules[fighter_index]
+                .as_ref()
+                .map(|rules| rules.buttons.clone())
+            else {
                 continue;
             };
             for button in [
@@ -184,7 +187,7 @@ impl FightSimulation {
                     &self.state.fighters[fighter_index],
                     input,
                     button,
-                    &rules.buttons,
+                    &button_rules,
                     self.config.special.ground_y,
                 );
                 for command_code in commands {

@@ -59,6 +59,7 @@ fn fighter_from_snapshot(value: &Value) -> FighterState {
         charge_power: 0.0,
         jump_direction: 0,
         low_time: 0,
+        back_time: 0,
         sequence_state: 0,
         sequence_timer: 0,
         punch_charge: 0,
