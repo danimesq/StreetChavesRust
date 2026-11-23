@@ -1392,20 +1392,32 @@ mod rot_runtime_integration_tests {
             if command_code == 18 || command_code == 19 {
                 assert_eq!(fighter.vertical_velocity, -10);
                 assert_eq!(fighter.jump_direction, 0);
-                assert_eq!(fighter.force_strength, if command_code == 18 { 1 } else { 2 });
+                assert_eq!(
+                    fighter.force_strength,
+                    if command_code == 18 { 1 } else { 2 }
+                );
             }
             if command_code == 16 || command_code == 17 {
-                assert_eq!(fighter.force_strength, if command_code == 16 { 1 } else { 2 });
+                assert_eq!(
+                    fighter.force_strength,
+                    if command_code == 16 { 1 } else { 2 }
+                );
             }
             if command_code == 20 || command_code == 21 {
-                assert_eq!(fighter.force_strength, if command_code == 20 { 1 } else { 2 });
+                assert_eq!(
+                    fighter.force_strength,
+                    if command_code == 20 { 1 } else { 2 }
+                );
             }
             if command_code == 22 || command_code == 23 || command_code == 24 {
-                assert_eq!(fighter.force_strength, match command_code {
-                    22 => 1,
-                    23 => 2,
-                    _ => 3,
-                });
+                assert_eq!(
+                    fighter.force_strength,
+                    match command_code {
+                        22 => 1,
+                        23 => 2,
+                        _ => 3,
+                    }
+                );
             }
         }
     }
@@ -1449,7 +1461,8 @@ mod rot_runtime_integration_tests {
             if (16..=23).contains(&command_code) {
                 assert_eq!(fighter.charge_power, 5.0);
             }
-            if command_code == 20 || command_code == 21 || command_code == 22 || command_code == 23 {
+            if command_code == 20 || command_code == 21 || command_code == 22 || command_code == 23
+            {
                 assert!(!fighter.in_air);
                 assert_eq!(fighter.vertical_velocity, 0);
             }
@@ -1497,17 +1510,26 @@ mod rot_runtime_integration_tests {
                 assert_eq!(fighter.charge_power, 5.0);
             }
             if command_code == 16 || command_code == 17 {
-                assert_eq!(fighter.force_strength, if command_code == 16 { 1 } else { 2 });
+                assert_eq!(
+                    fighter.force_strength,
+                    if command_code == 16 { 1 } else { 2 }
+                );
             }
             if command_code == 18 || command_code == 19 {
-                assert_eq!(fighter.force_strength, if command_code == 18 { 1 } else { 2 });
+                assert_eq!(
+                    fighter.force_strength,
+                    if command_code == 18 { 1 } else { 2 }
+                );
             }
             if command_code == 20 || command_code == 21 {
                 assert_eq!(fighter.force_strength, if command_code == 20 { 1 } else { 2 });
                 assert!(!fighter.in_air);
             }
             if command_code == 22 || command_code == 23 {
-                assert_eq!(fighter.force_strength, if command_code == 22 { 1 } else { 2 });
+                assert_eq!(
+                    fighter.force_strength,
+                    if command_code == 22 { 1 } else { 2 }
+                );
             }
             if command_code == 24 {
                 assert_eq!(fighter.power, 0);
