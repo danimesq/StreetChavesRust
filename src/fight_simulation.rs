@@ -505,7 +505,16 @@ impl FightSimulation {
             command_code,
         });
 
-        if self.state.fighters[fighter_index].character_id == 7 && matches!(command_code, 14..=24) {
+        if self.state.fighters[fighter_index].character_id == 8 && matches!(command_code, 14..=24) {
+            match self.execute_character_rot_action(fighter_index, 8, command_code) {
+                Ok(()) => report
+                    .rot_action_executions
+                    .push((fighter_index, 8, command_code)),
+                Err(error) => report.errors.push(format!(
+                    "C08 [Acao] fighter {fighter_index}, command {command_code}: {error}"
+                )),
+            }
+        } else if self.state.fighters[fighter_index].character_id == 7 && matches!(command_code, 14..=24) {
             match self.execute_character_rot_action(fighter_index, 7, command_code) {
                 Ok(()) => report
                     .rot_action_executions
@@ -633,6 +642,7 @@ impl FightSimulation {
             5 => ("C05.rot", include_str!("../research/pascal-rot/C05.rot")),
             6 => ("C06.rot", include_str!("../research/pascal-rot/C06.rot")),
             7 => ("C07.rot", include_str!("../research/pascal-rot/C07.rot")),
+            8 => ("C08.rot", include_str!("../research/pascal-rot/C08.rot")),
             9 => ("C09.rot", include_str!("../research/pascal-rot/C09.rot")),
             13 => ("C13.rot", include_str!("../research/pascal-rot/C13.rot")),
             _ => {
@@ -1437,6 +1447,96 @@ mod rot_runtime_integration_tests {
             assert!(rot_report.errors.is_empty());
         }
     }
+    #[test]
+    fn c08_bruja_routes_victory_pose_and_special_entries() {
+        for (command_code, button, action, duration) in [
+            (14, AttackButton::WeakPunch, ACTION_VICTORY, 250),
+            (15, AttackButton::WeakPunch, ACTION_POSE, 20),
+            (16, AttackButton::WeakPunch, ACTION_SPECIAL1, 28),
+            (17, AttackButton::StrongPunch, ACTION_SPECIAL1, 28),
+            (20, AttackButton::WeakKick, ACTION_SPECIAL3, 20),
+            (21, AttackButton::StrongKick, ACTION_SPECIAL3, 20),
+            (22, AttackButton::WeakKick, ACTION_SPECIAL4, 25),
+            (23, AttackButton::StrongKick, ACTION_SPECIAL4, 25),
+        ] {
+            let mut fight = simulation();
+            fight.state.fighters[0].character_id = 8;
+            let mut report = FightTickReport::default();
+
+            fight.dispatch_character_command(0, button, command_code, &mut report);
+
+            let fighter = &fight.state.fighters[0];
+            assert_eq!(fighter.action_id, action, "C08 command {command_code}");
+            assert_eq!(fighter.action_frame, 0);
+            assert_eq!(fighter.action_duration, duration);
+            assert_eq!(report.rot_action_executions, vec![(0, 8, command_code)]);
+            assert!(report.errors.is_empty());
+        }
+
+        for command_code in [18, 19] {
+            let mut fight = simulation();
+            fight.state.fighters[0].character_id = 8;
+            fight.state.fighters[0].action_id = ACTION_JUMPING;
+            let mut report = FightTickReport::default();
+            let button = if command_code == 18 {
+                AttackButton::WeakPunch
+            } else {
+                AttackButton::StrongPunch
+            };
+
+            fight.dispatch_character_command(0, button, command_code, &mut report);
+
+            assert_eq!(fight.state.fighters[0].action_id, ACTION_SPECIAL2);
+            assert_eq!(fight.state.fighters[0].action_duration, 15);
+            assert_eq!(report.rot_action_executions, vec![(0, 8, command_code)]);
+            assert!(report.errors.is_empty());
+        }
+    }
+
+    #[test]
+    fn c08_active_effect_guards_reject_first_and_second_specials() {
+        for (command_code, effect_type, action) in [
+            (16, 18, ACTION_IDLE),
+            (18, 19, ACTION_JUMPING),
+        ] {
+            let mut fight = simulation();
+            fight.state.fighters[0].character_id = 8;
+            fight.state.fighters[0].action_id = action;
+            fight.state.effects
+                .spawn(effect_type, Some('A'), 1, EFFECT_SIDE_RIGHT, 100.0, 100.0, &mut fight.rng)
+                .unwrap();
+            let mut report = FightTickReport::default();
+
+            fight.dispatch_character_command(0, AttackButton::WeakPunch, command_code, &mut report);
+
+            assert_eq!(fight.state.fighters[0].action_id, action);
+            assert_eq!(fight.state.fighters[0].charge_power, 0.0);
+            assert_eq!(fight.state.effects.active_count(), 1);
+            assert!(report.errors.is_empty());
+        }
+    }
+
+    #[test]
+    fn c08_final_special_consumes_power_and_writes_sprite_flash_and_sound() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 8;
+        fight.state.fighters[0].power = 1;
+        let mut report = FightTickReport::default();
+
+        fight.dispatch_character_command(0, AttackButton::StrongKick, 24, &mut report);
+
+        let fighter = &fight.state.fighters[0];
+        assert_eq!(fighter.action_id, ACTION_SPECIAL_FINAL);
+        assert_eq!(fighter.action_frame, 0);
+        assert_eq!(fighter.action_duration, 20);
+        assert_eq!(fighter.power, 0);
+        assert_eq!(fighter.sprite_frame, 33);
+        assert_eq!(fight.state.screen_flash, 22);
+        assert_eq!(fight.state.pending_sound, Some(19));
+        assert_eq!(report.rot_action_executions, vec![(0, 8, 24)]);
+        assert!(report.errors.is_empty());
+    }
+
     #[test]
     fn c07_sr_barriga_routes_victory_pose_and_all_special_entries() {
         for (command_code, button, action, duration) in [
