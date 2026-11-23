@@ -29,6 +29,9 @@ pub mod chaves_specials;
 /// Host-independent logical input sampling with edge and hold-state tracking.
 pub mod input;
 
+/// Platform-neutral fixed-step scheduling at the evidence-based 28 ms interval.
+pub mod fixed_timestep;
+
 /// Stable fighter identifier from the researched roster.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FighterId(pub u8);
