@@ -204,9 +204,8 @@ The update preserves the audited statement order for C01-C15. C02 consumes exact
 one shared `Random(2)` draw per victory update. C12 moves by 12, applies camera-relative
 facing thresholds, conditionally consumes its `Random(2)` draw at action-frame
 multiples of eight, then consumes the ten ordered particle-coordinate draws
-(`Random(40)`, `Random(10)` repeated five times). Particle spawn requests are returned
-as ordered data so the effect renderer can consume them without hiding or reordering
-RNG calls. C08 and C13 now receive explicit ground context; C13 uses ties-to-even
+(`Random(40)`, `Random(10)` repeated five times). The five type-2 instances are allocated in source order after their coordinate draws;
+the arena returns live slot indices while preserving the caller-owned RNG cursor. C08 and C13 now receive explicit ground context; C13 uses ties-to-even
 Pascal rounding for its cosine displacement.
 
 C06, C09 and C14 branch on the previous sprite frame. Tests must seed both 33 and 34
@@ -214,7 +213,7 @@ and assert the opposite frame on each eligible action-frame boundary. This is an
 animation update API, not a full renderer/effect-system integration claim.
 
 
-Validation note: GitHub Actions passed formatting and `cargo test --all-targets` on commit `9f335d9cd23665277081bc17a685b2adac60213d`. The update API preserves the shared RNG cursor; it does not claim renderer integration for C12's returned particle events.
+Validation note: GitHub Actions passed `cargo fmt --all -- --check` and `cargo test --all-targets` on the current implementation commit `fe8017d581ccbad531a88c5bcaa0c59930c85274`. The workflow ran 33 library tests, 2 differential/runtime tests, 29 combat-runtime tests and 6 live-effect tests: 70 passed, 0 failed. See [Actions run](https://github.com/danimesq/StreetChavesRust/actions/runs/45106532537).
 
 
 ## 🌈 Pose animation runtime slice
