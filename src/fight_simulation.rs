@@ -536,9 +536,7 @@ impl FightSimulation {
                     "C09 [Acao] fighter {fighter_index}, command {command_code}: {error}"
                 )),
             }
-        } else if self.state.fighters[fighter_index].character_id == 4
-            && command_code == 24
-        {
+        } else if self.state.fighters[fighter_index].character_id == 4 && command_code == 24 {
             match self.execute_character_rot_action(fighter_index, 4, command_code) {
                 Ok(()) => report
                     .rot_action_executions
@@ -573,15 +571,13 @@ impl FightSimulation {
         command_code: u8,
     ) -> Result<(), String> {
         let (filename, source) = match character_id {
-            4 => (
-                "C04.rot",
-                include_str!("../research/pascal-rot/C04.rot"),
-            ),
-            9 => (
-                "C09.rot",
-                include_str!("../research/pascal-rot/C09.rot"),
-            ),
-            _ => return Err(format!("character C{character_id:02} has no live ROT route")),
+            4 => ("C04.rot", include_str!("../research/pascal-rot/C04.rot")),
+            9 => ("C09.rot", include_str!("../research/pascal-rot/C09.rot")),
+            _ => {
+                return Err(format!(
+                    "character C{character_id:02} has no live ROT route"
+                ))
+            }
         };
         let common = RotDocument::from_str(
             "Comum.rot",
