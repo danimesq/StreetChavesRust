@@ -26,6 +26,9 @@ pub mod effect_runtime;
 /// C01 special [Acao] entry and character-specific [IA] dispatch.
 pub mod chaves_specials;
 
+/// Host-independent logical input sampling with edge and hold-state tracking.
+pub mod input;
+
 /// Stable fighter identifier from the researched roster.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FighterId(pub u8);
