@@ -4,7 +4,7 @@
 
 The Rust crate contains a source-preserving lexer/parser, typed local execution, and a host-aware execution path for live fight state. M1 parses every section in `Comum.rot` and `C01.rot` through `C15.rot`. The scalar executor handles local assignments, blocks, conditionals, loops and `case`; the host executor additionally binds fighter fields, game globals, RNG and engine helpers through an explicit adapter.
 
-The first end-to-end character path is C09 (Paty) command `cmEsp3Fraco` / `cmEsp3Forte`. `FightSimulation` executes the pinned scripts in source order: common `[Acao]`, C09 `[Acao]`, then common `[AcaoFim]`. The invocation uses the live `CombatState`, maps `P` and `O` to the actual fighters, consumes the fight's shared `Fpc322Rng`, and routes `ExisteEfeito`, `CriaEfeito` and `Empurra` to their existing simulation components.
+The first end-to-end character paths are C09 (Paty) commands `cmEsp3Fraco` / `cmEsp3Forte` and C04 (Quico) command `cmEspFinal`. `FightSimulation` executes the pinned scripts in source order: common `[Acao]`, character `[Acao]`, then common `[AcaoFim]`. These invocations use the live `CombatState`, map `P` and `O` to the actual fighters, and share the fight's `Fpc322Rng`. C09 exercises `Random` and `CriaEfeito`; C04's final special writes `O.Invulneravel` on the actual opponent. The host also routes `ExisteEfeito` and `Empurra` to their existing simulation components.
 
 **This is a first bounded character integration, not yet a roster-wide runtime.** Only the explicitly mapped fighter fields, globals, helpers and C09 command paths are executable. Unsupported field/helper access returns a source-located error instead of being fabricated or ignored.
 
@@ -58,7 +58,7 @@ The following limitations remain:
 - Only the globals used by the first action path and currently mapped constants are bound. Other globals fail explicitly.
 - `Random` currently supports the LongInt call path used by C09's action script. Int64 RNG calls are not yet exposed by the fight host.
 - `ExisteEfeito`, `CriaEfeito` and `Empurra` are connected to the live effect arena and combat state. `AcaoJogador` and `AplicarCaixas` are not yet connected.
-- C09 command codes 14, 15, 20 and 21 are routed through ROT. Other characters and C09's remaining command paths retain their existing bounded ports/unhandled reporting.
+- C09 command codes 14, 15, 20 and 21, and C04 command code 24, are routed through ROT. Other characters and remaining command paths retain their existing bounded ports/unhandled reporting.
 - Nested character action calls do not yet recursively invoke the complete Pascal `AcaoJogador` lifecycle.
 
 The host adapter uses the authoritative `CombatState`, effect arena and same `Fpc322Rng` owned by `FightSimulation`; it does not create a parallel script-only fighter state or random generator.
@@ -69,7 +69,7 @@ Rust currently represents real values as `f64`, while the Pascal interpreter use
 
 The test suite parses every section in all 16 pinned ROT files. It also covers literal parsing, source spans/errors, typed local defaults and assignment conversions, arithmetic/operators, sets, Boolean short-circuiting, pure functions, local statement execution, loop/control-flow order, unsupported host-bound operations and the step limit.
 
-Fight integration tests execute C09's real `[Acao]` section through the normal command dispatcher and assert live action state, charge, sound, five effect allocations, ten shared RNG draws and the common prelude/epilogue behavior.
+Fight integration tests execute real C09 and C04 `[Acao]` sections through the character-command dispatcher. They assert live action state, charge, sound, five effect allocations, ten shared RNG draws, an actual `O.Invulneravel` write and the common prelude/epilogue behavior.
 
 Run the checks from the repository root:
 
