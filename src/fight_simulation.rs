@@ -10,11 +10,301 @@ use crate::combat_runtime::{
     ACTION_WEAK_KICK, ACTION_WEAK_PUNCH,
 };
 use crate::command_recognition::{AttackButton, CommandRecognizer};
-use crate::effect_runtime::{EffectTickContext, EffectTickResult};
+use crate::effect_runtime::{EffectTickContext, EffectTickResult, EFFECT_SIDE_RIGHT};
+use crate::pascal_replay::PascalRandomSource;
+use crate::rot_runtime::{RotDocument, RotExecutionFrame, RotExecutionHost, RotValue};
 use crate::fighter_command_data::{embedded_character_command_rules, CharacterCommandRules};
 use crate::input::{Direction, InputFrame};
 use crate::runtime::SimulationTick;
 use crate::Fpc322Rng;
+
+
+/// Bridge from Pascal ROT field/helper names to the authoritative fight state.
+struct RotCombatHost<'a> {
+    state: &'a mut CombatState,
+    rng: &'a mut Fpc322Rng,
+    player_index: usize,
+    charge_gain: f64,
+    charge_max: f64,
+    ground_y: f64,
+}
+
+fn rot_int(value: i64) -> RotValue {
+    RotValue::Integer { value, wide: false }
+}
+
+fn rot_value_int(value: &RotValue) -> Result<i64, String> {
+    match value {
+        RotValue::Integer { value, .. } => Ok(*value),
+        _ => Err("expected an integer argument".to_owned()),
+    }
+}
+
+fn rot_value_real(value: &RotValue) -> Result<f64, String> {
+    match value {
+        RotValue::Real(value) => Ok(*value),
+        RotValue::Integer { value, .. } => Ok(*value as f64),
+        _ => Err("expected a numeric argument".to_owned()),
+    }
+}
+
+fn rot_value_bool(value: &RotValue) -> Result<bool, String> {
+    match value {
+        RotValue::Boolean(value) => Ok(*value),
+        _ => Err("expected a Boolean value".to_owned()),
+    }
+}
+
+impl RotCombatHost<'_> {
+    fn fighter_index(&self, base: char) -> Result<usize, String> {
+        match base.to_ascii_uppercase() {
+            'P' => Ok(self.player_index),
+            'O' => Ok(1 - self.player_index),
+            _ => Err(format!("unknown fighter base {base}")),
+        }
+    }
+
+    fn fighter(&self, base: char) -> Result<&crate::combat_runtime::FighterState, String> {
+        let index = self.fighter_index(base)?;
+        Ok(&self.state.fighters[index])
+    }
+}
+
+impl RotExecutionHost for RotCombatHost<'_> {
+    fn read_fighter_field(&self, base: char, name: &str) -> Result<RotValue, String> {
+        let fighter = self.fighter(base)?;
+        let value = match name.to_ascii_lowercase().as_str() {
+            "personagem" => rot_int(i64::from(fighter.character_id)),
+            "acao" => rot_int(i64::from(fighter.action_id)),
+            "quadro" => rot_int(i64::from(fighter.sprite_frame)),
+            "quadroacao" => rot_int(i64::from(fighter.action_frame)),
+            "duracaoacao" => rot_int(i64::from(fighter.action_duration)),
+            "lado" => rot_int(i64::from(fighter.facing)),
+            "forcagolpe" => rot_int(i64::from(fighter.force_strength)),
+            "defendendo" => RotValue::Boolean(fighter.defending),
+            "invulneravel" => RotValue::Boolean(fighter.invulnerable),
+            "ehchute" => RotValue::Boolean(fighter.is_kick),
+            "noar" => RotValue::Boolean(fighter.in_air),
+            "recuo" => rot_int(i64::from(fighter.recoil)),
+            "vely" => rot_int(i64::from(fighter.vertical_velocity)),
+            "x" => RotValue::Real(fighter.x),
+            "y" => RotValue::Real(fighter.y),
+            "velocidade" => RotValue::Real(fighter.speed),
+            "distanciaia" => rot_int(i64::from(fighter.distance_ai)),
+            "vida" => RotValue::Real(fighter.health),
+            "poder" => rot_int(i64::from(fighter.power)),
+            "cargapoder" => RotValue::Real(fighter.charge_power),
+            "dirpulo" => rot_int(i64::from(fighter.jump_direction)),
+            "tempobaixo" => rot_int(i64::from(fighter.low_time)),
+            "tempotras" => rot_int(i64::from(fighter.back_time)),
+            "seqestado" => rot_int(i64::from(fighter.sequence_state)),
+            "seqtempo" => rot_int(i64::from(fighter.sequence_timer)),
+            "cargasoco" => rot_int(i64::from(fighter.punch_charge)),
+            "cargachute" => rot_int(i64::from(fighter.kick_charge)),
+            "acertos" => rot_int(i64::from(fighter.hit_count)),
+            _ => return Err(format!("{base}.{name} is not mapped to live FighterState")),
+        };
+        Ok(value)
+    }
+
+    fn write_fighter_field(
+        &mut self,
+        base: char,
+        name: &str,
+        value: RotValue,
+    ) -> Result<(), String> {
+        let index = self.fighter_index(base)?;
+        let fighter = &mut self.state.fighters[index];
+        match name.to_ascii_lowercase().as_str() {
+            "personagem" => fighter.character_id = rot_value_int(&value)? as u8,
+            "acao" => fighter.action_id = u16::from(rot_value_int(&value)? as u8),
+            "quadro" => fighter.sprite_frame = i32::from(rot_value_int(&value)? as u8),
+            "quadroacao" => fighter.action_frame = (rot_value_int(&value)? as i16) as u16,
+            "duracaoacao" => fighter.action_duration = (rot_value_int(&value)? as i16) as u16,
+            "lado" => fighter.facing = rot_value_int(&value)? as u8,
+            "forcagolpe" => fighter.force_strength = rot_value_int(&value)? as u8,
+            "defendendo" => fighter.defending = rot_value_bool(&value)?,
+            "invulneravel" => fighter.invulnerable = rot_value_bool(&value)?,
+            "ehchute" => fighter.is_kick = rot_value_bool(&value)?,
+            "noar" => fighter.in_air = rot_value_bool(&value)?,
+            "recuo" => fighter.recoil = rot_value_int(&value)? as u8,
+            "vely" => fighter.vertical_velocity = rot_value_int(&value)? as i8,
+            "x" => fighter.x = rot_value_real(&value)?,
+            "y" => fighter.y = rot_value_real(&value)?,
+            "velocidade" => fighter.speed = rot_value_real(&value)?,
+            "distanciaia" => fighter.distance_ai = rot_value_int(&value)? as i32,
+            "vida" => fighter.health = rot_value_real(&value)?,
+            "poder" => fighter.power = rot_value_int(&value)? as u16,
+            "cargapoder" => fighter.charge_power = rot_value_real(&value)?,
+            "dirpulo" => fighter.jump_direction = rot_value_int(&value)? as u8,
+            "tempobaixo" => fighter.low_time = rot_value_int(&value)? as u8,
+            "tempotras" => fighter.back_time = rot_value_int(&value)? as u8,
+            "seqestado" => fighter.sequence_state = rot_value_int(&value)? as u8,
+            "seqtempo" => fighter.sequence_timer = rot_value_int(&value)? as u8,
+            "cargasoco" => fighter.punch_charge = rot_value_int(&value)? as u8,
+            "cargachute" => fighter.kick_charge = rot_value_int(&value)? as u8,
+            "acertos" => fighter.hit_count = rot_value_int(&value)? as u8,
+            _ => return Err(format!("{base}.{name} is not writable in live FighterState")),
+        }
+        Ok(())
+    }
+
+    fn read_identifier(&self, name: &str) -> Option<RotValue> {
+        // Numeric constants copied from ChavesTipos.pas at the pinned source revision.
+        const CONSTANTS: &[(&str, i64)] = &[
+            ("acParado", 1), ("acAndando", 2), ("acSocoFraco", 3),
+            ("acChuteFraco", 4), ("acSocoForte", 5), ("acChuteForte", 6),
+            ("acAgachado", 7), ("acAgSocoFraco", 8), ("acAgChuteFraco", 9),
+            ("acAgSocoForte", 10), ("acAgChuteForte", 11), ("acPulo", 12),
+            ("acArSocoFraco", 13), ("acArChuteFraco", 14), ("acArSocoForte", 15),
+            ("acArChuteForte", 16), ("acApanhaAlto", 17), ("acApanhaBaixo", 18),
+            ("acDerrubado", 19), ("acQuicando", 20), ("acDefesa", 21),
+            ("acDefesaBaixa", 22), ("acVitoria", 23), ("acPose", 24),
+            ("acEspecial1", 25), ("acEspecial2", 26), ("acEspecial3", 27),
+            ("acEspecial4", 28), ("acEspecial5", 29), ("acEspecial6", 30),
+            ("acEspecial7", 31),
+            ("cmEsquerda", 1), ("cmDireita", 2), ("cmSocoFraco", 3),
+            ("cmChuteFraco", 4), ("cmSocoForte", 5), ("cmChuteForte", 6),
+            ("cmAgachar", 7), ("cmApanharAlto", 8), ("cmApanharBaixo", 9),
+            ("cmDerrubar", 10), ("cmBaterNoChao", 11), ("cmDefender", 12),
+            ("cmDefenderBaixo", 13), ("cmVitoria", 14), ("cmPose", 15),
+            ("cmEsp1Fraco", 16), ("cmEsp1Forte", 17), ("cmEsp2Fraco", 18),
+            ("cmEsp2Forte", 19), ("cmEsp3Fraco", 20), ("cmEsp3Forte", 21),
+            ("cmEsp4Fraco", 22), ("cmEsp4Forte", 23), ("cmEspFinal", 24),
+            ("cmEspExtra1", 25), ("cmEspExtra2", 26),
+            ("pnChaves", 1), ("pnSeuMadruga", 2), ("pnChiquinha", 3),
+            ("pnQuico", 4), ("pnDonaFlorinda", 5), ("pnProfGirafales", 6),
+            ("pnSrBarriga", 7), ("pnBruxa", 8), ("pnPaty", 9), ("pnNhonho", 10),
+            ("pnGodines", 11), ("pnSrFurtado", 12), ("pnJaiminho", 13),
+            ("pnDonaNeves", 14), ("pnGloria", 15),
+            ("ldDireita", 1), ("ldEsquerda", 2),
+            ("fgNenhum", 0), ("fgFraco", 1), ("fgForte", 2), ("fgEspecial", 3),
+            ("puloNenhum", 0), ("puloReto", 1), ("puloEsquerda", 2), ("puloDireita", 3),
+            ("sndTempoEsgotado", 4), ("sndGolpeFraco", 5), ("sndGolpeForte", 6),
+            ("sndAcertoFraco", 7), ("sndAcertoForte", 8), ("sndAcertoEspecial", 9),
+            ("sndDefesa", 10), ("sndItem", 11), ("sndQueda", 12), ("sndPoder", 13),
+            ("sndEspFinal", 19),
+        ];
+        if let Some((_, value)) = CONSTANTS
+            .iter()
+            .find(|(symbol, _)| symbol.eq_ignore_ascii_case(name))
+        {
+            return Some(rot_int(*value));
+        }
+        match name.to_ascii_lowercase().as_str() {
+            "cargamax" => Some(RotValue::Real(self.charge_max)),
+            "ganhocarga" => Some(RotValue::Real(self.charge_gain)),
+            "chaoy" => Some(RotValue::Real(self.ground_y)),
+            "camerax" => Some(RotValue::Real(self.state.camera_x)),
+            "sompendente" => Some(rot_int(i64::from(self.state.pending_sound.unwrap_or(0)))),
+            "flashtela" => Some(rot_int(i64::from(self.state.screen_flash))),
+            "tremortela" => Some(rot_int(i64::from(self.state.screen_shake))),
+            _ => None,
+        }
+    }
+
+    fn write_identifier(&mut self, name: &str, value: RotValue) -> Result<(), String> {
+        match name.to_ascii_lowercase().as_str() {
+            "sompendente" => self.state.pending_sound = Some(rot_value_int(&value)? as u16),
+            "flashtela" => self.state.screen_flash = rot_value_int(&value)? as u8,
+            "tremortela" => self.state.screen_shake = rot_value_int(&value)? as u16,
+            _ => return Err(format!("global identifier {name} is not mapped to live game state")),
+        }
+        Ok(())
+    }
+
+    fn call_function(&mut self, name: &str, arguments: &[RotValue]) -> Result<RotValue, String> {
+        match name.to_ascii_lowercase().as_str() {
+            "random" => {
+                if arguments.len() != 1 {
+                    return Err("Random expects exactly one argument".to_owned());
+                }
+                let range = i32::try_from(rot_value_int(&arguments[0])?)
+                    .map_err(|_| "Random range is outside LongInt".to_owned())?;
+                if range <= 0 {
+                    return Err(format!("Random range must be positive, got {range}"));
+                }
+                let value = match self.rng.draw_longint(range) {
+                    Ok(value) => value,
+                    Err(never) => match never {},
+                };
+                Ok(rot_int(i64::from(value)))
+            }
+            "existeefeito" => {
+                if arguments.len() != 2 {
+                    return Err("ExisteEfeito expects two arguments".to_owned());
+                }
+                let effect_type = rot_value_int(&arguments[0])? as u8;
+                let owner = rot_value_int(&arguments[1])? as u8;
+                Ok(RotValue::Boolean(
+                    self.state.effects.contains_type_for_owner(effect_type, owner),
+                ))
+            }
+            "criaefeito" => {
+                if arguments.len() != 5 {
+                    return Err("CriaEfeito expects five arguments".to_owned());
+                }
+                let effect_type = rot_value_int(&arguments[0])? as u8;
+                let variant = match &arguments[1] {
+                    RotValue::String(value) if value.is_empty() => None,
+                    RotValue::String(value) if value.len() == 1 => value.chars().next(),
+                    _ => return Err("CriaEfeito variant must be empty, A or B".to_owned()),
+                };
+                let owner = rot_value_int(&arguments[2])? as u8;
+                if owner > 2 {
+                    return Err(format!("CriaEfeito owner {owner} is outside 0..=2"));
+                }
+                let owner_facing = if owner == 0 {
+                    EFFECT_SIDE_RIGHT
+                } else {
+                    self.state.fighters[usize::from(owner - 1)].facing
+                };
+                let x = rot_value_real(&arguments[3])?;
+                let y = rot_value_real(&arguments[4])?;
+                let (state, rng) = (&mut self.state, &mut self.rng);
+                state
+                    .effects
+                    .spawn(effect_type, variant, owner, owner_facing, x, y, rng)
+                    .map_err(|error| error.to_string())?;
+                Ok(rot_int(0))
+            }
+            "empurra" => {
+                if arguments.len() != 2 {
+                    return Err("Empurra expects two arguments".to_owned());
+                }
+                let jog = rot_value_int(&arguments[0])?;
+                if !(1..=2).contains(&jog) {
+                    return Err(format!("Empurra Jog must be 1 or 2, got {jog}"));
+                }
+                let dx = rot_value_real(&arguments[1])?;
+                self.state.push_fighter((jog - 1) as usize, dx);
+                Ok(rot_int(0))
+            }
+            _ => Err(format!("ROT helper {name} is not implemented by the fight host")),
+        }
+    }
+}
+
+fn execute_rot_section(
+    document: &RotDocument,
+    section: &str,
+    jog: u8,
+    command_code: u8,
+    host: &mut RotCombatHost<'_>,
+) -> Result<(), String> {
+    let program = document
+        .parse_optional(section)
+        .map_err(|error| error.to_string())?;
+    let Some(program) = program else {
+        return Ok(());
+    };
+    let mut frame = RotExecutionFrame::new(&program, jog, i32::from(command_code))
+        .map_err(|error| error.to_string())?;
+    frame
+        .execute_with_host(&program, host)
+        .map_err(|error| error.to_string())
+}
+
 
 /// Configuration for the already-audited C01 entry and frame executors.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -58,6 +348,8 @@ pub struct FightTickReport {
     pub unhandled_commands: Vec<UnhandledCommand>,
     pub sequence_transitions: Vec<(usize, u8, u8)>,
     pub special_outcomes: Vec<(usize, ChavesSpecialOutcome)>,
+    /// Character action sections executed by the pinned ROT interpreter.
+    pub rot_action_executions: Vec<(usize, u8, u8)>,
     pub c01_frames: Vec<(usize, C01FrameResult)>,
     pub effects: EffectTickResult,
     pub errors: Vec<String>,
@@ -163,6 +455,19 @@ impl FightSimulation {
             self.state.fighters[fighter_index].defending = false;
             self.dispatch_c13_extra(command_code, fighter_index, report);
             let _ = self.state.finish_common_action(fighter_index);
+        } else if self.state.fighters[fighter_index].character_id == 9
+            && matches!(command_code, 14 | 15 | 20 | 21)
+        {
+            match self.execute_c09_rot_action(fighter_index, command_code) {
+                Ok(()) => report.rot_action_executions.push((
+                    fighter_index,
+                    9,
+                    command_code,
+                )),
+                Err(error) => report.errors.push(format!(
+                    "C09 [Acao] fighter {fighter_index}, command {command_code}: {error}"
+                )),
+            }
         } else {
             // Even a rejected/unimplemented character command still executes
             // Common [Acao] and Common [AcaoFim] in Pascal's AcaoJogador path.
@@ -175,6 +480,45 @@ impl FightSimulation {
             });
             let _ = self.state.finish_common_action(fighter_index);
         }
+    }
+
+    /// Execute the pinned C09 [Acao] through shared and character ROT sections.
+    ///
+    /// C09 is the first live character host integration: common prelude, actual
+    /// character script, and shared epilogue all mutate the same fight state.
+    fn execute_c09_rot_action(
+        &mut self,
+        fighter_index: usize,
+        command_code: u8,
+    ) -> Result<(), String> {
+        let common = RotDocument::from_str(
+            "Comum.rot",
+            include_str!("../research/pascal-rot/Comum.rot"),
+        )
+        .map_err(|error| error.to_string())?;
+        let character = RotDocument::from_str(
+            "C09.rot",
+            include_str!("../research/pascal-rot/C09.rot"),
+        )
+        .map_err(|error| error.to_string())?;
+
+        let jog = (fighter_index + 1) as u8;
+        let special = self.config.special;
+        let mut host = RotCombatHost {
+            state: &mut self.state,
+            rng: &mut self.rng,
+            player_index: fighter_index,
+            charge_gain: special.charge_gain,
+            charge_max: special.charge_max,
+            ground_y: special.ground_y,
+        };
+
+        // AcaoJogador's source order is fixed: Common [Acao], C09 [Acao],
+        // then Common [AcaoFim]. Every section gets its own local variable frame.
+        execute_rot_section(&common, "Acao", jog, command_code, &mut host)?;
+        execute_rot_section(&character, "Acao", jog, command_code, &mut host)?;
+        execute_rot_section(&common, "AcaoFim", jog, command_code, &mut host)?;
+        Ok(())
     }
 
     /// Execute the C13 [Acao] branches for cmEspExtra1/2 from C13.rot.
