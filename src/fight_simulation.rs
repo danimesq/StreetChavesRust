@@ -183,7 +183,11 @@ impl FightSimulation {
             25 => {
                 if !matches!(
                     fighter.action_id,
-                    ACTION_IDLE | ACTION_WALKING | ACTION_JUMPING | ACTION_DEFENDING | ACTION_LOW_DEFENDING
+                    ACTION_IDLE
+                        | ACTION_WALKING
+                        | ACTION_JUMPING
+                        | ACTION_DEFENDING
+                        | ACTION_LOW_DEFENDING
                 ) {
                     return;
                 }
@@ -364,7 +368,10 @@ impl FightSimulation {
     fn dispatch_directional_input(&mut self, fighter_index: usize, input: InputFrame) {
         let fighter = &mut self.state.fighters[fighter_index];
         let direction = input.direction;
-        let down = matches!(direction, Direction::Down | Direction::DownLeft | Direction::DownRight);
+        let down = matches!(
+            direction,
+            Direction::Down | Direction::DownLeft | Direction::DownRight
+        );
         let horizontal = match direction {
             Direction::Left | Direction::UpLeft | Direction::DownLeft => Some(-1.0),
             Direction::Right | Direction::UpRight | Direction::DownRight => Some(1.0),
@@ -389,12 +396,13 @@ impl FightSimulation {
             fighter.action_id = ACTION_IDLE;
         }
 
-        if matches!(direction, Direction::Up | Direction::UpLeft | Direction::UpRight)
-            && matches!(
-                fighter.action_id,
-                ACTION_IDLE | ACTION_WALKING | ACTION_DEFENDING | ACTION_LOW_DEFENDING
-            )
-            && fighter.vertical_velocity == 0
+        if matches!(
+            direction,
+            Direction::Up | Direction::UpLeft | Direction::UpRight
+        ) && matches!(
+            fighter.action_id,
+            ACTION_IDLE | ACTION_WALKING | ACTION_DEFENDING | ACTION_LOW_DEFENDING
+        ) && fighter.vertical_velocity == 0
             && !fighter.in_air
         {
             fighter.vertical_velocity = -32;
@@ -454,12 +462,7 @@ impl FightSimulation {
                 (AttackButton::StrongKick, 6),
             ] {
                 if input.was_pressed(button.input_button()) {
-                    self.dispatch_common_basic_action(
-                        fighter_index,
-                        button,
-                        command_code,
-                        report,
-                    );
+                    self.dispatch_common_basic_action(fighter_index, button, command_code, report);
                 }
             }
         }
