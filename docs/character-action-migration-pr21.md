@@ -80,12 +80,12 @@ cargo test --all-targets
 
 Do not mark a command migrated based only on its final action ID. Do not claim roster-wide or universal runtime compatibility until the relevant source branches and evidence exist.
 
-## Current implementation snapshot (PR #21 branch)\n\nThe first migration slice now routes C01 commands 16–24 and C13 commands 25/26 through `execute_character_rot_action`, alongside the existing C04/C09 routes. Focused tests were added for C01 special 3, C01 final special, C13 extra 1 and C13 extra 2. These tests have been authored but must pass CI before this slice is considered validated. The old C01 compatibility API remains in the crate as a differential oracle, but `FightSimulation` no longer dispatches C01 specials through it. The former C13 hand-port is retained as a test-only differential oracle and is no longer used by production dispatch.\n\n## Delivery ledger
+## Current implementation snapshot (PR #21 branch)\n\nThe first migration slice now routes C01 commands 16–24 and C13 commands 25/26 through `execute_character_rot_action`, alongside the existing C04/C09 routes. Focused tests were added for C01 special 3, C01 final special, C13 extra 1 and C13 extra 2, including comparisons against the retained C01/C13 hand-port oracles. The Contract tests workflow passed on the current branch head, including formatting and all test targets. Broader differential capture against the pinned Pascal runtime remains pending. The old C01 compatibility API remains in the crate as a differential oracle, but `FightSimulation` no longer dispatches C01 specials through it. The former C13 hand-port is retained as a test-only differential oracle and is no longer used by production dispatch.\n\n## Delivery ledger
 
 - [x] C01 commands 16–24 are routed through ROT with focused entry-state regression tests; differential parity validation remains pending.
 - [x] C01 special-command hand-port is no longer used by FightSimulation; the compatibility API remains available until differential parity is proven.
 - [x] C13 commands 25/26 are routed through ROT with focused entry-state regression tests; differential parity validation remains pending.
 - [x] C13 extra-command hand-port is no longer used by production dispatch; it remains available as a differential test oracle until parity evidence is sufficient for deletion.
-- [ ] At least one additional source-audited character command is migrated.\n- [ ] Run CI and confirm the new C01/C13 ROT-vs-hand-port differential tests pass.
+- [ ] At least one additional source-audited character command is migrated.\n- [x] Run CI and confirm the new C01/C13 ROT-vs-hand-port differential tests pass. (The selected C01/C13 cases pass; broader Pascal capture remains pending.)
 - [ ] Runtime contract and documentation reflect the exact implemented boundary.
 - [ ] Formatting and all test targets pass.
