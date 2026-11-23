@@ -180,8 +180,8 @@ fn input_is_delivered_to_fight_tick_without_inventing_button_commands() {
 
     assert!(fight.last_report().input.is_held(Button(3)));
     assert!(fight.last_report().input.was_pressed(Button(3)));
-    assert_eq!(fight.state.fighters[0].action_id, ACTION_IDLE);
-    assert_eq!(fight.state.fighters[0].action_frame, 0);
+    assert_eq!(fight.state.fighters[0].action_id, street_chaves::combat_runtime::ACTION_STRONG_KICK);
+    assert_eq!(fight.state.fighters[0].action_duration, 11);
 }
 
 #[test]
@@ -228,11 +228,11 @@ fn real_c01_sequence_and_button_rules_reach_the_c01_dispatcher() {
         },
         InputFrame::default(),
     ]);
-    assert_eq!(fight.last_report().command_matches.len(), 1);
+    assert_eq!(fight.last_report().command_matches.len(), 2);
     assert_eq!(fight.last_report().command_matches[0].command_code, 16);
     assert_eq!(fight.last_report().special_outcomes.len(), 1);
     assert_eq!(fight.state.fighters[0].action_id, ACTION_SPECIAL1);
-    assert!(fight.last_report().unhandled_commands.iter().any(|item| {
+    assert!(!fight.last_report().unhandled_commands.iter().any(|item| {
         item.command_code == 3
             && item.source
                 == street_chaves::fight_simulation::UnhandledCommandSource::BasicButtonAction
@@ -252,7 +252,9 @@ fn real_character_data_exposes_unimplemented_commands_without_faking_execution()
         .command_matches
         .iter()
         .any(|item| item.command_code == 25));
-    assert!(fight
+    assert_eq!(fight.state.fighters[0].action_id, ACTION_SPECIAL4);
+    assert_eq!(fight.state.fighters[0].force_strength, 4);
+    assert!(!fight
         .last_report()
         .unhandled_commands
         .iter()
