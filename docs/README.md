@@ -7,11 +7,16 @@ This directory records the research and engineering decisions for an independent
 - [Project roadmap](project-roadmap.md): the whole project, from research and architecture through implementation, validation, packaging, and release.
 - [Documentation and research roadmap](documentation-roadmap.md): the research and specifications needed to support those project phases.
 
+## Architecture
+
+- [Rust architecture proposal](rust-architecture.md): a proposed separation of deterministic game logic from SDL3 presentation and platform services.
+- [Rendering backends and WebAssembly/Canvas architecture](rendering-backends-wasm-canvas.md): one shared Rust engine with replaceable native SDL3 and browser Canvas 2D adapters, build boundaries, timing, resources, tests and staged implementation.
+- [Construct 2/3 integration: embedded WASM + Canvas](construct-wasm-canvas-integration.md): embedding the Rust engine's own Canvas into exported Construct projects, overlay/underlay composition, generic plugin boundaries, host commands/events, and external sprite registration.
+  
 ## Research documents
 
 - [Original executable reverse engineering](original-executable-reverse-engineering.md): preliminary PE/toolchain findings and the investigation plan for embedded resources, external assets, gameplay cross-references, and final compatibility fixtures.
 - [Delphi source reconstruction and reproducible binary](delphi-source-and-reproducible-binary.md): two separate long-term research tracks, from source-level recovery to a strict byte-identical rebuild criterion.
-
 - [Comparative analysis of the SDL implementations](comparative-analysis.md): the Pascal/SDL2 and C17/SDL3 projects, their architectures, strengths, differences, and limitations.
 - [Fight-loop deep dive](fight-loop-deep-dive.md): source-level comparison of the fight tick, fighter frame selection, hit resolution, effects, and physics.
 - [Source and data inventory](source-inventory.md): pinned reference revisions, repository structure, runtime entry points, data roots, generated tables, and subsystem ownership.
@@ -26,11 +31,9 @@ This directory records the research and engineering decisions for an independent
 - [Pascal RNG inventory](pascal-rng-inventory.md): 255 unique .rot RNG sites, 465 composed occurrences, and 71 .pas/.inc references.
 - [ROT normalizer](rot-normalizer.md): parser for all 15 fighter scripts, nested guards/loops and symbolic RNG sites.
 - [C RNG call-site inventory](rng-callsite-inventory.md): comparative C shared RNG call sites and fight-tick phase order.
-- [Original executable reverse engineering](original-executable-reverse-engineering.md): PE/toolchain, resources, assets, gameplay cross-references, and final compatibility-fixture plan.
 - [Chapolin bonus plan](chapolin-bonus-2026.md): keep Chapolin recoverable as an optional 2026 bonus, separate from the base roster.
 - [Data formats and resource pipelines](data-formats.md): INI/ROT data, fighter/stage/effect resources, generated C tables, asset loading and unresolved parser semantics.
 - [Provenance and licensing review](provenance-and-licenses.md): declared project licenses, third-party material classes, asset rights risks, and current reuse decisions.
-- [Rust architecture proposal](rust-architecture.md): a proposed separation of deterministic game logic from SDL3 presentation and platform services.
 - [Evidence register and open questions](evidence-and-open-questions.md): facts, provenance, confidence levels, unresolved questions, and validation priorities.
 
 ## Tooling
