@@ -6,14 +6,14 @@
 
 - Target: [PR #20 — runtime: common actions, C13 extras and ROT local executor](https://github.com/danimesq/StreetChavesRust/pull/20)
 - Research date: 2026-11-23
-- Status: M0 baseline, M1 parser, M2 scalar/local execution, and the first live host bridge are delivered in this branch. A bounded C09 path executes the actual `Comum.rot [Acao]` → `C09.rot [Acao]` → `Comum.rot [AcaoFim]` lifecycle against live fighter state, globals, the shared fight RNG, and the existing effect/push helpers. This does not claim roster-wide field/helper coverage or recursive `AcaoJogador` calls.
+- Status: M0 baseline, M1 parser, M2 scalar/local execution, and the first live host bridge are delivered in this branch. Bounded C09 and C04 paths execute the actual `Comum.rot [Acao]` → character `[Acao]` → `Comum.rot [AcaoFim]` lifecycle against live fighter state, globals and shared fight RNG. C09 proves `Random` and effect allocation; C04 proves a write to the real opponent's `O.Invulneravel`. This does not claim roster-wide field/helper coverage or recursive `AcaoJogador` calls.
 - Normative Pascal source: [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves), commit `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`.
 - Scope: `Comum.rot [Acao]`, character `C01.rot` through `C15.rot [Acao]`, and `Comum.rot [AcaoFim]`; execute real character action scripts, including C02-C15 specials, through the Rust simulation.
 - Out of scope for this delivery: implementing all `[Quadro]`, `[IA]`, or `[Acerto]` sections as part of the action-entry milestone; C16 Chapolin; claiming equivalence with the original Delphi 5 executable.
 
 ## 1. Why this plan exists
 
-The current Rust branch has a real fight orchestrator, per-character INI command tables, common basic-action handling, a hand-ported C01 special dispatcher, and hand-ported C13 extra commands 25/26. It does **not** yet execute arbitrary character `[Acao]` sections.
+The current Rust branch has a real fight orchestrator, per-character INI command tables, common basic-action handling, the existing C01/C13 compatibility slices, and bounded ROT execution for C04/C09 command paths. It does **not** yet execute arbitrary character `[Acao]` sections.
 
 The missing layer is not a generic "special move" switch. The source scripts contain per-character eligibility guards, independent sequential `if` statements, typed assignments, loops, nested engine calls, effects, sounds, movement, power consumption, and RNG. The correct next unit is a reusable Rust interpreter for the actual ROT dialect plus a simulation adapter for the fields and engine helpers that the scripts can access.
 
