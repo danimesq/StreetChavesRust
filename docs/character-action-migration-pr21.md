@@ -92,5 +92,6 @@ The first migration slice routes C01 commands 16–24 and C13 commands 25/26 thr
 - [x] C13 extra-command hand-port is no longer used by production dispatch; it remains available as a differential test oracle until parity evidence is sufficient for deletion.
 - [x] C02 commands 16/17 execute through the real ROT [Acao] branch, with weak/strong and rejected-guard tests.
 - [x] Run CI and confirm the new C01/C13 ROT-vs-hand-port differential tests pass. (The selected C01/C13 cases pass; broader Pascal capture remains pending.)
+- [x] C02 special-one weak/strong entry and rejected-guard tests pass in CI.
 - [ ] Runtime contract and documentation reflect the exact implemented boundary.
 - [ ] Formatting and all test targets pass.
