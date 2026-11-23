@@ -205,7 +205,7 @@ fn types13_15_18_and19_use_source_hitboxes_rng_and_sprite_sequences() {
         assert!(effect.can_hit);
         assert!(effect.variant_flag);
         assert_eq!(effect.facing, EFFECT_SIDE_LEFT);
-        assert_eq!(effect.horizontal_velocity, 8);
+        assert_eq!(effect.horizontal_velocity, velocity);
         assert_eq!(effect.damage, 12);
         assert_eq!(effect.guard_damage, 3);
         assert_eq!(effect.bounds, expected_bounds);
