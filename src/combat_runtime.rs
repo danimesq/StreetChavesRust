@@ -1363,7 +1363,7 @@ impl CombatState {
     }
 
     /// Pascal ChavesGolpes.Empurra, including body separation and screen clamps.
-    fn push_fighter(&mut self, fighter_index: usize, dx: f64) {
+    pub(crate) fn push_fighter(&mut self, fighter_index: usize, dx: f64) {
         let (fighters_left, fighters_right) = self.fighters.split_at_mut(1);
         let (fighter, opponent) = if fighter_index == 0 {
             (&mut fighters_left[0], &mut fighters_right[0])
