@@ -208,7 +208,11 @@ impl RotExecutionHost for RotCombatHost<'_> {
             "sompendente" => self.state.pending_sound = Some(rot_value_int(&value)? as u16),
             "flashtela" => self.state.screen_flash = rot_value_int(&value)? as u8,
             "tremortela" => self.state.screen_shake = rot_value_int(&value)? as u16,
-            _ => return Err(format!("global identifier {name} is not mapped to live game state")),
+            _ => {
+                return Err(format!(
+                    "global identifier {name} is not mapped to live game state"
+                ))
+            }
         }
         Ok(())
     }
@@ -237,7 +241,9 @@ impl RotExecutionHost for RotCombatHost<'_> {
                 let effect_type = rot_value_int(&arguments[0])? as u8;
                 let owner = rot_value_int(&arguments[1])? as u8;
                 Ok(RotValue::Boolean(
-                    self.state.effects.contains_type_for_owner(effect_type, owner),
+                    self.state
+                        .effects
+                        .contains_type_for_owner(effect_type, owner),
                 ))
             }
             "criaefeito" => {
@@ -280,7 +286,9 @@ impl RotExecutionHost for RotCombatHost<'_> {
                 self.state.push_fighter((jog - 1) as usize, dx);
                 Ok(rot_int(0))
             }
-            _ => Err(format!("ROT helper {name} is not implemented by the fight host")),
+            _ => Err(format!(
+                "ROT helper {name} is not implemented by the fight host"
+            )),
         }
     }
 }
@@ -304,7 +312,6 @@ fn execute_rot_section(
         .execute_with_host(&program, host)
         .map_err(|error| error.to_string())
 }
-
 
 /// Configuration for the already-audited C01 entry and frame executors.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -459,11 +466,9 @@ impl FightSimulation {
             && matches!(command_code, 14 | 15 | 20 | 21)
         {
             match self.execute_c09_rot_action(fighter_index, command_code) {
-                Ok(()) => report.rot_action_executions.push((
-                    fighter_index,
-                    9,
-                    command_code,
-                )),
+                Ok(()) => report
+                    .rot_action_executions
+                    .push((fighter_index, 9, command_code)),
                 Err(error) => report.errors.push(format!(
                     "C09 [Acao] fighter {fighter_index}, command {command_code}: {error}"
                 )),
@@ -496,11 +501,9 @@ impl FightSimulation {
             include_str!("../research/pascal-rot/Comum.rot"),
         )
         .map_err(|error| error.to_string())?;
-        let character = RotDocument::from_str(
-            "C09.rot",
-            include_str!("../research/pascal-rot/C09.rot"),
-        )
-        .map_err(|error| error.to_string())?;
+        let character =
+            RotDocument::from_str("C09.rot", include_str!("../research/pascal-rot/C09.rot"))
+                .map_err(|error| error.to_string())?;
 
         let jog = (fighter_index + 1) as u8;
         let special = self.config.special;
@@ -965,7 +968,6 @@ impl SimulationTick for FightSimulation {
     }
 }
 
-
 #[cfg(test)]
 mod rot_runtime_integration_tests {
     use super::*;
@@ -1016,10 +1018,7 @@ mod rot_runtime_integration_tests {
             game_state: 7,
             camera_x: 0.0,
             clock_stopped: false,
-            fighters: [
-                fighter(9, ACTION_IDLE),
-                fighter(2, ACTION_IDLE),
-            ],
+            fighters: [fighter(9, ACTION_IDLE), fighter(2, ACTION_IDLE)],
             effects: Default::default(),
             pending_sound: None,
             screen_flash: 0,
