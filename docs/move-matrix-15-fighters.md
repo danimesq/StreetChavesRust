@@ -157,9 +157,6 @@ Pascal `[Acerto]`: when Chaves's Special 2 strong hits, sets opponent recoil to 
 
 ### Validation backlog for Chaves
 
-- [x] Implement the source-derived Rust C01 special-entry contract (command gates, durations, force, meter/power, jump-state reset, final sprite/flash/sound); see [C01 special-entry contract](chaves-special-entry-contract.md).
-- [ ] Connect the Special 1 effect-7 guard to the real effect-slot query and implement the per-frame `[Quadro]` operations against the real effect/audio/rendering systems.
-- [ ] Capture focused Pascal C01 entry checkpoints; the current source-derived Rust tests are not Pascal golden fixtures.
 - [ ] Inspect corresponding C fighter/move tables and hand-coded logic; record exact commit and file/symbol refs.
 - [ ] Map Pascal action IDs to normal attacks and named moves.
 - [ ] Verify command progress, reset timer, and ordered button matching with focused tests.

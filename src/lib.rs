@@ -20,8 +20,8 @@ pub mod pascal_differential;
 /// Bounded Pascal-derived AI runtime: target selection, movement, close-range attacks and child RNG.
 pub mod combat_runtime;
 
-/// C01 (Chaves) special-command entry contracts derived from Pascal [Acao].
-pub mod chaves_specials;
+/// Fixed-capacity live effect instances and source-ordered update snapshots.
+pub mod effect_runtime;
 
 /// Stable fighter identifier from the researched roster.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
