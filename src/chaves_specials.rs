@@ -59,13 +59,6 @@ impl ChavesSpecialCommand {
     const fn is_weak(self) -> bool {
         matches!(self, Self::Esp1Weak | Self::Esp2Weak | Self::Esp3Weak | Self::Esp4Weak)
     }
-
-    const fn is_strong(self) -> bool {
-        matches!(
-            self,
-            Self::Esp1Strong | Self::Esp2Strong | Self::Esp3Strong | Self::Esp4Strong
-        )
-    }
 }
 
 /// Values read by the Pascal script from game globals or the existing effect table.
