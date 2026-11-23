@@ -218,7 +218,7 @@ impl FightSimulation {
             let Some(rules) = self.command_rules[fighter_index].as_ref() else {
                 continue;
             };
-            let recognizer = self.command_recognizers[fighter_index];
+            let recognizer = &mut self.command_recognizers[fighter_index];
             recognizer.update_counters(&mut self.state.fighters[fighter_index], input);
             let transitions = recognizer.apply_sequences(
                 &mut self.state.fighters[fighter_index],
