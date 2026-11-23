@@ -59,7 +59,11 @@ fn fighter_from_snapshot(value: &Value) -> FighterState {
         charge_power: 0.0,
         jump_direction: 0,
         low_time: 0,
+        back_time: 0,
         sequence_state: 0,
+        sequence_timer: 0,
+        punch_charge: 0,
+        kick_charge: 0,
         body: BodyBox {
             x1: body[0].as_f64().expect("body_box x1"),
             y1: body[1].as_f64().expect("body_box y1"),

@@ -9,7 +9,7 @@ use street_chaves::combat_runtime::{
 };
 use street_chaves::effect_runtime::EFFECT_SIDE_RIGHT;
 use street_chaves::fight_simulation::{FightSimulation, FightSimulationConfig};
-use street_chaves::input::{Button, InputEvent, InputFrame};
+use street_chaves::input::{Button, Direction, InputEvent, InputFrame};
 use street_chaves::pascal_replay::PascalRandomSource;
 use street_chaves::runtime::{FixedStepRunner, SimulationTick};
 
@@ -38,7 +38,11 @@ fn fighter(character_id: u8, action_id: u16, action_frame: u16) -> FighterState 
         charge_power: 0.0,
         jump_direction: 0,
         low_time: 0,
+        back_time: 0,
         sequence_state: 0,
+        sequence_timer: 0,
+        punch_charge: 0,
+        kick_charge: 0,
         body: BodyBox {
             x1: -18.0,
             y1: 30.0,
@@ -49,13 +53,21 @@ fn fighter(character_id: u8, action_id: u16, action_frame: u16) -> FighterState 
 }
 
 fn simulation(first_action: u16, first_frame: u16) -> FightSimulation {
+    simulation_for_character(1, first_action, first_frame)
+}
+
+fn simulation_for_character(
+    first_character_id: u8,
+    first_action: u16,
+    first_frame: u16,
+) -> FightSimulation {
     let state = CombatState {
         tick_index: 0,
         game_state: 7,
         camera_x: 0.0,
         clock_stopped: false,
         fighters: [
-            fighter(1, first_action, first_frame),
+            fighter(first_character_id, first_action, first_frame),
             fighter(2, ACTION_IDLE, 0),
         ],
         effects: Default::default(),
@@ -186,4 +198,81 @@ fn stopped_fight_retains_queued_command_and_freezes_fighter_frame() {
     fight.state.clock_stopped = false;
     fight.tick(InputFrame::default());
     assert_eq!(fight.state.fighters[0].action_id, ACTION_SPECIAL1);
+}
+
+#[test]
+fn real_c01_sequence_and_button_rules_reach_the_c01_dispatcher() {
+    let mut fight = simulation(ACTION_IDLE, 0);
+    fight.tick_with_inputs([
+        InputFrame {
+            direction: Direction::Down,
+            ..Default::default()
+        },
+        InputFrame::default(),
+    ]);
+    assert_eq!(fight.state.fighters[0].sequence_state, 1);
+
+    fight.tick_with_inputs([
+        InputFrame {
+            direction: Direction::Right,
+            ..Default::default()
+        },
+        InputFrame::default(),
+    ]);
+    assert_eq!(fight.state.fighters[0].sequence_state, 2);
+
+    fight.tick_with_inputs([
+        InputFrame {
+            pressed_buttons: 1,
+            ..Default::default()
+        },
+        InputFrame::default(),
+    ]);
+    assert_eq!(fight.last_report().command_matches.len(), 1);
+    assert_eq!(fight.last_report().command_matches[0].command_code, 16);
+    assert_eq!(fight.last_report().special_outcomes.len(), 1);
+    assert_eq!(fight.state.fighters[0].action_id, ACTION_SPECIAL1);
+    assert!(fight.last_report().unhandled_commands.iter().any(|item| {
+        item.command_code == 3
+            && item.source
+                == street_chaves::fight_simulation::UnhandledCommandSource::BasicButtonAction
+    }));
+}
+
+#[test]
+fn real_character_data_exposes_unimplemented_commands_without_faking_execution() {
+    let mut fight = simulation_for_character(13, ACTION_IDLE, 0);
+    fight.state.fighters[0].sequence_state = 6;
+    fight.tick(InputFrame {
+        pressed_buttons: 8,
+        ..Default::default()
+    });
+    assert!(fight
+        .last_report()
+        .command_matches
+        .iter()
+        .any(|item| item.command_code == 25));
+    assert!(fight
+        .last_report()
+        .unhandled_commands
+        .iter()
+        .any(|item| item.command_code == 25));
+    assert!(fight.last_report().errors.is_empty());
+}
+
+#[test]
+fn sequence_timeout_is_paused_during_hitstop_and_resets_after_nine_ticks() {
+    let mut fight = simulation(ACTION_IDLE, 0);
+    fight.state.fighters[0].sequence_state = 6;
+    fight.state.fighters[0].sequence_timer = 1;
+    fight.state.clock_stopped = true;
+    fight.tick(InputFrame::default());
+    assert_eq!(fight.state.fighters[0].sequence_state, 6);
+    assert_eq!(fight.state.fighters[0].sequence_timer, 1);
+
+    fight.state.clock_stopped = false;
+    fight.state.screen_flash = 0;
+    fight.tick(InputFrame::default());
+    assert_eq!(fight.state.fighters[0].sequence_state, 0);
+    assert_eq!(fight.state.fighters[0].sequence_timer, 0);
 }

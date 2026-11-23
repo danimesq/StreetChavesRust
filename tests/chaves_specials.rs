@@ -8,8 +8,8 @@ use street_chaves::chaves_specials::{
 use street_chaves::combat_runtime::{
     AiCommand, AiTickInputs, BodyBox, CombatState, FighterState, RuntimeDrawWidth,
     ACTION_CROUCHING, ACTION_DEFENDING, ACTION_IDLE, ACTION_JUMPING, ACTION_LOW_DEFENDING,
-    ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL,
-    ACTION_STRONG_PUNCH, ACTION_WALKING, FORCE_SPECIAL, FORCE_STRONG, FORCE_WEAK, SIDE_RIGHT,
+    ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL_FINAL, ACTION_STRONG_PUNCH,
+    ACTION_WALKING, FORCE_SPECIAL, FORCE_STRONG, FORCE_WEAK, SIDE_RIGHT,
 };
 use street_chaves::effect_runtime::EFFECT_SIDE_RIGHT;
 use street_chaves::pascal_replay::PascalRandomSource;
@@ -77,7 +77,11 @@ fn fighter(character_id: u8, action_id: u16) -> FighterState {
         charge_power: 10.0,
         jump_direction: 3,
         low_time: 8,
+        back_time: 0,
         sequence_state: 4,
+        sequence_timer: 0,
+        punch_charge: 0,
+        kick_charge: 0,
         body: BodyBox {
             x1: -18.0,
             y1: 30.0,

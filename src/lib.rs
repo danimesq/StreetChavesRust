@@ -28,6 +28,9 @@ pub mod chaves_specials;
 /// Pascal-style direction/button command recognition primitives.
 pub mod command_recognition;
 
+/// Pinned per-character [Botoes]/[Sequencias] data and INI rule loader.
+pub mod fighter_command_data;
+
 /// Host-independent logical input sampling with edge and hold-state tracking.
 pub mod input;
 
