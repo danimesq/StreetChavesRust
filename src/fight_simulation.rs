@@ -608,6 +608,71 @@ impl FightSimulation {
         Ok(())
     }
 
+    /// Retained C13 hand-port used only as a differential test oracle.
+    ///
+    /// Production dispatch uses C13.rot through the shared ROT host. Keep this
+    /// implementation until Pascal/ROT differential coverage proves the migration.
+    fn dispatch_c13_extra_compatibility_oracle(
+        &mut self,
+        command_code: u8,
+        fighter_index: usize,
+        report: &mut FightTickReport,
+    ) {
+        let fighter = &mut self.state.fighters[fighter_index];
+        let sprite_offset = (fighter_index as i32) * 50;
+        match command_code {
+            25 => {
+                if !matches!(
+                    fighter.action_id,
+                    ACTION_IDLE
+                        | ACTION_WALKING
+                        | ACTION_JUMPING
+                        | ACTION_DEFENDING
+                        | ACTION_LOW_DEFENDING
+                ) {
+                    return;
+                }
+                fighter.action_id = ACTION_SPECIAL4;
+                fighter.action_frame = 0;
+                fighter.action_duration = 30;
+                if fighter.charge_power < self.config.special.charge_max {
+                    fighter.charge_power += 5.0 * self.config.special.charge_gain;
+                }
+                fighter.force_strength = 4;
+            }
+            26 => {
+                if !matches!(
+                    fighter.action_id,
+                    ACTION_IDLE
+                        | ACTION_WALKING
+                        | ACTION_CROUCHING
+                        | ACTION_JUMPING
+                        | ACTION_DEFENDING
+                        | ACTION_LOW_DEFENDING
+                        | ACTION_SPECIAL3
+                ) || !(fighter.health <= 15.0 || fighter.power > 0)
+                {
+                    return;
+                }
+                fighter.action_id = ACTION_SPECIAL_FINAL;
+                fighter.action_frame = 0;
+                fighter.action_duration = 30;
+                fighter.in_air = false;
+                fighter.jump_direction = 0;
+                fighter.vertical_velocity = 0;
+                if fighter.power == 3 {
+                    fighter.charge_power = 0.0;
+                }
+                fighter.power = fighter.power.wrapping_sub(1);
+                fighter.sprite_frame = sprite_offset + 37;
+                self.state.screen_flash = 22;
+                self.state.pending_sound = Some(crate::chaves_specials::SOUND_FINAL_SPECIAL);
+            }
+            _ => return,
+        }
+        let _ = report;
+    }
+
     /// Shared Pascal [Acao] for commands 3..6, followed by [AcaoFim].
     fn dispatch_common_basic_action(
         &mut self,
@@ -1223,6 +1288,94 @@ mod rot_runtime_integration_tests {
         assert_eq!(fight.state.pending_sound, Some(19));
         assert_eq!(report.rot_action_executions, vec![(0, 13, 26)]);
         assert!(report.errors.is_empty());
+    }
+
+    #[test]
+    fn c01_rot_entry_matches_the_retained_c01_hand_port_for_special_three() {
+        let mut rot = simulation();
+        let mut hand_port = simulation();
+        rot.state.fighters[0].character_id = 1;
+        hand_port.state.fighters[0].character_id = 1;
+        let mut rot_report = FightTickReport::default();
+
+        rot.dispatch_character_command(0, AttackButton::WeakPunch, 20, &mut rot_report);
+        hand_port
+            .state
+            .dispatch_chaves_special_code(0, 20, hand_port.config.special)
+            .unwrap();
+
+        assert_eq!(rot.state.fighters[0], hand_port.state.fighters[0]);
+        assert_eq!(rot.state.pending_sound, hand_port.state.pending_sound);
+        assert_eq!(rot.state.screen_flash, hand_port.state.screen_flash);
+        assert_eq!(rot.state.effects.active_count(), hand_port.state.effects.active_count());
+        assert!(rot_report.errors.is_empty());
+    }
+
+    #[test]
+    fn c01_rot_entry_matches_the_retained_c01_hand_port_for_final_special() {
+        let mut rot = simulation();
+        let mut hand_port = simulation();
+        rot.state.fighters[0].character_id = 1;
+        hand_port.state.fighters[0].character_id = 1;
+        rot.state.fighters[0].power = 1;
+        hand_port.state.fighters[0].power = 1;
+        let mut rot_report = FightTickReport::default();
+
+        rot.dispatch_character_command(0, AttackButton::StrongKick, 24, &mut rot_report);
+        hand_port
+            .state
+            .dispatch_chaves_special_code(0, 24, hand_port.config.special)
+            .unwrap();
+
+        assert_eq!(rot.state.fighters[0], hand_port.state.fighters[0]);
+        assert_eq!(rot.state.pending_sound, hand_port.state.pending_sound);
+        assert_eq!(rot.state.screen_flash, hand_port.state.screen_flash);
+        assert!(rot_report.errors.is_empty());
+    }
+
+    #[test]
+    fn c13_rot_extras_match_the_retained_hand_port_oracle() {
+        for command_code in [25, 26] {
+            let mut rot = simulation();
+            let mut compatibility = simulation();
+            rot.state.fighters[0].character_id = 13;
+            compatibility.state.fighters[0].character_id = 13;
+            if command_code == 26 {
+                rot.state.fighters[0].power = 1;
+                compatibility.state.fighters[0].power = 1;
+                rot.state.fighters[0].in_air = true;
+                compatibility.state.fighters[0].in_air = true;
+                rot.state.fighters[0].vertical_velocity = -5;
+                compatibility.state.fighters[0].vertical_velocity = -5;
+                rot.state.fighters[0].jump_direction = 2;
+                compatibility.state.fighters[0].jump_direction = 2;
+            }
+            let mut rot_report = FightTickReport::default();
+            let mut compatibility_report = FightTickReport::default();
+
+            rot.dispatch_character_command(
+                0,
+                AttackButton::WeakPunch,
+                command_code,
+                &mut rot_report,
+            );
+            compatibility.state.fighters[0].defending = false;
+            compatibility.dispatch_c13_extra_compatibility_oracle(
+                command_code,
+                0,
+                &mut compatibility_report,
+            );
+            let _ = compatibility.state.finish_common_action(0);
+
+            assert_eq!(
+                rot.state.fighters[0],
+                compatibility.state.fighters[0],
+                "C13 command {command_code}"
+            );
+            assert_eq!(rot.state.screen_flash, compatibility.state.screen_flash);
+            assert_eq!(rot.state.pending_sound, compatibility.state.pending_sound);
+            assert!(rot_report.errors.is_empty());
+        }
     }
 
 }
