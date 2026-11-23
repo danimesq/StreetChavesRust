@@ -168,7 +168,6 @@ fn special_one_queries_the_live_effect_arena_by_type_and_owner() {
     assert_eq!(result.events, vec![Event::CommonDefendingCleared]);
 }
 
-
 #[test]
 fn rejected_special_runs_common_action_end_when_fighter_keeps_walking() {
     let mut state = state_with_action(ACTION_WALKING);
@@ -178,7 +177,15 @@ fn rejected_special_runs_common_action_end_when_fighter_keeps_walking() {
     let mut effect_rng = ScriptedRng::with_values(&[0]);
     state
         .effects
-        .spawn(7, Some('A'), 2, EFFECT_SIDE_RIGHT, 145.0, 240.0, &mut effect_rng)
+        .spawn(
+            7,
+            Some('A'),
+            2,
+            EFFECT_SIDE_RIGHT,
+            145.0,
+            240.0,
+            &mut effect_rng,
+        )
         .unwrap();
 
     let result = state
