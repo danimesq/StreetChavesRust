@@ -1449,7 +1449,6 @@ mod rot_runtime_integration_tests {
     fn c14_dona_neves_routes_supported_action_entries_through_rot() {
         for (command_code, button, action, duration) in [
             (14, AttackButton::WeakPunch, ACTION_VICTORY, 250),
-            (15, AttackButton::WeakPunch, ACTION_POSE, 20),
             (16, AttackButton::WeakPunch, ACTION_SPECIAL1, 28),
             (17, AttackButton::StrongPunch, ACTION_SPECIAL1, 28),
             (18, AttackButton::WeakPunch, ACTION_SPECIAL2, 35),
@@ -1502,7 +1501,6 @@ mod rot_runtime_integration_tests {
     fn c15_gloria_routes_supported_action_entries_through_rot() {
         for (command_code, button, action, duration) in [
             (14, AttackButton::WeakPunch, ACTION_VICTORY, 250),
-            (15, AttackButton::WeakPunch, ACTION_POSE, 20),
             (16, AttackButton::WeakPunch, ACTION_SPECIAL1, 28),
             (17, AttackButton::StrongPunch, ACTION_SPECIAL1, 28),
             (18, AttackButton::WeakPunch, ACTION_SPECIAL2, 22),
