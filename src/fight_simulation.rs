@@ -1412,6 +1412,27 @@ mod rot_runtime_integration_tests {
         }
     }
     #[test]
+    fn c05_victory_and_pose_entries_execute_the_real_rot_action_section() {
+        for (command_code, button, expected_action, duration) in [
+            (14, AttackButton::WeakPunch, ACTION_VICTORY, 250),
+            (15, AttackButton::WeakPunch, ACTION_POSE, 20),
+        ] {
+            let mut fight = simulation();
+            fight.state.fighters[0].character_id = 5;
+            let mut report = FightTickReport::default();
+
+            fight.dispatch_character_command(0, button, command_code, &mut report);
+
+            let fighter = &fight.state.fighters[0];
+            assert_eq!(fighter.action_id, expected_action);
+            assert_eq!(fighter.action_frame, 0);
+            assert_eq!(fighter.action_duration, duration);
+            assert_eq!(report.rot_action_executions, vec![(0, 5, command_code)]);
+            assert!(report.errors.is_empty());
+        }
+    }
+
+    #[test]
     fn c05_special_one_weak_and_strong_execute_rot_with_the_effect_guard() {
         for (command_code, button, force) in [
             (16, AttackButton::WeakPunch, 1),
