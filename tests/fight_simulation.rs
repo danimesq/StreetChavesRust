@@ -53,13 +53,21 @@ fn fighter(character_id: u8, action_id: u16, action_frame: u16) -> FighterState 
 }
 
 fn simulation(first_action: u16, first_frame: u16) -> FightSimulation {
+    simulation_for_character(1, first_action, first_frame)
+}
+
+fn simulation_for_character(
+    first_character_id: u8,
+    first_action: u16,
+    first_frame: u16,
+) -> FightSimulation {
     let state = CombatState {
         tick_index: 0,
         game_state: 7,
         camera_x: 0.0,
         clock_stopped: false,
         fighters: [
-            fighter(1, first_action, first_frame),
+            fighter(first_character_id, first_action, first_frame),
             fighter(2, ACTION_IDLE, 0),
         ],
         effects: Default::default(),
@@ -233,8 +241,7 @@ fn real_c01_sequence_and_button_rules_reach_the_c01_dispatcher() {
 
 #[test]
 fn real_character_data_exposes_unimplemented_commands_without_faking_execution() {
-    let mut fight = simulation(ACTION_IDLE, 0);
-    fight.state.fighters[0].character_id = 13;
+    let mut fight = simulation_for_character(13, ACTION_IDLE, 0);
     fight.state.fighters[0].sequence_state = 6;
     fight.tick(InputFrame {
         pressed_buttons: 8,
