@@ -1522,7 +1522,10 @@ mod rot_runtime_integration_tests {
                 );
             }
             if command_code == 20 || command_code == 21 {
-                assert_eq!(fighter.force_strength, if command_code == 20 { 1 } else { 2 });
+                assert_eq!(
+                    fighter.force_strength,
+                    if command_code == 20 { 1 } else { 2 }
+                );
                 assert!(!fighter.in_air);
             }
             if command_code == 22 || command_code == 23 {
