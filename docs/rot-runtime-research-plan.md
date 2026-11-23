@@ -242,6 +242,12 @@ Additional roster-wide observations:
 - Victory entry is common across the original C01-C15 scripts: idle/walking/crouching eligibility, action = victory, action frame = 0, duration = 250. The separate victory `[Quadro]` behavior is character-specific and outside this action-entry scope.
 - C02-C15 have meaningful differences in allowed source actions, durations, force writes, charge increments, effect guards, movement resets, sound IDs and power use. The table is a map for focused tests; the scripts remain the executable truth.
 
+### C05 — Dona Florinda (next bounded roster slice)
+
+Audit the complete pinned C05.rot [Acao] section before enabling dispatch. The source contains cmVitoria (14), cmPose (15), four weak/strong specials (16–23), and cmEspFinal (24). Candidate branches appear to use existing host capabilities: mapped fighter fields, GanhoCarga/CargaMax/ChaoY, SomPendente/FlashTela, and ExisteEfeito. The Esp3 branch must preserve its ChaoY - 90 landing guard and ordered Y/VelY/NoAr/TempoBaixo writes; Esp4 resets CargaChute. Do not include [Quadro], [IA], or [Acerto] in this action-entry migration.
+
+Acceptance: route only after tests cover the weak/strong distinctions, accepted/rejected Esp3 height boundary, Esp4 counter reset, final-special power/sprite/flash/sound writes, and source dispatch reporting. If any dependency proves unmapped, leave that command unsupported and document the exact blocker.
+
 ## 7. C01 and C13 regression strategy
 
 ### 7.1 C01
@@ -410,6 +416,7 @@ A fixture with only a final action ID is insufficient. Compare every registered 
 - [ ] C01 hand-port regression matches actual C01.rot action execution.
 - [ ] C13 Extra1/Extra2 hand-port regression matches actual C13.rot action execution.
 - [ ] C02-C15 specials execute their real scripts, including all per-character guards and side effects.
+- [ ] C05 commands 14–24 execute the actual C05.rot [Acao] section, including victory/pose entry, effect guard, landing-height branch, kick-charge reset, and final-special writes.
 - [ ] Pascal-derived fixtures compare state mutations, effects, sounds, globals and RNG, not only final action IDs.
 - [ ] `CargaSoco`/`CargaChute` behavior is established from evidence or explicitly remains an unresolved input field; no guessed rule is merged.
 - [ ] Existing Rust tests, normalizer tests and relevant Pascal replay/differential checks pass.
