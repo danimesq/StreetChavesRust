@@ -5,8 +5,8 @@
 //! separate systems and are not simulated here.
 
 use crate::combat_runtime::{
-    CombatState, FighterState, ACTION_CROUCHING, ACTION_DEFENDING, ACTION_IDLE,
-    ACTION_JUMPING, ACTION_LOW_DEFENDING, ACTION_STRONG_PUNCH, ACTION_WALKING,
+    CombatState, FighterState, ACTION_CROUCHING, ACTION_DEFENDING, ACTION_IDLE, ACTION_JUMPING,
+    ACTION_LOW_DEFENDING, ACTION_STRONG_PUNCH, ACTION_WALKING,
 };
 use std::fmt;
 
@@ -57,7 +57,10 @@ impl ChavesSpecialCommand {
     }
 
     const fn is_weak(self) -> bool {
-        matches!(self, Self::Esp1Weak | Self::Esp2Weak | Self::Esp3Weak | Self::Esp4Weak)
+        matches!(
+            self,
+            Self::Esp1Weak | Self::Esp2Weak | Self::Esp3Weak | Self::Esp4Weak
+        )
     }
 }
 
@@ -143,7 +146,9 @@ impl fmt::Display for ChavesSpecialError {
             Self::FighterIndexOutOfRange(index) => {
                 write!(f, "fighter index {index} is outside the two-player state")
             }
-            Self::NotChaves { actual_character_id } => write!(
+            Self::NotChaves {
+                actual_character_id,
+            } => write!(
                 f,
                 "C01 special script cannot run for character id {actual_character_id}"
             ),
@@ -248,8 +253,7 @@ impl CombatState {
             ));
         }
 
-        if command == ChavesSpecialCommand::Final
-            && !(fighter.health <= 15.0 || fighter.power > 0)
+        if command == ChavesSpecialCommand::Final && !(fighter.health <= 15.0 || fighter.power > 0)
         {
             return Ok(ChavesSpecialOutcome::rejected(
                 ChavesSpecialRejection::FinalUnavailable,
@@ -377,20 +381,12 @@ impl CombatState {
     }
 }
 
-fn set_action(
-    fighter: &mut FighterState,
-    value: u16,
-    events: &mut Vec<ChavesSpecialEvent>,
-) {
+fn set_action(fighter: &mut FighterState, value: u16, events: &mut Vec<ChavesSpecialEvent>) {
     fighter.action_id = value;
     events.push(ChavesSpecialEvent::ActionChanged { value });
 }
 
-fn set_action_frame(
-    fighter: &mut FighterState,
-    value: u16,
-    events: &mut Vec<ChavesSpecialEvent>,
-) {
+fn set_action_frame(fighter: &mut FighterState, value: u16, events: &mut Vec<ChavesSpecialEvent>) {
     fighter.action_frame = value;
     events.push(ChavesSpecialEvent::ActionFrameChanged { value });
 }
