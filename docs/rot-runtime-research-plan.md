@@ -260,6 +260,10 @@ The pinned C07.rot [Acao] section uses only fighter fields/constants already map
 
 The pinned C08.rot [Acao] section routes commands 14–24 through the real interpreter. Esp1 and Esp2 are guarded by active effect types 18 and 19. Those projectile types now have source-backed creation, variant RNG, owner-facing movement, hitboxes and animation sprite sequences from the pinned Dados/Efeitos.ini. Focused tests cover victory/pose, special 1/2 accepted entries, special 3/4 entries, final-special power/sprite/flash/sound writes, and real active-effect rejection for both guards. CI passed on code commit `fbb02c6b9ad7b319b621b5e76ecb2a56f8761089`: formatting and all test targets are green (96 library tests plus integration targets 12, 2, 29, 7, 13, 5 and 5).
 
+### C10 — Nhonho (active bounded roster slice)
+
+The pinned `C10.rot` source is byte-identical to the upstream Pascal file at commit `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`. Its complete `[Acao]` section uses only existing host bindings: mapped fighter fields (`Acao`, `QuadroAcao`, `DuracaoAcao`, `CargaSoco`, `CargaPoder`, `ForcaGolpe`, `Y`, `NoAr`, `VelY`, `Vida`, `Poder`, `Quadro`), existing constants, and globals `GanhoCarga`, `CargaMax`, `ChaoY`, `SomPendente`, `FlashTela`. It requires no new helper, effect type, or RNG operation for this action-entry slice. Commands 14–24 route through the real interpreter. Tests cover victory/pose, weak/strong entry for all four specials, special 3 height acceptance/rejection and velocity/air writes, charge increments/reset, final-special power/charge/sprite/flash/sound writes, and final-special rejection without low health or power. CI passed on code commit `13f13a9af41ab2bce947499d7fbb2e6df535d637`: formatting and all test targets are green (100 library tests plus integration targets 12, 2, 29, 7, 13, 5 and 5).
+
 ## 7. C01 and C13 regression strategy
 
 ### 7.1 C01
