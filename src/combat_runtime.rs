@@ -607,7 +607,7 @@ impl CombatState {
             }
         }
 
-        if fighter.health > 0 {
+        if fighter.health > 0.0 {
             fighter.x = fighter.x.clamp(self.camera_x + 30.0, self.camera_x + 370.0);
         }
     }
