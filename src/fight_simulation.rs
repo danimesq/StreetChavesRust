@@ -964,3 +964,129 @@ impl SimulationTick for FightSimulation {
         self.run_tick([input, InputFrame::default()]);
     }
 }
+
+
+#[cfg(test)]
+mod rot_runtime_integration_tests {
+    use super::*;
+    use crate::combat_runtime::{BodyBox, FighterState, ACTION_SPECIAL3, ACTION_WALKING};
+    use crate::command_recognition::AttackButton;
+
+    fn fighter(character_id: u8, action_id: u16) -> FighterState {
+        FighterState {
+            sprite_frame: 0,
+            character_id,
+            action_id,
+            action_frame: 0,
+            action_duration: 30,
+            facing: crate::combat_runtime::SIDE_RIGHT,
+            force_strength: 0,
+            defending: true,
+            invulnerable: false,
+            hit_count: 0,
+            is_kick: false,
+            recoil: 0,
+            vertical_velocity: 0,
+            in_air: false,
+            x: 100.0,
+            y: 240.0,
+            speed: 5.0,
+            distance_ai: 100,
+            health: 100.0,
+            power: 0,
+            charge_power: 0.0,
+            jump_direction: 0,
+            low_time: 0,
+            back_time: 0,
+            sequence_state: 0,
+            sequence_timer: 0,
+            punch_charge: 0,
+            kick_charge: 0,
+            body: BodyBox {
+                x1: -18.0,
+                y1: 30.0,
+                x2: 13.0,
+                y2: 170.0,
+            },
+        }
+    }
+
+    fn simulation() -> FightSimulation {
+        let state = CombatState {
+            tick_index: 0,
+            game_state: 7,
+            camera_x: 0.0,
+            clock_stopped: false,
+            fighters: [
+                fighter(9, ACTION_IDLE),
+                fighter(2, ACTION_IDLE),
+            ],
+            effects: Default::default(),
+            pending_sound: None,
+            screen_flash: 0,
+            screen_shake: 0,
+        };
+        FightSimulation::new(
+            state,
+            FightSimulationConfig {
+                special: ChavesSpecialContext {
+                    charge_gain: 1.0,
+                    charge_max: 100.0,
+                    ground_y: 240.0,
+                },
+                frame: VictoryAnimationContext {
+                    sprite_offset: 0,
+                    ground_y: 240.0,
+                    camera_x: 0.0,
+                    camera_left_limit: 0.0,
+                    camera_right_limit: 450.0,
+                },
+                effect_camera_y: 0.0,
+            },
+            2026,
+        )
+    }
+
+    #[test]
+    fn c09_special_three_executes_pinned_rot_with_live_state_rng_and_effect_helper() {
+        let mut fight = simulation();
+        let mut report = FightTickReport::default();
+
+        // Pascal cmEsp3Fraco = 20. This goes through the normal character
+        // command dispatcher, not a Rust implementation of the special.
+        fight.dispatch_character_command(0, AttackButton::WeakPunch, 20, &mut report);
+
+        let fighter = &fight.state.fighters[0];
+        assert_eq!(fighter.action_id, ACTION_SPECIAL3);
+        assert_eq!(fighter.action_frame, 0);
+        assert_eq!(fighter.action_duration, 15);
+        assert_eq!(fighter.force_strength, 1);
+        assert_eq!(fighter.charge_power, 5.0);
+        assert!(!fighter.defending);
+        assert_eq!(fight.state.pending_sound, Some(45));
+        assert_eq!(fight.state.effects.active_count(), 5);
+        assert_eq!(fight.rng_calls_consumed(), 10);
+        assert_eq!(report.rot_action_executions, vec![(0, 9, 20)]);
+        assert!(report.unhandled_commands.is_empty());
+        assert!(report.errors.is_empty());
+    }
+
+    #[test]
+    fn common_action_prelude_and_epilogue_run_around_a_guarded_character_script() {
+        let mut fight = simulation();
+        fight.state.fighters[0].action_id = ACTION_WALKING;
+        fight.state.fighters[0].action_frame = 6;
+        fight.state.fighters[0].vertical_velocity = 1;
+        fight.state.fighters[0].defending = true;
+
+        // cmApanharAlto is rejected by the common grounded guard because
+        // VelY != 0. The character script leaves the fighter walking; the
+        // shared [AcaoFim] must still advance QuadroAcao.
+        fight.execute_c09_rot_action(0, 8).unwrap();
+
+        let fighter = &fight.state.fighters[0];
+        assert_eq!(fighter.action_id, ACTION_WALKING);
+        assert_eq!(fighter.action_frame, 7);
+        assert!(!fighter.defending);
+    }
+}
