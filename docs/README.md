@@ -17,6 +17,7 @@ This directory records the research and engineering decisions for an independent
 
 - [Fixed 28 ms simulation clock](fixed-timestep-clock.md): shared integer-nanosecond tick accumulator, host-loop order, catch-up policy, and 60/144 Hz validation.
 - [Headless FightSimulation](headless-fight-simulation.md): the first concrete SimulationTick implementation, C01 command/frame integration, live effect advancement, report snapshots and remaining boundaries.
+- [Mercedes action-dispatch slice](mercedes-action-dispatch.md): common basic attack entry, C13 extra commands 25/26, and the source-audited gaps for the other character ROT scripts and charge counters.
 
 ## Research documents
 

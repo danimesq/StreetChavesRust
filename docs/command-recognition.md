@@ -29,14 +29,25 @@ Values and per-section numeric row order are retained.
 ## Dispatcher boundary
 
 `FightSimulation` loads command rules for C01..C15 and now uses the real tables
-for both fighter input streams. The current executable character action dispatcher
-only implements C01 special commands 16..24. Commands for other characters,
-C13's extra commands 25..26, and common basic actions 3..6 are preserved in
-`FightTickReport.unhandled_commands`; they are not silently dropped or simulated
-with guessed behavior. The Pascal source documents `CargaSoco` and
-`CargaChute` but this repository slice does not yet port their producer logic,
-so those byte fields remain explicit runtime state inputs rather than guessed
-counters.
+for both fighter input streams. The common input path now executes the Pascal basic attack commands 3..6,
+including ground, crouch and jump variants, action durations, charge-power gain
+and outgoing hit sounds. C01 special commands 16..24 retain their audited
+dispatcher. C13's character-specific extra commands 25/26 are also implemented
+from C13.rot, including the literal force value 4 and the final-special power,
+flash and sound writes.
+
+C02..C12 and C14..C15 character-specific [Acao] scripts are still not executed
+by Rust. Their command IDs remain visible in `FightTickReport.unhandled_commands`.
+The Pascal source's generic ROT interpreter is a separate subsystem and must be
+ported before those scripts can be run faithfully.
+
+The Pascal record describes `CargaSoco` and `CargaChute` as decreasing counters
+for punch and kick buttons. In the pinned source revision, their only runtime
+reads are in `RegraVale`; C13/C07/C10 scripts reset them, but no producer or
+decrement routine appears in the audited fight/input source. The new runtime
+does not invent a duration or repeat-press rule. The byte fields remain
+explicit state inputs until that missing producer is located or independently
+validated.
 
 ## Tests
 
