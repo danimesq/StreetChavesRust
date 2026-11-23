@@ -248,6 +248,10 @@ The complete pinned C05.rot [Acao] section has been audited and command codes 14
 
 CI passed on commit f463ef7482cf3b94bd6b8abc88c62903b554f395: formatting and all test targets are green (87 library tests; integration targets 12, 2, 29, 6, 13, 5 and 5). The C05 tests cover victory/pose entry, weak/strong distinctions, accepted/rejected Esp3 height boundary, Esp4 counter reset, final-special power/sprite/flash/sound writes, and source dispatch reporting. A dedicated live-effect fixture for the Esp1 ExisteEfeito(13, Jog) rejection guard remains an explicit follow-up; current tests do not claim that branch's rejection parity. If any dependency proves unmapped, leave that command unsupported and document the exact blocker.
 
+### C06 — Professor Girafales (active bounded roster slice)
+
+The complete pinned C06.rot [Acao] section has been audited. Commands 14–24 are routed through the real interpreter on this branch. Its Esp1 and Esp2 branches both reject while effect type 15 is active. The effect arena now has source-backed creation and animation support for effect types 13 and 15, allowing real guard fixtures for C05 and C06 rather than mocked ExisteEfeito results. C06 tests cover victory/pose, weak/strong specials 1–4, final-special airborne/power/sprite/flash/sound writes, and active-effect rejection for Esp1/Esp2. CI validation is pending.
+
 ## 7. C01 and C13 regression strategy
 
 ### 7.1 C01
