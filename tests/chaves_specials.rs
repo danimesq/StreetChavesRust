@@ -48,7 +48,10 @@ fn state_with_player_action(action_id: u16) -> CombatState {
         clock_stopped: false,
         screen_flash: 0,
         pending_sound: 0,
-        fighters: [fighter(CHARACTER_CHAVES, action_id), fighter(2, ACTION_IDLE)],
+        fighters: [
+            fighter(CHARACTER_CHAVES, action_id),
+            fighter(2, ACTION_IDLE),
+        ],
     }
 }
 
@@ -349,10 +352,7 @@ fn special_entry_rejects_the_wrong_character_and_invalid_player_index() {
     let invalid_index = state
         .start_chaves_special(2, Command::Final, context(false))
         .unwrap_err();
-    assert_eq!(
-        invalid_index,
-        ChavesSpecialError::FighterIndexOutOfRange(2)
-    );
+    assert_eq!(invalid_index, ChavesSpecialError::FighterIndexOutOfRange(2));
 }
 
 #[test]
