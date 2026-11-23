@@ -160,6 +160,7 @@ impl FightSimulation {
             && matches!(command_code, 25 | 26)
         {
             self.dispatch_c13_extra(command_code, fighter_index, report);
+            let _ = self.state.finish_common_action(fighter_index);
         } else {
             report.unhandled_commands.push(UnhandledCommand {
                 fighter_index,
@@ -366,7 +367,6 @@ impl FightSimulation {
 
     /// Apply the directional portion of Pascal L7_Entrada before attack buttons.
     fn dispatch_directional_input(&mut self, fighter_index: usize, input: InputFrame) {
-        let fighter = &mut self.state.fighters[fighter_index];
         let direction = input.direction;
         let down = matches!(
             direction,
@@ -378,49 +378,66 @@ impl FightSimulation {
             _ => None,
         };
 
-        if !down {
-            if let Some(sign) = horizontal {
+        // L7_Entrada calls AcaoJogador for each horizontal/down command even
+        // when the Common [Acao] guard rejects the requested transition.
+        let finish_common = {
+            let fighter = &mut self.state.fighters[fighter_index];
+            let mut finish_common = false;
+
+            if !down {
+                if let Some(sign) = horizontal {
+                    finish_common = true;
+                    if matches!(fighter.action_id, ACTION_IDLE | ACTION_WALKING) {
+                        fighter.x += sign * fighter.speed;
+                        fighter.action_id = ACTION_WALKING;
+                        fighter.action_duration = 99;
+                    }
+                }
+            } else {
+                finish_common = true;
                 if matches!(fighter.action_id, ACTION_IDLE | ACTION_WALKING) {
-                    fighter.x += sign * fighter.speed;
-                    fighter.action_id = ACTION_WALKING;
+                    fighter.action_id = ACTION_CROUCHING;
                     fighter.action_duration = 99;
-                    let _ = self.state.finish_common_action(fighter_index);
                 }
             }
-        } else if matches!(fighter.action_id, ACTION_IDLE | ACTION_WALKING) {
-            fighter.action_id = ACTION_CROUCHING;
-            fighter.action_duration = 99;
+
+            if !down && fighter.action_id == ACTION_CROUCHING {
+                fighter.action_id = ACTION_IDLE;
+            }
+            if horizontal.is_none() && !down && fighter.action_id == ACTION_WALKING {
+                fighter.action_id = ACTION_IDLE;
+                fighter.action_frame = 0;
+            }
+            finish_common
+        };
+
+        if finish_common {
             let _ = self.state.finish_common_action(fighter_index);
-        }
-        if !down && fighter.action_id == ACTION_CROUCHING {
-            fighter.action_id = ACTION_IDLE;
         }
 
         if matches!(
             direction,
             Direction::Up | Direction::UpLeft | Direction::UpRight
-        ) && matches!(
-            fighter.action_id,
-            ACTION_IDLE | ACTION_WALKING | ACTION_DEFENDING | ACTION_LOW_DEFENDING
-        ) && fighter.vertical_velocity == 0
-            && !fighter.in_air
-        {
-            fighter.vertical_velocity = -32;
-            fighter.in_air = true;
-            fighter.action_id = ACTION_JUMPING;
-            fighter.action_frame = 0;
-            fighter.action_duration = 99;
-            fighter.defending = false;
-            fighter.jump_direction = match direction {
-                Direction::UpLeft => 2,
-                Direction::UpRight => 3,
-                _ => 1,
-            };
-        }
-
-        if horizontal.is_none() && !down && fighter.action_id == ACTION_WALKING {
-            fighter.action_id = ACTION_IDLE;
-            fighter.action_frame = 0;
+        ) {
+            let fighter = &mut self.state.fighters[fighter_index];
+            if matches!(
+                fighter.action_id,
+                ACTION_IDLE | ACTION_WALKING | ACTION_DEFENDING | ACTION_LOW_DEFENDING
+            ) && fighter.vertical_velocity == 0
+                && !fighter.in_air
+            {
+                fighter.vertical_velocity = -32;
+                fighter.in_air = true;
+                fighter.action_id = ACTION_JUMPING;
+                fighter.action_frame = 0;
+                fighter.action_duration = 99;
+                fighter.defending = false;
+                fighter.jump_direction = match direction {
+                    Direction::UpLeft => 2,
+                    Direction::UpRight => 3,
+                    _ => 1,
+                };
+            }
         }
     }
 
