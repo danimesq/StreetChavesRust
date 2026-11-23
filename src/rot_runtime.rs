@@ -764,6 +764,25 @@ impl RotExecutionFrame {
         self.execute_statement(&program.body, &mut remaining)
     }
 
+    /// Execute a parsed ROT program against a live game host.
+    ///
+    /// Locals remain isolated per invocation; fighter fields, globals, RNG and
+    /// engine helpers are read or mutated through the supplied host adapter.
+    pub fn execute_with_host<H: RotExecutionHost>(
+        &mut self,
+        program: &RotProgram,
+        host: &mut H,
+    ) -> Result<(), RotError> {
+        if program.source != self.source || program.section != self.section {
+            return Err(self.error(
+                program.body.span,
+                "execution frame belongs to a different ROT source section",
+            ));
+        }
+        let mut remaining = 1_000_000usize;
+        execute_statement_with_host(self, &program.body, &mut remaining, host)
+    }
+
     fn consume_step(&self, span: SourceSpan, remaining: &mut usize) -> Result<(), RotError> {
         if *remaining == 0 {
             return Err(self.error(span, "ROT execution step limit exceeded"));
@@ -940,6 +959,368 @@ impl RotExecutionFrame {
             return Ok(value.clone());
         }
         Err(self.error(span, format!("unknown ROT identifier {name}")))
+    }
+}
+
+
+/// Live bindings exposed to a ROT action invocation.
+///
+/// The host owns authoritative fighter/global state and the shared fight RNG.
+/// Unsupported fields and helpers must return errors rather than being treated
+/// as inert values.
+pub trait RotExecutionHost {
+    fn read_fighter_field(&self, base: char, name: &str) -> Result<RotValue, String>;
+    fn write_fighter_field(&mut self, base: char, name: &str, value: RotValue)
+        -> Result<(), String>;
+
+    fn read_identifier(&self, _name: &str) -> Option<RotValue> {
+        None
+    }
+
+    fn write_identifier(&mut self, name: &str, _value: RotValue) -> Result<(), String> {
+        Err(format!("global identifier {name} has no writable host binding"))
+    }
+
+    fn call_function(&mut self, name: &str, _arguments: &[RotValue])
+        -> Result<RotValue, String>
+    {
+        Err(format!("ROT helper {name} has no host binding"))
+    }
+}
+
+fn execute_statement_with_host<H: RotExecutionHost>(
+    frame: &mut RotExecutionFrame,
+    statement: &Statement,
+    remaining: &mut usize,
+    host: &mut H,
+) -> Result<(), RotError> {
+    frame.consume_step(statement.span, remaining)?;
+    match &statement.kind {
+        StatementKind::Block(statements) => {
+            for child in statements {
+                execute_statement_with_host(frame, child, remaining, host)?;
+            }
+            Ok(())
+        }
+        StatementKind::Assign { target, value } => {
+            let value = evaluate_expression_with_host(frame, value, host)?;
+            match &target.kind {
+                ExpressionKind::Identifier(name) => {
+                    if frame.locals.contains_key(&name.to_ascii_lowercase()) {
+                        frame.assign_local_at_span(name, value, target.span)
+                    } else {
+                        host.write_identifier(name, value)
+                            .map_err(|error| frame.error(target.span, error))
+                    }
+                }
+                ExpressionKind::FighterField { base, name } => host
+                    .write_fighter_field(*base, name, value)
+                    .map_err(|error| frame.error(target.span, error)),
+                _ => Err(frame.error(
+                    target.span,
+                    "assignment target must be a local, global or bound fighter field",
+                )),
+            }
+        }
+        StatementKind::Call(call) => {
+            evaluate_expression_with_host(frame, call, host)?;
+            Ok(())
+        }
+        StatementKind::If {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            let condition_value = evaluate_expression_with_host(frame, condition, host)?;
+            if require_boolean(frame, condition.span, condition_value)? {
+                execute_statement_with_host(frame, then_branch, remaining, host)
+            } else if let Some(else_branch) = else_branch {
+                execute_statement_with_host(frame, else_branch, remaining, host)
+            } else {
+                Ok(())
+            }
+        }
+        StatementKind::For {
+            variable,
+            direction,
+            first,
+            last,
+            body,
+        } => {
+            // Pascal evaluates both bounds once, before the first iteration.
+            let first_value = evaluate_expression_with_host(frame, first, host)?;
+            let (mut current, _) = require_integer(frame, first.span, first_value)?;
+            let last_value = evaluate_expression_with_host(frame, last, host)?;
+            let (last, _) = require_integer(frame, last.span, last_value)?;
+
+            loop {
+                let in_range = match direction {
+                    ForDirection::To => current <= last,
+                    ForDirection::DownTo => current >= last,
+                };
+                if !in_range {
+                    break;
+                }
+                frame.consume_step(statement.span, remaining)?;
+                frame.assign_local_at_span(variable, integer(current, false), statement.span)?;
+                execute_statement_with_host(frame, body, remaining, host)?;
+                current = match direction {
+                    ForDirection::To => current.wrapping_add(1),
+                    ForDirection::DownTo => current.wrapping_sub(1),
+                };
+            }
+            Ok(())
+        }
+        StatementKind::While { condition, body } => loop {
+            frame.consume_step(statement.span, remaining)?;
+            let condition_value = evaluate_expression_with_host(frame, condition, host)?;
+            if !require_boolean(frame, condition.span, condition_value)? {
+                break Ok(());
+            }
+            execute_statement_with_host(frame, body, remaining, host)?;
+        },
+        StatementKind::RepeatUntil { body, condition } => loop {
+            frame.consume_step(statement.span, remaining)?;
+            for child in body {
+                execute_statement_with_host(frame, child, remaining, host)?;
+            }
+            let condition_value = evaluate_expression_with_host(frame, condition, host)?;
+            if require_boolean(frame, condition.span, condition_value)? {
+                break Ok(());
+            }
+        },
+        StatementKind::Case {
+            selector,
+            arms,
+            otherwise,
+        } => {
+            let selector_value = evaluate_expression_with_host(frame, selector, host)?;
+            let (selector, _) = require_integer(frame, selector.span, selector_value)?;
+            for arm in arms {
+                let mut matched = false;
+                for label in &arm.labels {
+                    let label_matches = match label {
+                        SetElement::Value(value) => {
+                            let value_result = evaluate_expression_with_host(frame, value, host)?;
+                            let (value, _) = require_integer(frame, value.span, value_result)?;
+                            selector == value
+                        }
+                        SetElement::Range { low, high, span } => {
+                            let low_result = evaluate_expression_with_host(frame, low, host)?;
+                            let (low, _) = require_integer(frame, *span, low_result)?;
+                            let high_result = evaluate_expression_with_host(frame, high, host)?;
+                            let (high, _) = require_integer(frame, *span, high_result)?;
+                            selector >= low && selector <= high
+                        }
+                    };
+                    matched |= label_matches;
+                }
+                if matched {
+                    return execute_statement_with_host(frame, &arm.body, remaining, host);
+                }
+            }
+            if let Some(default) = otherwise {
+                for child in default {
+                    execute_statement_with_host(frame, child, remaining, host)?;
+                }
+            }
+            Ok(())
+        }
+    }
+}
+
+fn evaluate_expression_with_host<H: RotExecutionHost>(
+    frame: &RotExecutionFrame,
+    expression: &Expression,
+    host: &mut H,
+) -> Result<RotValue, RotError> {
+    match &expression.kind {
+        ExpressionKind::Literal(literal) => Ok(match literal {
+            Literal::Integer(value) => integer(
+                *value,
+                *value < i64::from(i32::MIN) || *value > i64::from(i32::MAX),
+            ),
+            Literal::Real(value) => RotValue::Real(*value),
+            Literal::String(value) => RotValue::String(value.clone()),
+            Literal::Boolean(value) => RotValue::Boolean(*value),
+        }),
+        ExpressionKind::Identifier(name) => {
+            if let Some(value) = frame.local(name) {
+                return Ok(value.clone());
+            }
+            if let Some(value) = host.read_identifier(name) {
+                return Ok(value);
+            }
+            frame.lookup(name, expression.span)
+        }
+        ExpressionKind::FighterField { base, name } => host
+            .read_fighter_field(*base, name)
+            .map_err(|error| frame.error(expression.span, error)),
+        ExpressionKind::Call { name, arguments } => {
+            let mut values = Vec::with_capacity(arguments.len());
+            for argument in arguments {
+                values.push(evaluate_expression_with_host(frame, argument, host)?);
+            }
+            if matches!(
+                name.to_ascii_lowercase().as_str(),
+                "round" | "trunc" | "abs" | "cos" | "sin" | "shortint"
+            ) {
+                let literal_arguments = values
+                    .into_iter()
+                    .zip(arguments.iter())
+                    .map(|(value, original)| {
+                        let literal = match value {
+                            RotValue::Integer { value, .. } => Literal::Integer(value),
+                            RotValue::Real(value) => Literal::Real(value),
+                            RotValue::Boolean(value) => Literal::Boolean(value),
+                            RotValue::String(value) => Literal::String(value),
+                            RotValue::Set(_) => {
+                                return Err(frame.error(
+                                    original.span,
+                                    "pure ROT helper cannot accept a set value",
+                                ))
+                            }
+                        };
+                        Ok(Expression {
+                            kind: ExpressionKind::Literal(literal),
+                            span: original.span,
+                        })
+                    })
+                    .collect::<Result<Vec<_>, RotError>>()?;
+                evaluate_pure_function(frame, expression.span, name, &literal_arguments)
+            } else {
+                host.call_function(name, &values)
+                    .map_err(|error| frame.error(expression.span, error))
+            }
+        }
+        ExpressionKind::Unary { operator, value } => {
+            let value = evaluate_expression_with_host(frame, value, host)?;
+            match (operator, value) {
+                (UnaryOperator::Not, RotValue::Boolean(value)) => Ok(RotValue::Boolean(!value)),
+                (UnaryOperator::Not, RotValue::Integer { value, wide }) => {
+                    Ok(integer(!value, wide))
+                }
+                (UnaryOperator::Positive, value @ RotValue::Integer { .. })
+                | (UnaryOperator::Positive, value @ RotValue::Real(_)) => Ok(value),
+                (UnaryOperator::Negative, RotValue::Integer { value, wide }) => {
+                    Ok(integer(value.wrapping_neg(), wide))
+                }
+                (UnaryOperator::Negative, RotValue::Real(value)) => Ok(RotValue::Real(-value)),
+                (UnaryOperator::Not, _) => {
+                    Err(frame.error(expression.span, "not requires Boolean or integer"))
+                }
+                (_, _) => Err(frame.error(expression.span, "unary sign requires a number")),
+            }
+        }
+        ExpressionKind::Binary {
+            operator,
+            left,
+            right,
+        } => evaluate_binary_with_host(frame, expression.span, *operator, left, right, host),
+        ExpressionKind::Group(value) => evaluate_expression_with_host(frame, value, host),
+        ExpressionKind::Set(elements) => {
+            let mut values = Vec::with_capacity(elements.len());
+            for element in elements {
+                match element {
+                    SetElement::Value(value) => {
+                        let (value, _) = require_integer(
+                            frame,
+                            value.span,
+                            evaluate_expression_with_host(frame, value, host)?,
+                        )?;
+                        values.push(RotSetItem::Value(value));
+                    }
+                    SetElement::Range { low, high, span } => {
+                        let (low, _) = require_integer(
+                            frame,
+                            low.span,
+                            evaluate_expression_with_host(frame, low, host)?,
+                        )?;
+                        let (high, _) = require_integer(
+                            frame,
+                            high.span,
+                            evaluate_expression_with_host(frame, high, host)?,
+                        )?;
+                        values.push(RotSetItem::Range { low, high });
+                        let _ = span;
+                    }
+                }
+            }
+            Ok(RotValue::Set(values))
+        }
+    }
+}
+
+fn evaluate_binary_with_host<H: RotExecutionHost>(
+    frame: &RotExecutionFrame,
+    span: SourceSpan,
+    operator: BinaryOperator,
+    left_expression: &Expression,
+    right_expression: &Expression,
+    host: &mut H,
+) -> Result<RotValue, RotError> {
+    let left = evaluate_expression_with_host(frame, left_expression, host)?;
+
+    // Preserve Pascal Boolean short-circuiting so skipped helper calls consume
+    // neither RNG values nor engine state.
+    if operator == BinaryOperator::And {
+        if let RotValue::Boolean(false) = left {
+            return Ok(RotValue::Boolean(false));
+        }
+        if let RotValue::Boolean(true) = left {
+            return Ok(RotValue::Boolean(require_boolean(
+                frame,
+                span,
+                evaluate_expression_with_host(frame, right_expression, host)?,
+            )?));
+        }
+    }
+    if operator == BinaryOperator::Or {
+        if let RotValue::Boolean(true) = left {
+            return Ok(RotValue::Boolean(true));
+        }
+        if let RotValue::Boolean(false) = left {
+            return Ok(RotValue::Boolean(require_boolean(
+                frame,
+                span,
+                evaluate_expression_with_host(frame, right_expression, host)?,
+            )?));
+        }
+    }
+
+    if operator == BinaryOperator::In {
+        let (needle, _) = require_integer(frame, left_expression.span, left)?;
+        let set = evaluate_expression_with_host(frame, right_expression, host)?;
+        let RotValue::Set(elements) = set else {
+            return Err(frame.error(right_expression.span, "right operand of in must be a set"));
+        };
+        let found = elements.iter().any(|element| match element {
+            RotSetItem::Value(value) => needle == *value,
+            RotSetItem::Range { low, high } => needle >= *low && needle <= *high,
+        });
+        return Ok(RotValue::Boolean(found));
+    }
+
+    let right = evaluate_expression_with_host(frame, right_expression, host)?;
+    match operator {
+        BinaryOperator::Equal
+        | BinaryOperator::NotEqual
+        | BinaryOperator::Less
+        | BinaryOperator::Greater
+        | BinaryOperator::LessEqual
+        | BinaryOperator::GreaterEqual => evaluate_comparison(frame, span, operator, left, right),
+        BinaryOperator::And | BinaryOperator::Or | BinaryOperator::Xor => {
+            evaluate_logic(frame, span, operator, left, right)
+        }
+        BinaryOperator::Add
+        | BinaryOperator::Subtract
+        | BinaryOperator::Multiply
+        | BinaryOperator::RealDivide
+        | BinaryOperator::IntegerDivide
+        | BinaryOperator::Modulo
+        | BinaryOperator::ShiftLeft
+        | BinaryOperator::ShiftRight => evaluate_arithmetic(frame, span, operator, left, right),
+        BinaryOperator::In => unreachable!("in was handled before evaluating the right operand"),
     }
 }
 
