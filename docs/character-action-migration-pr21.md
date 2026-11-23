@@ -120,3 +120,5 @@ The migration now routes C01 commands 16–24, C02 commands 16–23, C03 command
 - Command 15 is not routed because these character scripts have no character-specific pose branch. Focused tests exercise every routed command entry, assert action/frame/duration and the source-specific state writes, and verify that each command is reported as a real ROT execution without runtime errors.
 - These tests do not claim execution of [Quadro], [IA] or [Acerto], nor do they claim Pascal differential parity. The active-effect guard paths are executed by the real `ExisteEfeito` host helper, but the source effect types 26/28/29/33 are not yet configured in the effect arena, so no synthetic active-effect fixtures are claimed.
 - Structural interpreter limitations remain deferred as agreed.
+
+- CI validation: run [45286642440](https://github.com/danimesq/StreetChavesRust/actions/runs/45286642440) passed on code commit `ffabd727fffb860a1e9534d9d00d87e04872ecc9`: `cargo fmt --all -- --check` and `cargo test --all-targets`; 105 library tests plus integration targets 12, 2, 29, 7, 13, 5 and 5 (178 total, 0 failures).
