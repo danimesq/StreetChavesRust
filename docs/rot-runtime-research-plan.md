@@ -474,3 +474,15 @@ Current Rust branch:
 - C11 / Godines: audited pinned `[Acao]`, byte-compared the checked-in ROT file to upstream, routed commands 14–24 through the live interpreter, and added command-by-command action-entry assertions.
 - C12 / Sr. Furtado: audited pinned `[Acao]`, byte-compared the checked-in ROT file to upstream, and routed only commands 14–17 and 20–22. Commands 18/19 remain unhandled until `GolpeAtivo` has an authoritative live-state binding; no default is invented.
 - No [Quadro], [IA], or [Acerto] route is claimed. Structural interpreter limitations remain deferred as agreed.
+
+
+## 2026-11-23 — C13, C14 and C15 action-entry slice
+
+- Pinned Pascal source: OpenStreetChaves commit `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`.
+- The checked-in C13/C14/C15 ROT files were byte-compared against upstream and are identical.
+- C13 / Jaiminho: route commands 14–26 through the actual `[Acao]` script. Command 24 is source-mapped to `acEspecial4`/special force, while commands 25 and 26 preserve the existing Extra1/Extra2 mappings.
+- C14 / Dona Neves: route commands 14–24. Preserve the jump-only guard on commands 20/21 and the 70-frame final.
+- C15 / Glória: route commands 14–24. Preserve the strong-kick frame-cancel guard on commands 20/21 and the 30-frame final.
+- Tests cover every routed command entry and the distinct duration/state writes. No [Quadro], [IA] or [Acerto] execution is added.
+- The scripts' `ExisteEfeito` checks remain live helper calls. The arena does not yet define effect types 26, 28, 29 or 33, so this slice does not claim active-instance guard fixtures or frame-script effect creation.
+- Broader interpreter limitations and Pascal differential validation remain outside this batch.
