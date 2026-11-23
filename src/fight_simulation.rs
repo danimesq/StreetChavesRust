@@ -1433,7 +1433,7 @@ mod rot_runtime_integration_tests {
     }
 
     #[test]
-    fn c05_special_one_weak_and_strong_execute_rot_with_the_effect_guard() {
+    fn c05_special_one_weak_and_strong_execute_rot() {
         for (command_code, button, force) in [
             (16, AttackButton::WeakPunch, 1),
             (17, AttackButton::StrongPunch, 2),
