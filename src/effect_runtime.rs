@@ -316,7 +316,7 @@ impl EffectArena {
 
     /// Advance live instances in ascending slot order and capture their draw state.
     ///
-    /// This models the C01-used INI animation rules and the Pascal effect loop's
+    /// This models the supported INI animation rules and the Pascal effect loop's
     /// move/snapshot/lifetime/cull order. Effect-vs-effect and effect-vs-fighter
     /// collision consequences remain a later combat-system integration.
     pub fn advance(&mut self, context: EffectTickContext) -> EffectTickResult {
