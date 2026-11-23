@@ -5,8 +5,8 @@
 //! remains an injected child-script seam; unsupported behavior is not fabricated.
 
 use crate::effect_runtime::{
-    EffectArena, EffectSpawnError, EffectTickContext, EffectTickResult,
-    EFFECT_SIDE_LEFT, EFFECT_SIDE_RIGHT,
+    EffectArena, EffectSpawnError, EffectTickContext, EffectTickResult, EFFECT_SIDE_LEFT,
+    EFFECT_SIDE_RIGHT,
 };
 use crate::pascal_replay::PascalRandomSource;
 use serde_json::json;
@@ -204,7 +204,10 @@ impl<E: fmt::Display> fmt::Display for RuntimeError<E> {
             Self::InvalidEffectOwner(owner) => write!(f, "invalid effect owner {owner}"),
             Self::InvalidEffectFacing(facing) => write!(f, "invalid effect facing {facing}"),
             Self::InvalidEffectVariant(effect_type) => {
-                write!(f, "effect type {effect_type} requires a valid source variant")
+                write!(
+                    f,
+                    "effect type {effect_type} requires a valid source variant"
+                )
             }
         }
     }
@@ -341,218 +344,218 @@ impl CombatState {
         let mut rng = RecordingRandomSource::new(rng);
         let mut effect_requests = Vec::new();
         {
-        let fighter =
-            self.fighters
-                .get_mut(fighter_index)
-                .ok_or(RuntimeError::UnsupportedBranch(
-                    "victory animation: invalid fighter index",
-                ))?;
-        if fighter.action_id != ACTION_VICTORY {
-            return Err(RuntimeError::UnsupportedBranch(
-                "victory animation requires ACTION_VICTORY",
-            ));
-        }
-
-        let frame = fighter.action_frame;
-        let offset = context.sprite_offset;
-        match fighter.character_id {
-            // C01: independent frame-boundary writes, including the frame-28 reset.
-            1 => {
-                if frame == 0 {
-                    fighter.sprite_frame = offset + 33;
-                }
-                if frame == 7 {
-                    fighter.sprite_frame = offset + 34;
-                }
-                if frame == 14 {
-                    fighter.sprite_frame = offset + 35;
-                }
-                if frame == 21 {
-                    fighter.sprite_frame = offset + 34;
-                }
-                if frame == 28 {
-                    fighter.sprite_frame = offset + 33;
-                    fighter.action_frame = 0;
-                }
+            let fighter =
+                self.fighters
+                    .get_mut(fighter_index)
+                    .ok_or(RuntimeError::UnsupportedBranch(
+                        "victory animation: invalid fighter index",
+                    ))?;
+            if fighter.action_id != ACTION_VICTORY {
+                return Err(RuntimeError::UnsupportedBranch(
+                    "victory animation requires ACTION_VICTORY",
+                ));
             }
-            // C02: the unconditional base write precedes Random(2).
-            2 => {
-                fighter.sprite_frame = offset + 33;
-                if rng.draw_longint(2).map_err(RuntimeError::Rng)? == 0 {
-                    fighter.sprite_frame = offset + 34;
-                }
-            }
-            3 => {
-                if frame == 0 {
-                    fighter.sprite_frame = offset + 33;
-                }
-                if frame == 5 {
-                    fighter.sprite_frame = offset + 34;
-                }
-                if frame == 10 {
-                    fighter.sprite_frame = offset + 35;
-                }
-                if frame == 15 {
-                    fighter.sprite_frame = offset + 34;
-                }
-                if frame == 20 {
-                    fighter.sprite_frame = offset + 33;
-                }
-                if frame == 25 {
-                    fighter.sprite_frame = offset + 34;
-                }
-                if frame == 30 {
-                    fighter.sprite_frame = offset + 35;
-                }
-                if frame == 35 {
-                    fighter.sprite_frame = offset + 34;
-                }
-            }
-            4 => {
-                if frame < 13 {
-                    fighter.sprite_frame = offset + 33;
-                }
-                if frame == 13 {
-                    fighter.sprite_frame = offset + 34;
-                }
-            }
-            5 => {
-                if frame < 5 {
-                    fighter.sprite_frame = offset + 33;
-                }
-                if frame == 9 || frame == 17 || frame == 25 || frame == 33 {
-                    fighter.sprite_frame = offset + 34;
-                }
-                if frame == 13 || frame == 21 || frame == 29 || frame == 37 {
-                    fighter.sprite_frame = offset + 33;
-                }
-                if frame == 41 {
-                    fighter.sprite_frame = offset + 35;
-                }
-            }
-            6 => {
-                if frame % 4 == 0 {
-                    fighter.sprite_frame = if fighter.sprite_frame == offset + 33 {
-                        offset + 34
-                    } else {
-                        offset + 33
-                    };
-                }
-            }
-            7 => {
-                fighter.sprite_frame = offset + if frame % 2 == 0 { 33 } else { 34 };
-            }
-            8 => {
-                fighter.sprite_frame = offset + 33;
-                if frame % 2 == 0 {
-                    fighter.y -= 4.0;
-                }
-                if frame % 2 != 0 {
-                    fighter.y += 4.0;
-                }
-                if context.ground_y < fighter.y {
-                    fighter.y = context.ground_y;
-                }
-            }
-            9 => {
-                if frame % 3 == 0 {
-                    fighter.sprite_frame = if fighter.sprite_frame == offset + 33 {
-                        offset + 34
-                    } else {
-                        offset + 33
-                    };
-                }
-            }
-            10 => {
-                if frame < 12 {
-                    fighter.sprite_frame = offset + 33;
-                }
-                if frame == 12 {
-                    fighter.sprite_frame = offset + 34;
-                }
-            }
-            11 => {
-                fighter.sprite_frame = offset + 33;
-            }
-            12 => {
-                if frame % 2 == 0 {
-                    fighter.sprite_frame = offset + 33;
-                } else {
-                    fighter.sprite_frame = offset + 34;
-                }
-
-                if fighter.facing == SIDE_RIGHT {
-                    fighter.x += 12.0;
-                }
-                if fighter.facing == SIDE_LEFT {
-                    fighter.x -= 12.0;
-                }
-
-                let camera_relative_x = fighter.x - context.camera_x;
-                if camera_relative_x <= context.camera_left_limit {
-                    fighter.facing = SIDE_RIGHT;
-                }
-                if camera_relative_x >= context.camera_right_limit {
-                    fighter.facing = SIDE_LEFT;
-                }
-
-                if frame % 8 == 0 && rng.draw_longint(2).map_err(RuntimeError::Rng)? == 0 {
-                    if fighter.facing == SIDE_RIGHT {
-                        fighter.facing = SIDE_LEFT;
-                    } else if fighter.facing == SIDE_LEFT {
-                        fighter.facing = SIDE_RIGHT;
+    
+            let frame = fighter.action_frame;
+            let offset = context.sprite_offset;
+            match fighter.character_id {
+                // C01: independent frame-boundary writes, including the frame-28 reset.
+                1 => {
+                    if frame == 0 {
+                        fighter.sprite_frame = offset + 33;
+                    }
+                    if frame == 7 {
+                        fighter.sprite_frame = offset + 34;
+                    }
+                    if frame == 14 {
+                        fighter.sprite_frame = offset + 35;
+                    }
+                    if frame == 21 {
+                        fighter.sprite_frame = offset + 34;
+                    }
+                    if frame == 28 {
+                        fighter.sprite_frame = offset + 33;
+                        fighter.action_frame = 0;
                     }
                 }
-
-                // Pascal evaluates the two Random expressions for each effect in order.
-                for _ in 0..5 {
-                    let dx = rng.draw_longint(40).map_err(RuntimeError::Rng)?;
-                    let dy = rng.draw_longint(10).map_err(RuntimeError::Rng)?;
-                    effect_requests.push(EffectSpawnRequest {
-                        effect_type: 2,
-                        variant: None,
-                        owner: 0,
-                        owner_facing: EFFECT_SIDE_RIGHT,
-                        x: fighter.x - 30.0 + dx as f64,
-                        y: fighter.y + dy as f64,
-                    });
+                // C02: the unconditional base write precedes Random(2).
+                2 => {
+                    fighter.sprite_frame = offset + 33;
+                    if rng.draw_longint(2).map_err(RuntimeError::Rng)? == 0 {
+                        fighter.sprite_frame = offset + 34;
+                    }
                 }
-            }
-            13 => {
-                fighter.sprite_frame = offset + 33;
-                let displacement = pascal_round((f64::from(frame) / 3.0).cos() * 6.0);
-                fighter.y -= f64::from(displacement);
-                if context.ground_y - 10.0 < fighter.y {
-                    fighter.y = context.ground_y - 10.0;
+                3 => {
+                    if frame == 0 {
+                        fighter.sprite_frame = offset + 33;
+                    }
+                    if frame == 5 {
+                        fighter.sprite_frame = offset + 34;
+                    }
+                    if frame == 10 {
+                        fighter.sprite_frame = offset + 35;
+                    }
+                    if frame == 15 {
+                        fighter.sprite_frame = offset + 34;
+                    }
+                    if frame == 20 {
+                        fighter.sprite_frame = offset + 33;
+                    }
+                    if frame == 25 {
+                        fighter.sprite_frame = offset + 34;
+                    }
+                    if frame == 30 {
+                        fighter.sprite_frame = offset + 35;
+                    }
+                    if frame == 35 {
+                        fighter.sprite_frame = offset + 34;
+                    }
                 }
-            }
-            14 => {
-                if frame % 3 == 0 {
-                    fighter.sprite_frame = if fighter.sprite_frame == offset + 33 {
-                        offset + 34
-                    } else {
-                        offset + 33
-                    };
+                4 => {
+                    if frame < 13 {
+                        fighter.sprite_frame = offset + 33;
+                    }
+                    if frame == 13 {
+                        fighter.sprite_frame = offset + 34;
+                    }
                 }
-            }
-            15 => {
-                if frame <= 10 {
+                5 => {
+                    if frame < 5 {
+                        fighter.sprite_frame = offset + 33;
+                    }
+                    if frame == 9 || frame == 17 || frame == 25 || frame == 33 {
+                        fighter.sprite_frame = offset + 34;
+                    }
+                    if frame == 13 || frame == 21 || frame == 29 || frame == 37 {
+                        fighter.sprite_frame = offset + 33;
+                    }
+                    if frame == 41 {
+                        fighter.sprite_frame = offset + 35;
+                    }
+                }
+                6 => {
+                    if frame % 4 == 0 {
+                        fighter.sprite_frame = if fighter.sprite_frame == offset + 33 {
+                            offset + 34
+                        } else {
+                            offset + 33
+                        };
+                    }
+                }
+                7 => {
+                    fighter.sprite_frame = offset + if frame % 2 == 0 { 33 } else { 34 };
+                }
+                8 => {
+                    fighter.sprite_frame = offset + 33;
+                    if frame % 2 == 0 {
+                        fighter.y -= 4.0;
+                    }
+                    if frame % 2 != 0 {
+                        fighter.y += 4.0;
+                    }
+                    if context.ground_y < fighter.y {
+                        fighter.y = context.ground_y;
+                    }
+                }
+                9 => {
+                    if frame % 3 == 0 {
+                        fighter.sprite_frame = if fighter.sprite_frame == offset + 33 {
+                            offset + 34
+                        } else {
+                            offset + 33
+                        };
+                    }
+                }
+                10 => {
+                    if frame < 12 {
+                        fighter.sprite_frame = offset + 33;
+                    }
+                    if frame == 12 {
+                        fighter.sprite_frame = offset + 34;
+                    }
+                }
+                11 => {
                     fighter.sprite_frame = offset + 33;
                 }
-                if frame == 10 {
-                    fighter.sprite_frame = offset + 34;
+                12 => {
+                    if frame % 2 == 0 {
+                        fighter.sprite_frame = offset + 33;
+                    } else {
+                        fighter.sprite_frame = offset + 34;
+                    }
+    
+                    if fighter.facing == SIDE_RIGHT {
+                        fighter.x += 12.0;
+                    }
+                    if fighter.facing == SIDE_LEFT {
+                        fighter.x -= 12.0;
+                    }
+    
+                    let camera_relative_x = fighter.x - context.camera_x;
+                    if camera_relative_x <= context.camera_left_limit {
+                        fighter.facing = SIDE_RIGHT;
+                    }
+                    if camera_relative_x >= context.camera_right_limit {
+                        fighter.facing = SIDE_LEFT;
+                    }
+    
+                    if frame % 8 == 0 && rng.draw_longint(2).map_err(RuntimeError::Rng)? == 0 {
+                        if fighter.facing == SIDE_RIGHT {
+                            fighter.facing = SIDE_LEFT;
+                        } else if fighter.facing == SIDE_LEFT {
+                            fighter.facing = SIDE_RIGHT;
+                        }
+                    }
+    
+                    // Pascal evaluates the two Random expressions for each effect in order.
+                    for _ in 0..5 {
+                        let dx = rng.draw_longint(40).map_err(RuntimeError::Rng)?;
+                        let dy = rng.draw_longint(10).map_err(RuntimeError::Rng)?;
+                        effect_requests.push(EffectSpawnRequest {
+                            effect_type: 2,
+                            variant: None,
+                            owner: 0,
+                            owner_facing: EFFECT_SIDE_RIGHT,
+                            x: fighter.x - 30.0 + dx as f64,
+                            y: fighter.y + dy as f64,
+                        });
+                    }
                 }
-                if frame == 14 {
-                    fighter.sprite_frame = offset + 35;
+                13 => {
+                    fighter.sprite_frame = offset + 33;
+                    let displacement = pascal_round((f64::from(frame) / 3.0).cos() * 6.0);
+                    fighter.y -= f64::from(displacement);
+                    if context.ground_y - 10.0 < fighter.y {
+                        fighter.y = context.ground_y - 10.0;
+                    }
+                }
+                14 => {
+                    if frame % 3 == 0 {
+                        fighter.sprite_frame = if fighter.sprite_frame == offset + 33 {
+                            offset + 34
+                        } else {
+                            offset + 33
+                        };
+                    }
+                }
+                15 => {
+                    if frame <= 10 {
+                        fighter.sprite_frame = offset + 33;
+                    }
+                    if frame == 10 {
+                        fighter.sprite_frame = offset + 34;
+                    }
+                    if frame == 14 {
+                        fighter.sprite_frame = offset + 35;
+                    }
+                }
+                _ => {
+                    return Err(RuntimeError::UnsupportedBranch(
+                        "victory animation: character ID outside audited C01-C15 roster",
+                    ))
                 }
             }
-            _ => {
-                return Err(RuntimeError::UnsupportedBranch(
-                    "victory animation: character ID outside audited C01-C15 roster",
-                ))
             }
-        }
-        }
 
         let mut spawned_effect_slots = Vec::new();
         for request in effect_requests {
@@ -574,7 +577,6 @@ impl CombatState {
             spawned_effect_slots,
         })
     }
-
 
     /// Allocate one real effect instance through the fixed Pascal-compatible arena.
     fn spawn_effect<R: PascalRandomSource>(
@@ -622,12 +624,12 @@ impl CombatState {
         R::Error: fmt::Display,
     {
         let (character_id, action_id, frame, force, facing) = {
-            let fighter = self
-                .fighters
-                .get(fighter_index)
-                .ok_or(RuntimeError::UnsupportedBranch(
-                    "C01 [Quadro]: invalid fighter index",
-                ))?;
+            let fighter =
+                self.fighters
+                    .get(fighter_index)
+                    .ok_or(RuntimeError::UnsupportedBranch(
+                        "C01 [Quadro]: invalid fighter index",
+                    ))?;
             (
                 fighter.character_id,
                 fighter.action_id,
@@ -660,9 +662,8 @@ impl CombatState {
             _ => {}
         }
 
-        let player = u8::try_from(fighter_index + 1).map_err(|_| {
-            RuntimeError::UnsupportedBranch("C01 [Quadro]: invalid player index")
-        })?;
+        let player = u8::try_from(fighter_index + 1)
+            .map_err(|_| RuntimeError::UnsupportedBranch("C01 [Quadro]: invalid player index"))?;
         let offset = context.sprite_offset;
         let mut rng = RecordingRandomSource::new(rng);
         let mut spawned_effect_slots = Vec::new();
@@ -733,15 +734,9 @@ impl CombatState {
                         let dy = rng.draw_longint(10).map_err(RuntimeError::Rng)?;
                         let x = self.fighters[fighter_index].x - 20.0 + f64::from(dx);
                         let y = self.fighters[fighter_index].y + f64::from(dy);
-                        if let Some(slot) = self.spawn_effect(
-                            2,
-                            None,
-                            0,
-                            EFFECT_SIDE_RIGHT,
-                            x,
-                            y,
-                            &mut rng,
-                        )? {
+                        if let Some(slot) =
+                            self.spawn_effect(2, None, 0, EFFECT_SIDE_RIGHT, x, y, &mut rng)?
+                        {
                             spawned_effect_slots.push(slot);
                         }
                     }
@@ -768,15 +763,9 @@ impl CombatState {
                         _ => None,
                     };
                     if let Some(x) = x {
-                        if let Some(slot) = self.spawn_effect(
-                            16,
-                            None,
-                            player,
-                            side,
-                            x,
-                            origin_y - 85.0,
-                            &mut rng,
-                        )? {
+                        if let Some(slot) =
+                            self.spawn_effect(16, None, player, side, x, origin_y - 85.0, &mut rng)?
+                        {
                             spawned_effect_slots.push(slot);
                         }
                     }
@@ -873,15 +862,9 @@ impl CombatState {
                         _ => None,
                     };
                     if let Some(x) = x {
-                        if let Some(slot) = self.spawn_effect(
-                            8,
-                            None,
-                            player,
-                            facing,
-                            x,
-                            origin_y,
-                            &mut rng,
-                        )? {
+                        if let Some(slot) =
+                            self.spawn_effect(8, None, player, facing, x, origin_y, &mut rng)?
+                        {
                             spawned_effect_slots.push(slot);
                         }
                     }

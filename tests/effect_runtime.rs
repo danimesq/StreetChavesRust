@@ -104,13 +104,26 @@ fn type7_uses_weak_ini_values_and_consumes_one_random_five() {
     assert_eq!(effect.guard_damage, 3);
     assert_eq!(
         effect.bounds,
-        EffectBounds { left: -25, top: -38, right: 25, bottom: 0 }
+        EffectBounds {
+            left: -25,
+            top: -38,
+            right: 25,
+            bottom: 0
+        }
     );
 
     let mut second_rng = ScriptedRng::with_values(&[1]);
     assert_eq!(
         arena
-            .spawn(7, Some('B'), 2, EFFECT_SIDE_RIGHT, 100.0, 200.0, &mut second_rng)
+            .spawn(
+                7,
+                Some('B'),
+                2,
+                EFFECT_SIDE_RIGHT,
+                100.0,
+                200.0,
+                &mut second_rng
+            )
             .unwrap(),
         Some(1)
     );
@@ -155,7 +168,12 @@ fn type8_arms_its_two_source_hitbox_phases_and_stage_flag() {
     assert_eq!(at_two.render_snapshots[0].sprite, 16);
     assert_eq!(
         at_two.render_snapshots[0].bounds,
-        EffectBounds { left: -45, top: -150, right: 45, bottom: 0 }
+        EffectBounds {
+            left: -45,
+            top: -150,
+            right: 45,
+            bottom: 0
+        }
     );
 
     arena.advance(tick_context());
@@ -165,7 +183,12 @@ fn type8_arms_its_two_source_hitbox_phases_and_stage_flag() {
     assert!(at_five.render_snapshots[0].stage);
     assert_eq!(
         at_five.render_snapshots[0].bounds,
-        EffectBounds { left: -45, top: -220, right: 45, bottom: 0 }
+        EffectBounds {
+            left: -45,
+            top: -220,
+            right: 45,
+            bottom: 0
+        }
     );
 }
 

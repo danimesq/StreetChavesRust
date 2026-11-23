@@ -7,8 +7,8 @@ use street_chaves::combat_runtime::{
     AiCommand, AiTickInputs, BodyBox, CharacterActionScript, CombatState, FighterState,
     RuntimeDrawWidth, RuntimeError, VictoryAnimationContext, ACTION_CROUCHING, ACTION_IDLE,
     ACTION_POSE, ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4,
-    ACTION_SPECIAL_FINAL, ACTION_VICTORY, ACTION_WALKING, FORCE_STRONG, FORCE_WEAK,
-    SIDE_LEFT, SIDE_RIGHT,
+    ACTION_SPECIAL_FINAL, ACTION_VICTORY, ACTION_WALKING, FORCE_STRONG, FORCE_WEAK, SIDE_LEFT,
+    SIDE_RIGHT,
 };
 use street_chaves::pascal_differential::{first_divergence, load_tick_checkpoints};
 use street_chaves::pascal_replay::{PascalDrawReplay, PascalRandomSource};
@@ -523,7 +523,10 @@ fn c12_victory_preserves_movement_clamps_rng_and_particle_order() {
     );
     assert_eq!(result.spawned_effect_slots, vec![0, 1, 2, 3, 4]);
     assert_eq!(state.effects.active_count(), 5);
-    let first_effect = state.effects.instance(0).expect("first live C12 dust effect");
+    let first_effect = state
+        .effects
+        .instance(0)
+        .expect("first live C12 dust effect");
     assert_eq!(first_effect.effect_type, 2);
     assert_eq!(first_effect.owner, 0);
     assert_eq!(first_effect.x, 271.0);
@@ -753,7 +756,6 @@ fn pose_animation_rejects_non_pose_actions_unsupported_fighters_and_bad_indices(
     assert_eq!(invalid_index, before);
 }
 
-
 #[test]
 fn c01_special1_frame10_spawns_a_real_type7_and_consumes_random_five() {
     let mut state = c01_frame_state(ACTION_SPECIAL1, 10, 0);
@@ -767,7 +769,11 @@ fn c01_special1_frame10_spawns_a_real_type7_and_consumes_random_five() {
     assert_eq!(state.pending_sound, Some(14));
     assert_eq!(rng.cursor, 1);
     assert_eq!(
-        result.draws.iter().map(|draw| (draw.range, draw.value)).collect::<Vec<_>>(),
+        result
+            .draws
+            .iter()
+            .map(|draw| (draw.range, draw.value))
+            .collect::<Vec<_>>(),
         vec![(5, 0)]
     );
     assert_eq!(result.spawned_effect_slots, vec![0]);
@@ -795,7 +801,11 @@ fn c01_special2_uses_sprite_frame_gate_and_spawns_dust_and_trail_instances() {
 
     assert_eq!(rng.cursor, 6);
     assert_eq!(
-        result.draws.iter().map(|draw| draw.range).collect::<Vec<_>>(),
+        result
+            .draws
+            .iter()
+            .map(|draw| draw.range)
+            .collect::<Vec<_>>(),
         vec![40, 10, 40, 10, 40, 10]
     );
     assert_eq!(result.spawned_effect_slots, vec![0, 1, 2, 3]);
@@ -867,7 +877,8 @@ fn c01_special4_applies_weak_and_strong_frame_pushback_windows() {
 
     let mut strong = c01_frame_state(ACTION_SPECIAL4, 13, 777);
     strong.fighters[1].force_strength = FORCE_STRONG;
-    strong.update_c01_character_frame(1, victory_context(), &mut rng)
+    strong
+        .update_c01_character_frame(1, victory_context(), &mut rng)
         .unwrap();
     assert_eq!(strong.fighters[1].x, 221.0);
     assert!(strong.fighters[1].is_kick);
