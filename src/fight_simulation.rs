@@ -1307,7 +1307,10 @@ mod rot_runtime_integration_tests {
         assert_eq!(rot.state.fighters[0], hand_port.state.fighters[0]);
         assert_eq!(rot.state.pending_sound, hand_port.state.pending_sound);
         assert_eq!(rot.state.screen_flash, hand_port.state.screen_flash);
-        assert_eq!(rot.state.effects.active_count(), hand_port.state.effects.active_count());
+        assert_eq!(
+            rot.state.effects.active_count(),
+            hand_port.state.effects.active_count()
+        );
         assert!(rot_report.errors.is_empty());
     }
 
@@ -1368,8 +1371,7 @@ mod rot_runtime_integration_tests {
             let _ = compatibility.state.finish_common_action(0);
 
             assert_eq!(
-                rot.state.fighters[0],
-                compatibility.state.fighters[0],
+                rot.state.fighters[0], compatibility.state.fighters[0],
                 "C13 command {command_code}"
             );
             assert_eq!(rot.state.screen_flash, compatibility.state.screen_flash);
@@ -1377,5 +1379,4 @@ mod rot_runtime_integration_tests {
             assert!(rot_report.errors.is_empty());
         }
     }
-
 }
