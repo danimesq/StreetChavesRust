@@ -591,6 +591,17 @@ impl FightSimulation {
                     "C13 [Acao] fighter {fighter_index}, command {command_code}: {error}"
                 )),
             }
+        } else if self.state.fighters[fighter_index].character_id == 10
+            && matches!(command_code, 14..=24)
+        {
+            match self.execute_character_rot_action(fighter_index, 10, command_code) {
+                Ok(()) => report
+                    .rot_action_executions
+                    .push((fighter_index, 10, command_code)),
+                Err(error) => report.errors.push(format!(
+                    "C10 [Acao] fighter {fighter_index}, command {command_code}: {error}"
+                )),
+            }
         } else if self.state.fighters[fighter_index].character_id == 9
             && matches!(command_code, 14 | 15 | 20 | 21)
         {
@@ -646,6 +657,7 @@ impl FightSimulation {
             7 => ("C07.rot", include_str!("../research/pascal-rot/C07.rot")),
             8 => ("C08.rot", include_str!("../research/pascal-rot/C08.rot")),
             9 => ("C09.rot", include_str!("../research/pascal-rot/C09.rot")),
+            10 => ("C10.rot", include_str!("../research/pascal-rot/C10.rot")),
             13 => ("C13.rot", include_str!("../research/pascal-rot/C13.rot")),
             _ => {
                 return Err(format!(
@@ -1544,6 +1556,128 @@ mod rot_runtime_integration_tests {
         assert_eq!(fight.state.screen_flash, 22);
         assert_eq!(fight.state.pending_sound, Some(19));
         assert_eq!(report.rot_action_executions, vec![(0, 8, 24)]);
+        assert!(report.errors.is_empty());
+    }
+
+    #[test]
+    fn c10_nhonho_routes_victory_pose_and_all_special_entries() {
+        for (command_code, button, action, duration) in [
+            (14, AttackButton::WeakPunch, ACTION_VICTORY, 250),
+            (15, AttackButton::WeakPunch, ACTION_POSE, 20),
+            (16, AttackButton::WeakPunch, ACTION_SPECIAL1, 20),
+            (17, AttackButton::StrongPunch, ACTION_SPECIAL1, 20),
+            (18, AttackButton::WeakPunch, ACTION_SPECIAL2, 11),
+            (19, AttackButton::StrongPunch, ACTION_SPECIAL2, 20),
+            (20, AttackButton::WeakKick, ACTION_SPECIAL3, 20),
+            (21, AttackButton::StrongKick, ACTION_SPECIAL3, 20),
+            (22, AttackButton::WeakKick, ACTION_SPECIAL4, 13),
+            (23, AttackButton::StrongKick, ACTION_SPECIAL4, 13),
+        ] {
+            let mut fight = simulation();
+            fight.state.fighters[0].character_id = 10;
+            fight.state.fighters[0].punch_charge = 9;
+            let mut report = FightTickReport::default();
+
+            fight.dispatch_character_command(0, button, command_code, &mut report);
+
+            let fighter = &fight.state.fighters[0];
+            assert_eq!(fighter.action_id, action, "C10 command {command_code}");
+            assert_eq!(fighter.action_frame, 0);
+            assert_eq!(fighter.action_duration, duration);
+            assert_eq!(report.rot_action_executions, vec![(0, 10, command_code)]);
+            assert!(report.unhandled_commands.is_empty());
+            assert!(report.errors.is_empty());
+
+            match command_code {
+                16 | 17 => {
+                    assert_eq!(fighter.punch_charge, 0);
+                    assert_eq!(fighter.charge_power, 5.0);
+                    assert_eq!(fighter.force_strength, if command_code == 16 { 1 } else { 2 });
+                    assert_eq!(fight.state.pending_sound, Some(47));
+                }
+                18 | 19 => {
+                    assert_eq!(fighter.charge_power, 6.0);
+                    assert_eq!(fighter.force_strength, if command_code == 18 { 1 } else { 2 });
+                    assert_eq!(fight.state.pending_sound, Some(48));
+                }
+                20 | 21 => {
+                    assert_eq!(fighter.y, 190.0);
+                    assert!(fighter.in_air);
+                    assert_eq!(fighter.vertical_velocity, if command_code == 20 { -25 } else { -28 });
+                    assert_eq!(fighter.charge_power, 5.0);
+                    assert_eq!(fighter.force_strength, if command_code == 20 { 1 } else { 2 });
+                    assert_eq!(fight.state.pending_sound, Some(49));
+                }
+                22 | 23 => {
+                    assert_eq!(fighter.charge_power, 5.0);
+                    assert_eq!(fighter.force_strength, if command_code == 22 { 1 } else { 2 });
+                    assert_eq!(fight.state.pending_sound, Some(49));
+                }
+                _ => {}
+            }
+        }
+    }
+
+    #[test]
+    fn c10_nhonho_final_special_consumes_power_and_writes_sprite_flash_and_sound() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 10;
+        fight.state.fighters[0].power = 3;
+        fight.state.fighters[0].charge_power = 25.0;
+        let mut report = FightTickReport::default();
+
+        fight.dispatch_character_command(0, AttackButton::StrongKick, 24, &mut report);
+
+        let fighter = &fight.state.fighters[0];
+        assert_eq!(fighter.action_id, ACTION_SPECIAL_FINAL);
+        assert_eq!(fighter.action_frame, 0);
+        assert_eq!(fighter.action_duration, 40);
+        assert_eq!(fighter.charge_power, 0.0);
+        assert_eq!(fighter.power, 2);
+        assert_eq!(fighter.sprite_frame, 38);
+        assert_eq!(fight.state.screen_flash, 22);
+        assert_eq!(fight.state.pending_sound, Some(19));
+        assert_eq!(report.rot_action_executions, vec![(0, 10, 24)]);
+        assert!(report.unhandled_commands.is_empty());
+        assert!(report.errors.is_empty());
+    }
+
+    #[test]
+    fn c10_nhonho_rejects_special_three_above_the_source_height_threshold() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 10;
+        fight.state.fighters[0].y = 149.0;
+        let mut report = FightTickReport::default();
+
+        fight.dispatch_character_command(0, AttackButton::WeakKick, 20, &mut report);
+
+        let fighter = &fight.state.fighters[0];
+        assert_eq!(fighter.action_id, ACTION_IDLE);
+        assert_eq!(fighter.y, 149.0);
+        assert!(!fighter.in_air);
+        assert_eq!(fighter.charge_power, 0.0);
+        assert_eq!(fight.state.pending_sound, None);
+        assert_eq!(report.rot_action_executions, vec![(0, 10, 20)]);
+        assert!(report.errors.is_empty());
+    }
+
+    #[test]
+    fn c10_nhonho_rejects_final_special_without_low_health_or_power() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 10;
+        fight.state.fighters[0].power = 0;
+        fight.state.fighters[0].health = 100.0;
+        let mut report = FightTickReport::default();
+
+        fight.dispatch_character_command(0, AttackButton::StrongKick, 24, &mut report);
+
+        let fighter = &fight.state.fighters[0];
+        assert_eq!(fighter.action_id, ACTION_IDLE);
+        assert_eq!(fighter.power, 0);
+        assert_eq!(fighter.sprite_frame, 0);
+        assert_eq!(fight.state.screen_flash, 0);
+        assert_eq!(fight.state.pending_sound, None);
+        assert_eq!(report.rot_action_executions, vec![(0, 10, 24)]);
         assert!(report.errors.is_empty());
     }
 
