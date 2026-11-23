@@ -74,7 +74,11 @@ fn main() -> ExitCode {
                 charge_power: 0.0,
                 jump_direction: 0,
                 low_time: 0,
+            back_time: 0,
                 sequence_state: 0,
+            sequence_timer: 0,
+            punch_charge: 0,
+            kick_charge: 0,
                 body: BodyBox {
                     x1: -18.0,
                     y1: 30.0,
@@ -106,7 +110,11 @@ fn main() -> ExitCode {
                 charge_power: 0.0,
                 jump_direction: 0,
                 low_time: 0,
+            back_time: 0,
                 sequence_state: 0,
+            sequence_timer: 0,
+            punch_charge: 0,
+            kick_charge: 0,
                 body: BodyBox {
                     x1: -19.0,
                     y1: 35.0,
