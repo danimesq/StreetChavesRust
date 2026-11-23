@@ -4,8 +4,8 @@ use std::time::Duration;
 
 use street_chaves::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext};
 use street_chaves::combat_runtime::{
-    BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_IDLE, ACTION_SPECIAL1,
-    ACTION_CROUCHING, ACTION_CROUCH_STRONG_KICK, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL,
+    BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_CROUCHING,
+    ACTION_CROUCH_STRONG_KICK, ACTION_IDLE, ACTION_SPECIAL1, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL,
     ACTION_WEAK_PUNCH, FORCE_WEAK, SIDE_RIGHT,
 };
 use street_chaves::effect_runtime::EFFECT_SIDE_RIGHT;

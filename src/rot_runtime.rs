@@ -248,8 +248,9 @@ impl<'a> Lexer<'a> {
                 return Err(self.error(start, "hex literal needs digits"));
             }
             let digits: String = self.chars[digits_start..self.index].iter().collect();
-            let value = i64::from_str_radix(&digits, 16)
-                .map_err(|_| self.error(start, "hex literal is outside the supported integer range"))?;
+            let value = i64::from_str_radix(&digits, 16).map_err(|_| {
+                self.error(start, "hex literal is outside the supported integer range")
+            })?;
             return Ok(self.token(
                 TokenKind::Integer,
                 start_index,
@@ -263,9 +264,7 @@ impl<'a> Lexer<'a> {
         }
 
         let mut is_real = false;
-        if self.current() == Some('.')
-            && self.next().is_some_and(|ch| ch.is_ascii_digit())
-        {
+        if self.current() == Some('.') && self.next().is_some_and(|ch| ch.is_ascii_digit()) {
             is_real = true;
             self.advance();
             while self.current().is_some_and(|ch| ch.is_ascii_digit()) {
@@ -397,9 +396,12 @@ impl<'a> Lexer<'a> {
 }
 
 pub fn lex(source_name: &str, text: &str) -> Result<Vec<(String, SourceSpan)>, RotError> {
-    Lexer::new(source_name, text, 1)
-        .run()
-        .map(|tokens| tokens.into_iter().map(|token| (token.text, token.span)).collect())
+    Lexer::new(source_name, text, 1).run().map(|tokens| {
+        tokens
+            .into_iter()
+            .map(|token| (token.text, token.span))
+            .collect()
+    })
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -477,8 +479,14 @@ pub struct Expression {
 pub enum ExpressionKind {
     Literal(Literal),
     Identifier(String),
-    FighterField { base: char, name: String },
-    Call { name: String, arguments: Vec<Expression> },
+    FighterField {
+        base: char,
+        name: String,
+    },
+    Call {
+        name: String,
+        arguments: Vec<Expression>,
+    },
     Unary {
         operator: UnaryOperator,
         value: Box<Expression>,
@@ -680,11 +688,7 @@ struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn try_new(
-        source: &'a str,
-        text: &str,
-        first_line: usize,
-    ) -> Result<Self, RotError> {
+    fn try_new(source: &'a str, text: &str, first_line: usize) -> Result<Self, RotError> {
         Ok(Self {
             source,
             tokens: Lexer::new(source, text, first_line).run()?,
@@ -718,10 +722,7 @@ impl<'a> Parser<'a> {
 
     fn expect(&mut self, text: &str) -> Result<Token, RotError> {
         if !self.at(text) {
-            return Err(self.error(format!(
-                "expected {text:?}, found {:?}",
-                self.token().text
-            )));
+            return Err(self.error(format!("expected {text:?}, found {:?}", self.token().text)));
         }
         Ok(self.bump())
     }
@@ -745,12 +746,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn statement(
-        &mut self,
-        kind: StatementKind,
-        start: SourceSpan,
-        end: SourceSpan,
-    ) -> Statement {
+    fn statement(&mut self, kind: StatementKind, start: SourceSpan, end: SourceSpan) -> Statement {
         Statement {
             kind,
             span: SourceSpan::join(start, end),
@@ -776,10 +772,7 @@ impl<'a> Parser<'a> {
         }
         let body = self.parse_statement_list(&[])?;
         if self.token().kind != TokenKind::Eof {
-            return Err(self.error(format!(
-                "unexpected trailing token {:?}",
-                self.token().text
-            )));
+            return Err(self.error(format!("unexpected trailing token {:?}", self.token().text)));
         }
         Ok(RotProgram {
             source: self.source.to_owned(),
@@ -824,17 +817,17 @@ impl<'a> Parser<'a> {
                 continue;
             }
             if self.token().kind != TokenKind::Eof && !self.is_stop(stop) {
-                return Err(self.error(format!(
-                    "expected ';', found {:?}",
-                    self.token().text
-                )));
+                return Err(self.error(format!("expected ';', found {:?}", self.token().text)));
             }
             if before == self.position {
                 return Err(self.error("parser made no progress"));
             }
         }
 
-        let end = statements.last().map(|statement| statement.span).unwrap_or(start);
+        let end = statements
+            .last()
+            .map(|statement| statement.span)
+            .unwrap_or(start);
         Ok(self.statement(StatementKind::Block(statements), start, end))
     }
 
@@ -1015,7 +1008,10 @@ impl<'a> Parser<'a> {
             }
             let value = self.parse_expression()?;
             return Ok(self.statement(
-                StatementKind::Assign { target, value: value.clone() },
+                StatementKind::Assign {
+                    target,
+                    value: value.clone(),
+                },
                 start,
                 value.span,
             ));
@@ -1149,11 +1145,7 @@ impl<'a> Parser<'a> {
         if self.eat("(") {
             let value = self.parse_expression()?;
             let end = self.expect(")")?.span;
-            return Ok(self.expression(
-                ExpressionKind::Group(Box::new(value)),
-                start,
-                end,
-            ));
+            return Ok(self.expression(ExpressionKind::Group(Box::new(value)), start, end));
         }
 
         if self.eat("[") {
@@ -1185,16 +1177,11 @@ impl<'a> Parser<'a> {
             TokenKind::Integer | TokenKind::Real | TokenKind::String => {
                 self.bump();
                 let literal = token.literal.expect("literal token must carry a value");
-                Ok(self.expression(
-                    ExpressionKind::Literal(literal),
-                    token.span,
-                    token.span,
-                ))
+                Ok(self.expression(ExpressionKind::Literal(literal), token.span, token.span))
             }
             TokenKind::Identifier => {
                 let name = self.bump();
-                if name.text.eq_ignore_ascii_case("true")
-                    || name.text.eq_ignore_ascii_case("false")
+                if name.text.eq_ignore_ascii_case("true") || name.text.eq_ignore_ascii_case("false")
                 {
                     let value = name.text.eq_ignore_ascii_case("true");
                     return Ok(self.expression(
@@ -1204,8 +1191,7 @@ impl<'a> Parser<'a> {
                     ));
                 }
 
-                if (name.text.eq_ignore_ascii_case("P")
-                    || name.text.eq_ignore_ascii_case("O"))
+                if (name.text.eq_ignore_ascii_case("P") || name.text.eq_ignore_ascii_case("O"))
                     && self.eat(".")
                 {
                     let field = self.expect_identifier()?;
@@ -1241,11 +1227,7 @@ impl<'a> Parser<'a> {
                     ));
                 }
 
-                Ok(self.expression(
-                    ExpressionKind::Identifier(name.text),
-                    name.span,
-                    name.span,
-                ))
+                Ok(self.expression(ExpressionKind::Identifier(name.text), name.span, name.span))
             }
             _ => Err(self.error(format!(
                 "unexpected expression token {:?}",
@@ -1260,7 +1242,10 @@ mod tests {
     use super::*;
 
     const SOURCES: &[(&str, &str)] = &[
-        ("Comum.rot", include_str!("../research/pascal-rot/Comum.rot")),
+        (
+            "Comum.rot",
+            include_str!("../research/pascal-rot/Comum.rot"),
+        ),
         ("C01.rot", include_str!("../research/pascal-rot/C01.rot")),
         ("C02.rot", include_str!("../research/pascal-rot/C02.rot")),
         ("C03.rot", include_str!("../research/pascal-rot/C03.rot")),
@@ -1283,7 +1268,10 @@ mod tests {
         for (filename, text) in SOURCES {
             let document = RotDocument::from_str(filename, text)
                 .unwrap_or_else(|error| panic!("{filename}: {error}"));
-            assert!(document.section("Acao").is_some(), "{filename} lacks [Acao]");
+            assert!(
+                document.section("Acao").is_some(),
+                "{filename} lacks [Acao]"
+            );
             for section in document.sections() {
                 section
                     .parse()
@@ -1299,10 +1287,15 @@ mod tests {
 
     #[test]
     fn common_action_end_is_present_and_character_action_end_is_absent() {
-        let common = RotDocument::from_str("Comum.rot", include_str!("../research/pascal-rot/Comum.rot")).unwrap();
+        let common = RotDocument::from_str(
+            "Comum.rot",
+            include_str!("../research/pascal-rot/Comum.rot"),
+        )
+        .unwrap();
         assert!(common.parse_optional("AcaoFim").unwrap().is_some());
 
-        let c13 = RotDocument::from_str("C13.rot", include_str!("../research/pascal-rot/C13.rot")).unwrap();
+        let c13 = RotDocument::from_str("C13.rot", include_str!("../research/pascal-rot/C13.rot"))
+            .unwrap();
         assert!(c13.parse_optional("AcaoFim").unwrap().is_none());
     }
 
@@ -1337,8 +1330,13 @@ else
 
     #[test]
     fn lexer_preserves_source_offsets_and_doubled_quotes() {
-        let tokens = Lexer::new("fixture.rot", "P.X := 'it''s';", 12).run().unwrap();
-        let string = tokens.iter().find(|token| token.kind == TokenKind::String).unwrap();
+        let tokens = Lexer::new("fixture.rot", "P.X := 'it''s';", 12)
+            .run()
+            .unwrap();
+        let string = tokens
+            .iter()
+            .find(|token| token.kind == TokenKind::String)
+            .unwrap();
         assert_eq!(string.literal, Some(Literal::String("it's".to_owned())));
         assert_eq!(string.span.line, 12);
         assert_eq!(string.span.start_offset, 7);
