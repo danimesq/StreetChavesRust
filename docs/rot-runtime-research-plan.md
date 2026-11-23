@@ -250,7 +250,7 @@ CI passed on commit f463ef7482cf3b94bd6b8abc88c62903b554f395: formatting and all
 
 ### C06 — Professor Girafales (active bounded roster slice)
 
-The complete pinned C06.rot [Acao] section has been audited. Commands 14–24 are routed through the real interpreter on this branch. Its Esp1 and Esp2 branches both reject while effect type 15 is active. The effect arena now has source-backed creation and animation support for effect types 13 and 15, allowing real guard fixtures for C05 and C06 rather than mocked ExisteEfeito results. C06 tests cover victory/pose, weak/strong specials 1–4, final-special airborne/power/sprite/flash/sound writes, and active-effect rejection for Esp1/Esp2. CI validation is pending.
+The complete pinned C06.rot [Acao] section has been audited. Commands 14–24 are routed through the real interpreter on this branch. Its Esp1 and Esp2 branches both reject while effect type 15 is active. The effect arena now has source-backed creation and animation support for effect types 13 and 15, allowing real guard fixtures for C05 and C06 rather than mocked ExisteEfeito results. C06 tests cover victory/pose, weak/strong specials 1–4, final-special airborne/power/sprite/flash/sound writes, and active-effect rejection for Esp1/Esp2. CI passed on code commit `f8bfdb1b03a4250082a1b24a4b2fad0216e0530b`: formatting and all test targets are green (91 library tests plus integration targets 12, 2, 29, 7, 13, 5 and 5).
 
 ## 7. C01 and C13 regression strategy
 
@@ -421,7 +421,7 @@ A fixture with only a final action ID is insufficient. Compare every registered 
 - [ ] C13 Extra1/Extra2 hand-port regression matches actual C13.rot action execution.
 - [ ] C02-C15 specials execute their real scripts, including all per-character guards and side effects.
 - [x] C05 commands 14–24 execute the actual C05.rot [Acao] section; victory/pose, weak/strong, landing-height, charge-reset and final-special tests pass CI.
-- [ ] Add a real active-effect fixture for C05 Esp1's `ExisteEfeito(13, Jog)` rejection guard. Effect type 13 is not yet spawnable by the current effect arena.
+- [x] C05 Esp1's `ExisteEfeito(13, Jog)` rejection guard is covered with a real effect-type-13 instance created by the source-backed effect arena.
 - [ ] Pascal-derived fixtures compare state mutations, effects, sounds, globals and RNG, not only final action IDs.
 - [ ] `CargaSoco`/`CargaChute` behavior is established from evidence or explicitly remains an unresolved input field; no guessed rule is merged.
 - [ ] Existing Rust tests, normalizer tests and relevant Pascal replay/differential checks pass.
