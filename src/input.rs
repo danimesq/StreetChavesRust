@@ -28,7 +28,10 @@ pub struct Button(pub u8);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputEvent {
     DirectionChanged(Direction),
-    ButtonChanged { button: Button, down: bool },
+    ButtonChanged {
+        button: Button,
+        down: bool,
+    },
     /// Clear held state when focus is lost or a device disconnects.
     Reset,
 }
@@ -139,7 +142,10 @@ mod tests {
     fn edges_are_emitted_once_and_hold_counter_advances_per_tick() {
         let mut sampler = InputSampler::default();
         let attack = Button(2);
-        sampler.apply_event(InputEvent::ButtonChanged { button: attack, down: true });
+        sampler.apply_event(InputEvent::ButtonChanged {
+            button: attack,
+            down: true,
+        });
         // Repeated host down events (including OS key repeat) do not create edges.
         sampler.apply_event(InputEvent::ButtonChanged { button: attack, down: true });
 
@@ -152,7 +158,10 @@ mod tests {
         assert!(!second.was_pressed(attack));
         assert_eq!(second.held_for(attack), 2);
 
-        sampler.apply_event(InputEvent::ButtonChanged { button: attack, down: false });
+        sampler.apply_event(InputEvent::ButtonChanged {
+            button: attack,
+            down: false,
+        });
         let third = sampler.sample_tick();
         assert!(third.was_released(attack));
         assert!(!third.is_held(attack));
@@ -178,7 +187,10 @@ mod tests {
     #[test]
     fn out_of_range_button_slots_are_ignored() {
         let mut sampler = InputSampler::default();
-        sampler.apply_event(InputEvent::ButtonChanged { button: Button(32), down: true });
+        sampler.apply_event(InputEvent::ButtonChanged {
+            button: Button(32),
+            down: true,
+        });
         assert_eq!(sampler.sample_tick().held_buttons, 0);
     }
 }
