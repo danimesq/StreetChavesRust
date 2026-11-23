@@ -232,6 +232,41 @@ impl EffectArena {
                     bottom: 0,
                 };
             }
+            // [Efeito13]/[Efeito15]: source-defined weak/strong fighter projectiles.
+            // Both share the same RNG and damage contract; only their hitboxes/sprites differ.
+            13 | 15 => {
+                let variant = source_variant
+                    .filter(|value| *value == 'A' || *value == 'B')
+                    .ok_or(EffectSpawnError::InvalidVariant { effect_type })?;
+                if owner == 0 {
+                    return Err(EffectSpawnError::InvalidOwner(owner));
+                }
+                if !matches!(owner_facing, EFFECT_SIDE_RIGHT | EFFECT_SIDE_LEFT) {
+                    return Err(EffectSpawnError::InvalidFacing(owner_facing));
+                }
+                effect.duration = 5;
+                effect.can_hit = true;
+                effect.variant_flag = rng.draw_longint(5).map_err(EffectSpawnError::Rng)? == 0;
+                effect.facing = owner_facing;
+                effect.horizontal_velocity = if variant == 'A' { 8 } else { 11 };
+                effect.damage = 12;
+                effect.guard_damage = 3;
+                effect.bounds = if effect_type == 13 {
+                    EffectBounds {
+                        left: -25,
+                        top: -10,
+                        right: 25,
+                        bottom: 80,
+                    }
+                } else {
+                    EffectBounds {
+                        left: -25,
+                        top: -25,
+                        right: 25,
+                        bottom: 37,
+                    }
+                };
+            }
             // [Efeito8]: C01 final special. The type is terminating and damage-active.
             8 => {
                 if source_variant.is_some() {
@@ -318,6 +353,18 @@ impl EffectArena {
                         0 | 1 => effect.sprite = 13,
                         2 => effect.sprite = 14,
                         3 => effect.frame = 0, // Anim4=Q0, before lifetime advancement.
+                        _ => {}
+                    },
+                    13 => match effect.frame {
+                        0 | 1 => effect.sprite = 34,
+                        2 => effect.sprite = 35,
+                        3 => effect.frame = 0,
+                        _ => {}
+                    },
+                    15 => match effect.frame {
+                        0 | 1 => effect.sprite = 39,
+                        2 => effect.sprite = 40,
+                        3 => effect.frame = 0,
                         _ => {}
                     },
                     8 => {
