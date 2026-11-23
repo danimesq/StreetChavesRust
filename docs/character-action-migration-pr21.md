@@ -92,7 +92,8 @@ The migration now routes C01 commands 16–24, C02 commands 16–23, C03 command
 - [x] C13 extra-command hand-port is no longer used by production dispatch; it remains available as a differential test oracle until parity evidence is sufficient for deletion.
 - [x] C02 commands 16–23 execute through the real ROT [Acao] section, with weak/strong coverage for specials 1–3, special 4, final special and rejected-guard coverage for special 1.
 - [x] C03 commands 16–24 execute through the real ROT [Acao] section, with weak/strong coverage for specials 1–4 and final-special state/effect assertions.
-- [x] C05 commands 14–24 are routed through the real C05.rot [Acao] section; focused weak/strong, landing, charge-reset and final-special tests have been added. CI validation and the victory/pose/effect-guard assertions remain pending.
+- [x] C05 commands 14–24 are routed through the real C05.rot [Acao] section; victory/pose, weak/strong, landing-height, charge-reset and final-special tests pass CI.
+- [ ] Add a real active-effect fixture for C05 Esp1's `ExisteEfeito(13, Jog)` rejection guard. Effect type 13 is not yet spawnable by the current effect arena.
 - [x] Run CI and confirm the new C01/C13 ROT-vs-hand-port differential tests pass. (The selected C01/C13 cases pass; broader Pascal capture remains pending.)
 - [x] C02 special-one weak/strong entry and rejected-guard tests pass in CI.
 - [x] Runtime contract and documentation reflect the exact implemented boundary.
