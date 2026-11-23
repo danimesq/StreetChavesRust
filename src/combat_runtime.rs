@@ -87,6 +87,11 @@ pub struct FighterState {
     pub jump_direction: u8,
     pub low_time: u8,
     pub sequence_state: u8,
+    /// Pascal TLutador.SeqTempo (9 ticks after a matching sequence transition).
+    pub sequence_timer: u8,
+    /// Pascal TLutador.CargaSoco and CargaChute; no producer is inferred by this slice.
+    pub punch_charge: u8,
+    pub kick_charge: u8,
     pub body: BodyBox,
 }
 

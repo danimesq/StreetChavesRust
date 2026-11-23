@@ -78,6 +78,9 @@ fn fighter(character_id: u8, action_id: u16) -> FighterState {
         jump_direction: 3,
         low_time: 8,
         sequence_state: 4,
+        sequence_timer: 0,
+        punch_charge: 0,
+        kick_charge: 0,
         body: BodyBox {
             x1: -18.0,
             y1: 30.0,

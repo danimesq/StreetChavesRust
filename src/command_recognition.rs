@@ -124,11 +124,12 @@ pub fn rule_matches(
             ConditionAtom::Up => up,
             ConditionAtom::DownHeld(n) => down_ticks >= n,
             ConditionAtom::BackHeld(n) => back_ticks >= n,
-            ConditionAtom::Grounded => fighter.y == ground_y && !fighter.in_air,
+            // Pascal RegraVale('H') compares ChaoY = P.Y directly.
+            ConditionAtom::Grounded => fighter.y == ground_y,
             ConditionAtom::SequenceState(n) => fighter.sequence_state == n,
             ConditionAtom::Airborne => fighter.vertical_velocity != 0,
-            ConditionAtom::PunchCharge(n) => fighter.charge_power >= f64::from(n),
-            ConditionAtom::KickCharge(n) => fighter.charge_power >= f64::from(n),
+            ConditionAtom::PunchCharge(n) => fighter.punch_charge >= n.min(u16::from(u8::MAX)) as u8,
+            ConditionAtom::KickCharge(n) => fighter.kick_charge >= n.min(u16::from(u8::MAX)) as u8,
         };
         v != c.negated
     })
@@ -141,7 +142,7 @@ pub struct CommandRecognizer {
 }
 impl CommandRecognizer {
     /// Update Pascal TempoBaixo/TempoTras counters once per logical tick.
-    pub fn update_counters(&mut self, fighter: &FighterState, input: InputFrame) {
+    pub fn update_counters(&mut self, fighter: &mut FighterState, input: InputFrame) {
         let (down, _, back, _) = relative(input.direction, fighter.facing);
         if down {
             self.down_ticks = self.down_ticks.saturating_add(1).min(18);
@@ -153,6 +154,7 @@ impl CommandRecognizer {
         } else if self.back_ticks > 1 {
             self.back_ticks -= 1;
         }
+        fighter.low_time = self.down_ticks as u8;
     }
 
     pub fn counters(&self) -> (u16, u16) {
@@ -209,10 +211,22 @@ impl CommandRecognizer {
                 )
             {
                 fighter.sequence_state = r.to_state;
+                fighter.sequence_timer = 9;
                 out.push((r.from_state, r.to_state));
             }
         }
         out
+    }
+
+    /// Pascal decrements SeqTempo after evaluating every sequence rule. Hit-stop
+    /// and screen flash pause only this timeout, not the direction counters/rules.
+    pub fn tick_sequence_timeout(&self, fighter: &mut FighterState, paused: bool) {
+        if fighter.sequence_timer > 0 && !paused {
+            fighter.sequence_timer -= 1;
+            if fighter.sequence_timer == 0 {
+                fighter.sequence_state = 0;
+            }
+        }
     }
 }
 
@@ -247,6 +261,9 @@ mod tests {
             jump_direction: 0,
             low_time: 0,
             sequence_state: 0,
+            sequence_timer: 0,
+            punch_charge: 0,
+            kick_charge: 0,
             body: BodyBox {
                 x1: -1.,
                 y1: 0.,
@@ -298,10 +315,10 @@ mod tests {
     #[test]
     fn counters_cap_then_decay() {
         let mut r = CommandRecognizer::default();
-        let f = fighter(SIDE_RIGHT);
+        let mut f = fighter(SIDE_RIGHT);
         for _ in 0..25 {
             r.update_counters(
-                &f,
+                &mut f,
                 InputFrame {
                     direction: Direction::Down,
                     ..Default::default()
@@ -318,7 +335,7 @@ mod tests {
         let f = fighter(SIDE_RIGHT);
         let mut r = CommandRecognizer::default();
         r.update_counters(
-            &f,
+            &mut f,
             InputFrame {
                 direction: Direction::Down,
                 ..Default::default()
