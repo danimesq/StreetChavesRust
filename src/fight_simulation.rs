@@ -514,7 +514,9 @@ impl FightSimulation {
                     "C06 [Acao] fighter {fighter_index}, command {command_code}: {error}"
                 )),
             }
-        } else if self.state.fighters[fighter_index].character_id == 5 && matches!(command_code, 14..=24) {
+        } else if self.state.fighters[fighter_index].character_id == 5
+            && matches!(command_code, 14..=24)
+        {
             match self.execute_character_rot_action(fighter_index, 5, command_code) {
                 Ok(()) => report
                     .rot_action_executions
@@ -1480,7 +1482,9 @@ mod rot_runtime_integration_tests {
         let mut fight = simulation();
         fight.state.fighters[0].character_id = 5;
         let mut rng = ScriptedRng::with_values(&[1]);
-        fight.state.effects
+        fight
+            .state
+            .effects
             .spawn(13, Some('A'), 1, EFFECT_SIDE_RIGHT, 100.0, 100.0, &mut rng)
             .unwrap();
         let mut report = FightTickReport::default();
