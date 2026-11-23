@@ -47,6 +47,7 @@ fn main() -> ExitCode {
         clock_stopped: false,
         effects: Default::default(),
         pending_sound: None,
+        screen_flash: 0,
         screen_shake: 0,
         fighters: [
             FighterState {
@@ -68,7 +69,12 @@ fn main() -> ExitCode {
                 y: 300.0,
                 speed: 8.0,
                 distance_ai: 0,
-                health: 125,
+                health: 125.0,
+                power: 0,
+                charge_power: 0.0,
+                jump_direction: 0,
+                low_time: 0,
+                sequence_state: 0,
                 body: BodyBox {
                     x1: -18.0,
                     y1: 30.0,
@@ -95,7 +101,12 @@ fn main() -> ExitCode {
                 y: 300.0,
                 speed: 8.0,
                 distance_ai: 0,
-                health: 125,
+                health: 125.0,
+                power: 0,
+                charge_power: 0.0,
+                jump_direction: 0,
+                low_time: 0,
+                sequence_state: 0,
                 body: BodyBox {
                     x1: -19.0,
                     y1: 35.0,

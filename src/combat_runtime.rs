@@ -4,6 +4,9 @@
 //! movement, and the close-range probability chain. Character-specific ROT execution
 //! remains an injected child-script seam; unsupported behavior is not fabricated.
 
+use crate::chaves_specials::{
+    ChavesCharacterActionScript, ChavesSpecialCommand, ChavesSpecialContext,
+};
 use crate::effect_runtime::{
     EffectArena, EffectSpawnError, EffectTickContext, EffectTickResult, EFFECT_SIDE_RIGHT,
 };
@@ -74,7 +77,16 @@ pub struct FighterState {
     pub y: f64,
     pub speed: f64,
     pub distance_ai: i32,
-    pub health: i32,
+    /// Pascal TLutador.Vida is Double; preserve the C01 low-health gate in floating point.
+    pub health: f64,
+    /// Pascal TLutador.Poder (Word), used by C01's final special.
+    pub power: u16,
+    /// Pascal TLutador.CargaPoder (Double).
+    pub charge_power: f64,
+    /// Pascal TLutador.DirPulo, TempoBaixo and SeqEstado (Byte).
+    pub jump_direction: u8,
+    pub low_time: u8,
+    pub sequence_state: u8,
     pub body: BodyBox,
 }
 
@@ -126,6 +138,8 @@ pub struct CombatState {
     pub effects: EffectArena,
     /// Pascal SomPendente, consumed by the outer fight/audio phase.
     pub pending_sound: Option<u16>,
+    /// Pascal FlashTela request from the C01 final-special entry.
+    pub screen_flash: u8,
     /// Pascal TremorTela request from the C01 final special.
     pub screen_shake: u16,
 }
@@ -166,6 +180,8 @@ pub enum AiCommand {
     StrongPunch,
     StrongKick,
     Crouch,
+    /// A character-specific special command requested by a ROT [IA] section.
+    ChavesSpecial(ChavesSpecialCommand),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -195,7 +211,7 @@ impl<E: fmt::Display> fmt::Display for RuntimeError<E> {
             }
             Self::InvalidProbabilityRange { source_line, range } => write!(
                 f,
-                "invalid Pascal probability range at Common.rot line {source_line}: {range}"
+                "invalid Pascal AI probability range at source line {source_line}: {range}"
             ),
             Self::UnsupportedEffectType(effect_type) => {
                 write!(f, "effect type {effect_type} is not implemented")
@@ -226,6 +242,19 @@ pub trait CharacterActionScript {
         command: AiCommand,
         rng: &mut R,
     ) -> Result<(), RuntimeError<R::Error>>;
+
+    /// Execute the character-specific [IA] section after Common.rot [IA].
+    /// The child receives the same mutable RNG cursor as the common script.
+    fn execute_character_ai<R: PascalRandomSource>(
+        &mut self,
+        _state: &mut CombatState,
+        _fighter_index: usize,
+        _input: AiTickInputs,
+        _rng: &mut R,
+        _commands: &mut Vec<AiCommand>,
+    ) -> Result<(), RuntimeError<R::Error>> {
+        Ok(())
+    }
 }
 
 /// The common-action-only runtime uses this until a character ROT is implemented.
@@ -944,6 +973,23 @@ impl CombatState {
         true
     }
 
+    /// Execute Common.rot and C01 [IA] with a shared Pascal RNG cursor.
+    ///
+    /// `context` carries the globals read by C01 [Acao]/[IA]. The Special 1 guard
+    /// queries the actual live `EffectArena`; no parallel effect list is maintained.
+    pub fn tick_common_ai_with_chaves<R: PascalRandomSource>(
+        &mut self,
+        input: AiTickInputs,
+        context: ChavesSpecialContext,
+        rng: &mut R,
+    ) -> Result<RuntimeTick, RuntimeError<R::Error>>
+    where
+        R::Error: fmt::Display,
+    {
+        let mut script = ChavesCharacterActionScript::new(context);
+        self.tick_common_ai_with_child(input, rng, &mut script)
+    }
+
     /// Execute one source-ordered Common.rot [IA] tick using no character-specific child ROT.
     pub fn tick_common_ai<R: PascalRandomSource>(
         &mut self,
@@ -1109,6 +1155,9 @@ impl CombatState {
             }
         }
 
+        // Character [IA] runs after Common.rot [IA], using the same recorded RNG stream.
+        child_script.execute_character_ai(self, 1, input, &mut rng, &mut commands)?;
+
         let end = self.checkpoint(false, false);
         Ok(RuntimeTick {
             checkpoint_jsonl: format!("{start}\n{end}\n"),
@@ -1175,14 +1224,22 @@ impl CombatState {
         child_script.execute(self, fighter_index, command, rng)?;
 
         // Common.rot [AcaoFim]: only an action still walking advances here.
-        let fighter = &mut self.fighters[fighter_index];
-        if fighter.action_id == ACTION_WALKING {
-            fighter.action_frame = fighter.action_frame.saturating_add(1);
-            if fighter.action_frame > 16 {
-                fighter.action_frame = 0;
-            }
-        }
+        self.finish_common_action(fighter_index);
         Ok(())
+    }
+
+    /// Apply the Common.rot [AcaoFim] walk-frame update after any AcaoJogador call.
+    /// Returns the resulting frame only when the fighter remains in the walking action.
+    pub(crate) fn finish_common_action(&mut self, fighter_index: usize) -> Option<u16> {
+        let fighter = self.fighters.get_mut(fighter_index)?;
+        if fighter.action_id != ACTION_WALKING {
+            return None;
+        }
+        fighter.action_frame = fighter.action_frame.saturating_add(1);
+        if fighter.action_frame > 16 {
+            fighter.action_frame = 0;
+        }
+        Some(fighter.action_frame)
     }
 
     fn execute_common_command(&mut self, fighter_index: usize, command: AiCommand) {
@@ -1286,6 +1343,9 @@ impl CombatState {
                     Self::set_attack(fighter, ACTION_AIR_STRONG_KICK, 11);
                 }
             }
+            // Special requests are dispatched by the character script, not by
+            // the common-action state machine.
+            AiCommand::ChavesSpecial(_) => {}
         }
     }
 
@@ -1323,7 +1383,7 @@ impl CombatState {
             }
         }
 
-        if fighter.health > 0 {
+        if fighter.health > 0.0 {
             fighter.x = fighter.x.clamp(self.camera_x + 30.0, self.camera_x + 370.0);
         }
     }

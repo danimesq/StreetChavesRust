@@ -54,7 +54,12 @@ fn fighter_from_snapshot(value: &Value) -> FighterState {
         y: required_f64(value, "y"),
         speed: required_f64(value, "speed"),
         distance_ai: required_i32(value, "distance_ai"),
-        health: required_i32(value, "health"),
+        health: required_i32(value, "health") as f64,
+        power: 0,
+        charge_power: 0.0,
+        jump_direction: 0,
+        low_time: 0,
+        sequence_state: 0,
         body: BodyBox {
             x1: body[0].as_f64().expect("body_box x1"),
             y1: body[1].as_f64().expect("body_box y1"),
@@ -99,6 +104,7 @@ fn ai_scenario(trace: &str, tick_index: u64) -> (CombatState, AiTickInputs) {
         clock_stopped: false,
         fighters: [opponent, fighter],
         effects: Default::default(),
+        screen_flash: 0,
         pending_sound: None,
         screen_shake: 0,
     };

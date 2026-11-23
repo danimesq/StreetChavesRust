@@ -23,6 +23,9 @@ pub mod combat_runtime;
 /// Fixed-capacity live effect instances and source-ordered update snapshots.
 pub mod effect_runtime;
 
+/// C01 special [Acao] entry and character-specific [IA] dispatch.
+pub mod chaves_specials;
+
 /// Stable fighter identifier from the researched roster.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FighterId(pub u8);
