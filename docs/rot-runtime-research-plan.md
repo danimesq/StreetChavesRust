@@ -480,9 +480,9 @@ Current Rust branch:
 
 - Pinned Pascal source: OpenStreetChaves commit `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`.
 - The checked-in C13/C14/C15 ROT files were byte-compared against upstream and are identical.
-- C13 / Jaiminho: route commands 14–26 through the actual `[Acao]` script. Command 24 is source-mapped to `acEspecial4`/special force, while commands 25 and 26 preserve the existing Extra1/Extra2 mappings.
-- C14 / Dona Neves: route commands 14–24. Preserve the jump-only guard on commands 20/21 and the 70-frame final.
-- C15 / Glória: route commands 14–24. Preserve the strong-kick frame-cancel guard on commands 20/21 and the 30-frame final.
-- Tests cover every routed command entry and the distinct duration/state writes. No [Quadro], [IA] or [Acerto] execution is added.
+- C13 / Jaiminho: route commands 14 and 16–26 through the actual `[Acao]` script. Command 24 is source-mapped to `acEspecial4`/special force, while commands 25 and 26 preserve the existing Extra1/Extra2 mappings.
+- C14 / Dona Neves: route commands 14 and 16–24. Preserve the jump-only guard on commands 20/21 and the 70-frame final.
+- C15 / Glória: route commands 14 and 16–24. Preserve the strong-kick frame-cancel guard on commands 20/21 and the 30-frame final.
+- Command 15 is not routed because the character scripts do not define a character-specific pose branch. Tests cover every routed command entry and the distinct duration/state writes. No [Quadro], [IA] or [Acerto] execution is added.
 - The scripts' `ExisteEfeito` checks remain live helper calls. The arena does not yet define effect types 26, 28, 29 or 33, so this slice does not claim active-instance guard fixtures or frame-script effect creation.
 - Broader interpreter limitations and Pascal differential validation remain outside this batch.
