@@ -256,6 +256,10 @@ The complete pinned C06.rot [Acao] section has been audited. Commands 14–24 ar
 
 The pinned C07.rot [Acao] section uses only fighter fields/constants already mapped by the live host for commands 14–24: CargaSoco reset, jump-direction reset, landing-height guard, air-state/velocity writes, power consumption, sprite, flash and sound. No new helper or effect dependency is required for this action-entry slice. Commands 14–24 now route through the real interpreter, with tests for victory/pose, weak/strong special entries, punch-charge reset, special 3/4 jump-state writes and final-special state. CI passed on code commit `324094b475926bbc19085606c7f2c7ecb159c101`: formatting and all test targets are green (93 library tests plus integration targets 12, 2, 29, 7, 13, 5 and 5).
 
+### C08 — Bruxa (active bounded roster slice)
+
+The pinned C08.rot [Acao] section routes commands 14–24 through the real interpreter. Esp1 and Esp2 are guarded by active effect types 18 and 19. Those projectile types now have source-backed creation, variant RNG, owner-facing movement, hitboxes and animation sprite sequences from the pinned Dados/Efeitos.ini. Focused tests cover victory/pose, special 1/2 accepted entries, special 3/4 entries, final-special power/sprite/flash/sound writes, and real active-effect rejection for both guards. CI validation is pending.
+
 ## 7. C01 and C13 regression strategy
 
 ### 7.1 C01
