@@ -581,7 +581,7 @@ impl FightSimulation {
                 )),
             }
         } else if self.state.fighters[fighter_index].character_id == 13
-            && matches!(command_code, 14..=26)
+            && matches!(command_code, 14 | 16..=26)
         {
             match self.execute_character_rot_action(fighter_index, 13, command_code) {
                 Ok(()) => report
@@ -589,6 +589,28 @@ impl FightSimulation {
                     .push((fighter_index, 13, command_code)),
                 Err(error) => report.errors.push(format!(
                     "C13 [Acao] fighter {fighter_index}, command {command_code}: {error}"
+                )),
+            }
+        } else if self.state.fighters[fighter_index].character_id == 14
+            && matches!(command_code, 14 | 16..=24)
+        {
+            match self.execute_character_rot_action(fighter_index, 14, command_code) {
+                Ok(()) => report
+                    .rot_action_executions
+                    .push((fighter_index, 14, command_code)),
+                Err(error) => report.errors.push(format!(
+                    "C14 [Acao] fighter {fighter_index}, command {command_code}: {error}"
+                )),
+            }
+        } else if self.state.fighters[fighter_index].character_id == 15
+            && matches!(command_code, 14 | 16..=24)
+        {
+            match self.execute_character_rot_action(fighter_index, 15, command_code) {
+                Ok(()) => report
+                    .rot_action_executions
+                    .push((fighter_index, 15, command_code)),
+                Err(error) => report.errors.push(format!(
+                    "C15 [Acao] fighter {fighter_index}, command {command_code}: {error}"
                 )),
             }
         } else if self.state.fighters[fighter_index].character_id == 10
@@ -1355,7 +1377,6 @@ mod rot_runtime_integration_tests {
     fn c13_jaiminho_routes_standard_action_entries_through_rot() {
         for (command_code, button, action, duration) in [
             (14, AttackButton::WeakPunch, ACTION_VICTORY, 250),
-            (15, AttackButton::WeakPunch, ACTION_POSE, 20),
             (16, AttackButton::WeakPunch, ACTION_SPECIAL1, 28),
             (17, AttackButton::StrongPunch, ACTION_SPECIAL1, 28),
             (18, AttackButton::WeakPunch, ACTION_SPECIAL2, 16),
