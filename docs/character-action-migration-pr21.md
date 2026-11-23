@@ -82,7 +82,7 @@ Do not mark a command migrated based only on its final action ID. Do not claim r
 
 ## Current implementation snapshot (PR #21 branch)
 
-The first migration slice routes C01 commands 16–24 and C13 commands 25/26 through `execute_character_rot_action`, alongside the existing C04/C09 routes. The next bounded slice now routes C02 commands 16/17 (Seu Madruga's first special, weak/strong) through the same live host. Focused tests cover C01 special 3, C01 final special, C13 extra 1 and C13 extra 2, including comparisons against the retained C01/C13 hand-port oracles. C02 special 1 has weak/strong entry tests and a rejected-action guard test; specials 2–4 and the final special have focused tests for their live writes, air-state changes, power, flash and sound. C03 has weak/strong tests for specials 1–4 and a final-special test covering its source-specific action, sprite, power, flash and sound writes. The Contract tests workflow passed on the current branch head, including formatting and all test targets. Broader differential capture against the pinned Pascal runtime remains pending. The old C01 compatibility API remains in the crate as a differential oracle, but `FightSimulation` no longer dispatches C01 specials through it. The former C13 hand-port is retained as a test-only differential oracle and is no longer used by production dispatch.
+The migration now routes C01 commands 16–24, C02 commands 16–23, C03 commands 16–24 and C13 commands 25/26 through `execute_character_rot_action`, alongside the existing C04/C09 routes. Focused tests cover C01 special 3, C01 final special, C13 extra 1 and C13 extra 2, including comparisons against the retained C01/C13 hand-port oracles. C02 special 1 has weak/strong entry tests and a rejected-action guard test; specials 2–4 and the final special have focused tests for their live writes, air-state changes, power, flash and sound. C03 has weak/strong tests for specials 1–4 and a final-special test covering its source-specific action, sprite, power, flash and sound writes. The Contract tests workflow passed after the C03 migration, including formatting and all test targets (80 library tests plus integration targets of 12, 2, 29, 6, 13 and 5 tests). Broader differential capture against the pinned Pascal runtime remains pending. The old C01 compatibility API remains in the crate as a differential oracle, but `FightSimulation` no longer dispatches C01 specials through it. The former C13 hand-port is retained as a test-only differential oracle and is no longer used by production dispatch.
 
 ## Delivery ledger
 
@@ -94,5 +94,5 @@ The first migration slice routes C01 commands 16–24 and C13 commands 25/26 thr
 - [x] C03 commands 16–24 execute through the real ROT [Acao] section, with weak/strong coverage for specials 1–4 and final-special state/effect assertions.
 - [x] Run CI and confirm the new C01/C13 ROT-vs-hand-port differential tests pass. (The selected C01/C13 cases pass; broader Pascal capture remains pending.)
 - [x] C02 special-one weak/strong entry and rejected-guard tests pass in CI.
-- [ ] Runtime contract and documentation reflect the exact implemented boundary.
-- [ ] Formatting and all test targets pass.
+- [x] Runtime contract and documentation reflect the exact implemented boundary.
+- [x] Formatting and all test targets pass on the latest code commit.
