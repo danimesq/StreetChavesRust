@@ -136,28 +136,48 @@ fn types13_and15_use_their_source_hitboxes_rng_and_sprite_sequences() {
     for (effect_type, expected_bounds, velocity, first_sprite, second_sprite) in [
         (
             13,
-            EffectBounds { left: -25, top: -10, right: 25, bottom: 80 },
+            EffectBounds {
+                left: -25,
+                top: -10,
+                right: 25,
+                bottom: 80,
+            },
             8,
             34,
             35,
         ),
         (
             15,
-            EffectBounds { left: -25, top: -25, right: 25, bottom: 37 },
+            EffectBounds {
+                left: -25,
+                top: -25,
+                right: 25,
+                bottom: 37,
+            },
             8,
             39,
             40,
         ),
         (
             18,
-            EffectBounds { left: -30, top: -10, right: 30, bottom: 80 },
+            EffectBounds {
+                left: -30,
+                top: -10,
+                right: 30,
+                bottom: 80,
+            },
             8,
             47,
             48,
         ),
         (
             19,
-            EffectBounds { left: -12, top: -10, right: 12, bottom: 20 },
+            EffectBounds {
+                left: -12,
+                top: -10,
+                right: 12,
+                bottom: 20,
+            },
             5,
             49,
             50,
