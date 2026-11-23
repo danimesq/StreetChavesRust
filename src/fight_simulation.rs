@@ -5,9 +5,7 @@
 //! claim a complete Pascal fight loop: unsupported common physics, action-end,
 //! collision, command-recognition and non-C01 frame paths remain explicit gates.
 
-use crate::chaves_specials::{
-    ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome,
-};
+use crate::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome};
 use crate::combat_runtime::{
     C01FrameResult, CombatState, VictoryAnimationContext, ACTION_POSE, ACTION_SPECIAL1,
     ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL, ACTION_VICTORY,
@@ -128,9 +126,9 @@ impl FightSimulation {
                     fighter.action_frame = fighter.action_frame.saturating_add(1);
                 }
             }
-            Err(error) => report.errors.push(format!(
-                "C01 [Quadro] fighter {fighter_index}: {error}"
-            )),
+            Err(error) => report
+                .errors
+                .push(format!("C01 [Quadro] fighter {fighter_index}: {error}")),
         }
     }
 
