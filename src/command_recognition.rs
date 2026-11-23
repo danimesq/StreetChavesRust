@@ -261,6 +261,7 @@ mod tests {
             charge_power: 0.,
             jump_direction: 0,
             low_time: 0,
+            back_time: 0,
             sequence_state: 0,
             sequence_timer: 0,
             punch_charge: 0,
@@ -327,13 +328,13 @@ mod tests {
             );
         }
         assert_eq!(r.counters().0, 18);
-        r.update_counters(&f, InputFrame::default());
+        r.update_counters(&mut f, InputFrame::default());
         assert_eq!(r.counters().0, 17);
     }
 
     #[test]
     fn matching_rules_preserve_order_and_allow_multiple() {
-        let f = fighter(SIDE_RIGHT);
+        let mut f = fighter(SIDE_RIGHT);
         let mut r = CommandRecognizer::default();
         r.update_counters(
             &mut f,
