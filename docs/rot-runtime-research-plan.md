@@ -6,7 +6,7 @@
 
 - Target: [PR #20 — runtime: common actions, C13 extras and ROT local executor](https://github.com/danimesq/StreetChavesRust/pull/20)
 - Research date: 2026-11-23
-- Status: M0 baseline and M1 parser are delivered; M2 scalar/local execution is in progress. `src/rot_runtime.rs` parses every section in the pinned `Comum.rot` and C01-C15 files and executes a bounded statement subset over typed local frames. Fighter/global bindings, game-helper bridge, RNG and character action-script execution are not claimed.
+- Status: M0 baseline, M1 parser, M2 scalar/local execution, and the first live host bridge are delivered in this branch. A bounded C09 path executes the actual `Comum.rot [Acao]` → `C09.rot [Acao]` → `Comum.rot [AcaoFim]` lifecycle against live fighter state, globals, the shared fight RNG, and the existing effect/push helpers. This does not claim roster-wide field/helper coverage or recursive `AcaoJogador` calls.
 - Normative Pascal source: [OpenStreetChaves](https://github.com/danimesq/OpenStreetChaves), commit `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`.
 - Scope: `Comum.rot [Acao]`, character `C01.rot` through `C15.rot [Acao]`, and `Comum.rot [AcaoFim]`; execute real character action scripts, including C02-C15 specials, through the Rust simulation.
 - Out of scope for this delivery: implementing all `[Quadro]`, `[IA]`, or `[Acerto]` sections as part of the action-entry milestone; C16 Chapolin; claiming equivalence with the original Delphi 5 executable.
@@ -23,7 +23,7 @@ This plan intentionally separates three things:
 2. **Game integration:** expose the correct fighter/opponent/global state and engine helpers, and invoke scripts in the original order.
 3. **Evidence:** compare ordered writes, side effects, and RNG requests against the pinned Pascal implementation and captured executions.
 
-A parser, a symbolic timeline, a hand-coded command switch, or a test that merely checks the final action ID is not by itself proof of runtime compatibility.
+A parser, a symbolic timeline, a hand-coded command switch, or a test that merely checks the final action ID is not by itself proof of runtime compatibility. The first live path must also verify state writes, helper side effects and shared RNG consumption.
 
 ## 2. Evidence policy and source pins
 
@@ -58,12 +58,12 @@ At the time of this audit, GitHub reported the PR head branch as nine commits be
 | Existing component | What it provides | What it does not provide |
 |---|---|---|
 | `tools/rot-normalize.py` and `docs/rot-normalizer.md` | Static parsing, AST-like structure, source spans, nested guards/loops, symbolic action/tick lanes and RNG-site inventory. | No expression evaluation, mutable fighter state, engine calls or concrete action execution. |
-| `src/rot_runtime.rs` and `docs/rot-runtime.md` | Rust lexer, section loader and source-preserving typed AST parser; tests parse every pinned section. | No evaluator, mutable fighter state, engine calls or concrete action execution. |
+| `src/rot_runtime.rs` and `docs/rot-runtime.md` | Rust lexer/parser, typed local executor, host-aware statement/expression execution, and explicit error paths for unbound operations. | Not the complete original interpreter or a universal fighter/global/helper adapter. |
 | `research/pascal-rot/` | Pinned real `Comum.rot` and C01-C15 scripts plus source manifest. | No executable runtime by itself. |
 | `src/pascal_replay.rs` | Strict replay of captured Pascal RNG requests, including width/range checking. | Not a ROT interpreter and not a source of guessed initial state. |
 | `src/combat_runtime.rs` | A bounded executable slice of common Pascal AI behavior and a child-script seam that shares the parent's RNG cursor. | Not a general ROT parser/evaluator; the child seam is not the actual C02-C15 `[Acao]` implementation. |
 | `src/chaves_specials.rs` | Audited hand-port of C01 special entry and C01 AI special dispatch. | Not a substitute for executing C01.rot, and not a general character runtime. |
-| `src/fight_simulation.rs` | Headless fight tick, normalized input, ordered command recognition, common basic actions, C01 special dispatch, C13 extra 25/26 dispatch, and explicit unhandled-command reporting. | Does not execute the remaining character action scripts. |
+| `src/fight_simulation.rs` | Headless fight tick, normalized input, ordered command recognition, common basic actions, C01/C13 audited ports, and C09 commands 14/15/20/21 executed through the real ROT lifecycle. | Other character action scripts and unmapped ROT commands/helpers remain explicit migration work. |
 | `src/fighter_command_data.rs` and `data/fighter-command-rules.ini` | Per-character `[Sequencias]`/`[Botoes]` extraction and rule evaluation. | These INI rules choose command codes; they do not implement the ROT action behavior those codes invoke. |
 
 Important distinction: the Python normalizer and the future Rust interpreter may share grammar fixtures and source metadata, but they have different jobs. The normalizer is a research/indexing tool. The Rust runtime must execute the actual pinned script semantics against live simulation state.
