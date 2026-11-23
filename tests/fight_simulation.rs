@@ -192,24 +192,32 @@ fn stopped_fight_retains_queued_command_and_freezes_fighter_frame() {
     assert_eq!(fight.state.fighters[0].action_id, ACTION_SPECIAL1);
 }
 
-
 #[test]
 fn real_c01_sequence_and_button_rules_reach_the_c01_dispatcher() {
     let mut fight = simulation(ACTION_IDLE, 0);
     fight.tick_with_inputs([
-        InputFrame { direction: Direction::Down, ..Default::default() },
+        InputFrame {
+            direction: Direction::Down,
+            ..Default::default()
+        },
         InputFrame::default(),
     ]);
     assert_eq!(fight.state.fighters[0].sequence_state, 1);
 
     fight.tick_with_inputs([
-        InputFrame { direction: Direction::Right, ..Default::default() },
+        InputFrame {
+            direction: Direction::Right,
+            ..Default::default()
+        },
         InputFrame::default(),
     ]);
     assert_eq!(fight.state.fighters[0].sequence_state, 2);
 
     fight.tick_with_inputs([
-        InputFrame { pressed_buttons: 1, ..Default::default() },
+        InputFrame {
+            pressed_buttons: 1,
+            ..Default::default()
+        },
         InputFrame::default(),
     ]);
     assert_eq!(fight.last_report().command_matches.len(), 1);
@@ -218,7 +226,8 @@ fn real_c01_sequence_and_button_rules_reach_the_c01_dispatcher() {
     assert_eq!(fight.state.fighters[0].action_id, ACTION_SPECIAL1);
     assert!(fight.last_report().unhandled_commands.iter().any(|item| {
         item.command_code == 3
-            && item.source == street_chaves::fight_simulation::UnhandledCommandSource::BasicButtonAction
+            && item.source
+                == street_chaves::fight_simulation::UnhandledCommandSource::BasicButtonAction
     }));
 }
 
@@ -231,8 +240,16 @@ fn real_character_data_exposes_unimplemented_commands_without_faking_execution()
         pressed_buttons: 8,
         ..Default::default()
     });
-    assert!(fight.last_report().command_matches.iter().any(|item| item.command_code == 25));
-    assert!(fight.last_report().unhandled_commands.iter().any(|item| item.command_code == 25));
+    assert!(fight
+        .last_report()
+        .command_matches
+        .iter()
+        .any(|item| item.command_code == 25));
+    assert!(fight
+        .last_report()
+        .unhandled_commands
+        .iter()
+        .any(|item| item.command_code == 25));
     assert!(fight.last_report().errors.is_empty());
 }
 

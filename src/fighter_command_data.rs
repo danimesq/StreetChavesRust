@@ -73,9 +73,11 @@ fn parse_conditions(raw: &str) -> Result<Vec<BoxCondition>, String> {
     raw.split(',')
         .map(str::trim)
         .filter(|term| !term.is_empty())
-        .map(|term| translate_condition(term).map_err(|error| {
-            format!("unknown or invalid condition {:?}: {}", term, error.token)
-        }))
+        .map(|term| {
+            translate_condition(term).map_err(|error| {
+                format!("unknown or invalid condition {:?}: {}", term, error.token)
+            })
+        })
         .collect()
 }
 
@@ -92,11 +94,32 @@ fn attack_button(raw: &str) -> Option<AttackButton> {
 /// The exact NomesComando order from ChavesTipos.pas (Pascal command IDs are 1-based).
 fn command_code(raw: &str) -> Option<u8> {
     const NAMES: [&str; 26] = [
-        "Esquerda", "Direita", "SocoFraco", "ChuteFraco", "SocoForte", "ChuteForte",
-        "Agachar", "ApanharAlto", "ApanharBaixo", "Derrubar", "BaterNoChao", "Defender",
-        "DefenderBaixo", "Vitoria", "Pose", "Esp1Fraco", "Esp1Forte", "Esp2Fraco",
-        "Esp2Forte", "Esp3Fraco", "Esp3Forte", "Esp4Fraco", "Esp4Forte", "EspFinal",
-        "EspExtra1", "EspExtra2",
+        "Esquerda",
+        "Direita",
+        "SocoFraco",
+        "ChuteFraco",
+        "SocoForte",
+        "ChuteForte",
+        "Agachar",
+        "ApanharAlto",
+        "ApanharBaixo",
+        "Derrubar",
+        "BaterNoChao",
+        "Defender",
+        "DefenderBaixo",
+        "Vitoria",
+        "Pose",
+        "Esp1Fraco",
+        "Esp1Forte",
+        "Esp2Fraco",
+        "Esp2Forte",
+        "Esp3Fraco",
+        "Esp3Forte",
+        "Esp4Fraco",
+        "Esp4Forte",
+        "EspFinal",
+        "EspExtra1",
+        "EspExtra2",
     ];
     NAMES
         .iter()
@@ -167,9 +190,13 @@ pub fn parse_character_command_ini(
                     .trim()
                     .split_once('>')
                     .ok_or_else(|| "missing '>' in sequence transition".to_owned())?;
-                let from_state = from.trim().parse::<u8>()
+                let from_state = from
+                    .trim()
+                    .parse::<u8>()
                     .map_err(|_| "invalid sequence source state".to_owned())?;
-                let to_state = to.trim().parse::<u8>()
+                let to_state = to
+                    .trim()
+                    .parse::<u8>()
                     .map_err(|_| "invalid sequence target state".to_owned())?;
                 Ok::<_, String>(SequenceRule {
                     from_state,
@@ -242,22 +269,33 @@ mod tests {
             let rules = embedded_character_command_rules(character_id).unwrap();
             assert!(!rules.sequences.is_empty(), "C{character_id:02} sequences");
             assert!(!rules.buttons.is_empty(), "C{character_id:02} buttons");
-            assert!(rules.ignored_rules.is_empty(), "C{character_id:02}: {:?}", rules.ignored_rules);
+            assert!(
+                rules.ignored_rules.is_empty(),
+                "C{character_id:02}: {:?}",
+                rules.ignored_rules
+            );
         }
     }
 
     #[test]
     fn parser_preserves_charge_air_and_extra_command_terms() {
         let c05 = embedded_character_command_rules(5).unwrap();
-        let c05_rule = c05.buttons.iter().find(|rule| {
-            rule.attack_button == AttackButton::WeakKick && rule.command_code == 22
-        }).unwrap();
-        assert_eq!(c05_rule.conditions, vec![translate_condition("CargaChute>=6").unwrap()]);
+        let c05_rule = c05
+            .buttons
+            .iter()
+            .find(|rule| rule.attack_button == AttackButton::WeakKick && rule.command_code == 22)
+            .unwrap();
+        assert_eq!(
+            c05_rule.conditions,
+            vec![translate_condition("CargaChute>=6").unwrap()]
+        );
 
         let c08 = embedded_character_command_rules(8).unwrap();
         assert!(c08.buttons.iter().any(|rule| {
             rule.command_code == 18
-                && rule.conditions.contains(&translate_condition("NoAr").unwrap())
+                && rule
+                    .conditions
+                    .contains(&translate_condition("NoAr").unwrap())
         }));
 
         let c13 = embedded_character_command_rules(13).unwrap();
@@ -267,7 +305,8 @@ mod tests {
 
     #[test]
     fn unknown_terms_skip_the_complete_row_without_reordering_later_rules() {
-        let source = "[C01.Botoes]\n1=SocoFraco, CondicaoInexistente: Esp1Fraco\n2=SocoForte: Esp1Forte\n";
+        let source =
+            "[C01.Botoes]\n1=SocoFraco, CondicaoInexistente: Esp1Fraco\n2=SocoForte: Esp1Forte\n";
         let rules = parse_character_command_ini(1, source).unwrap();
         assert_eq!(rules.buttons.len(), 1);
         assert_eq!(rules.buttons[0].command_code, 17);

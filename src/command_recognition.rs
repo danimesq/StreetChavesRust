@@ -128,7 +128,9 @@ pub fn rule_matches(
             ConditionAtom::Grounded => fighter.y == ground_y,
             ConditionAtom::SequenceState(n) => fighter.sequence_state == n,
             ConditionAtom::Airborne => fighter.vertical_velocity != 0,
-            ConditionAtom::PunchCharge(n) => fighter.punch_charge >= n.min(u16::from(u8::MAX)) as u8,
+            ConditionAtom::PunchCharge(n) => {
+                fighter.punch_charge >= n.min(u16::from(u8::MAX)) as u8
+            },
             ConditionAtom::KickCharge(n) => fighter.kick_charge >= n.min(u16::from(u8::MAX)) as u8,
         };
         v != c.negated

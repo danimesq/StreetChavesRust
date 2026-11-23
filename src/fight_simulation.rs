@@ -1,10 +1,10 @@
 //! First concrete, renderer-free fight orchestrator.
 use crate::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome};
-use crate::command_recognition::{AttackButton, CommandRecognizer};
 use crate::combat_runtime::{
     C01FrameResult, CombatState, VictoryAnimationContext, ACTION_POSE, ACTION_SPECIAL1,
     ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL, ACTION_VICTORY,
 };
+use crate::command_recognition::{AttackButton, CommandRecognizer};
 use crate::effect_runtime::{EffectTickContext, EffectTickResult};
 use crate::fighter_command_data::{embedded_character_command_rules, CharacterCommandRules};
 use crate::input::InputFrame;
@@ -162,11 +162,7 @@ impl FightSimulation {
         }
     }
 
-    fn dispatch_input_commands(
-        &mut self,
-        inputs: [InputFrame; 2],
-        report: &mut FightTickReport,
-    ) {
+    fn dispatch_input_commands(&mut self, inputs: [InputFrame; 2], report: &mut FightTickReport) {
         // Pascal L7_Entrada handles fighter 1, then fighter 2. Special-table rows
         // for each button are all dispatched in file order before the basic action.
         for fighter_index in 0..2 {
@@ -191,12 +187,7 @@ impl FightSimulation {
                     self.config.special.ground_y,
                 );
                 for command_code in commands {
-                    self.dispatch_character_command(
-                        fighter_index,
-                        button,
-                        command_code,
-                        report,
-                    );
+                    self.dispatch_character_command(fighter_index, button, command_code, report);
                 }
             }
 
@@ -221,11 +212,7 @@ impl FightSimulation {
         }
     }
 
-    fn update_command_sequences(
-        &mut self,
-        inputs: [InputFrame; 2],
-        report: &mut FightTickReport,
-    ) {
+    fn update_command_sequences(&mut self, inputs: [InputFrame; 2], report: &mut FightTickReport) {
         for fighter_index in 0..2 {
             let input = inputs[fighter_index];
             let Some(rules) = self.command_rules[fighter_index].as_ref() else {
