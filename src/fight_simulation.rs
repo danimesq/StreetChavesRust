@@ -1194,5 +1194,4 @@ mod rot_runtime_integration_tests {
         assert!(report.unhandled_commands.is_empty());
         assert!(report.errors.is_empty());
     }
-
 }
