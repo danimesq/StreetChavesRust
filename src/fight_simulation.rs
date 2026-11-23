@@ -514,7 +514,9 @@ impl FightSimulation {
                     "C07 [Acao] fighter {fighter_index}, command {command_code}: {error}"
                 )),
             }
-        } else if self.state.fighters[fighter_index].character_id == 6 && matches!(command_code, 14..=24) {
+        } else if self.state.fighters[fighter_index].character_id == 6
+            && matches!(command_code, 14..=24)
+        {
             match self.execute_character_rot_action(fighter_index, 6, command_code) {
                 Ok(()) => report
                     .rot_action_executions
