@@ -32,6 +32,9 @@ pub mod input;
 /// Platform-neutral fixed-step scheduling at the evidence-based 28 ms interval.
 pub mod fixed_timestep;
 
+/// Shared headless bridge from normalized host input to logical simulation ticks.
+pub mod runtime;
+
 /// Stable fighter identifier from the researched roster.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FighterId(pub u8);
