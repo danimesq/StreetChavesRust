@@ -29,11 +29,15 @@ fn input_edges_wait_for_a_due_tick_and_are_sampled_once() {
 
     // Host/render callbacks may happen before the first logical tick.
     assert_eq!(
-        runner.advance(Duration::from_millis(10), &mut simulation).ticks_due,
+        runner
+            .advance(Duration::from_millis(10), &mut simulation)
+            .ticks_due,
         0
     );
     assert_eq!(
-        runner.advance(Duration::from_millis(17), &mut simulation).ticks_due,
+        runner
+            .advance(Duration::from_millis(17), &mut simulation)
+            .ticks_due,
         0
     );
     assert!(simulation.inputs.is_empty());
