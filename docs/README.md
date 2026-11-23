@@ -13,6 +13,7 @@ This directory records the research and engineering decisions for an independent
 - [Rendering backends and WebAssembly/Canvas architecture](rendering-backends-wasm-canvas.md): one shared Rust engine with replaceable native SDL3 and browser Canvas 2D adapters, build boundaries, timing, resources, tests and staged implementation.
 - [Construct 2/3 integration: embedded WASM + Canvas](construct-wasm-canvas-integration.md): embedding the Rust engine's own Canvas into exported Construct projects, overlay/underlay composition, generic plugin boundaries, host commands/events, and external sprite registration.
 - [Reusable WASM Canvas host compatibility contract](wasm-canvas-host-compatibility.md): the application-side requirements for interoperating with a generic host, including facade operations, version negotiation, lifecycle, viewport, resources, events and a minimum compatibility fixture.
+- [Web rendering backend study: SDL3, Emscripten and Construct hosts](web-rendering-backend-study.md): compares SDL3/Emscripten WebGL with a direct Rust browser renderer, documents Construct C2/C3 constraints, and defines a feasibility/benchmark plan.
 
 ## Research documents
 
