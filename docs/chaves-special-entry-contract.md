@@ -18,7 +18,7 @@ These are source-derived Rust contracts and tests. They are not Pascal golden ca
 | cmEsp4Fraco / cmEsp4Forte | 22 / 23 | Esp4Weak / Esp4Strong |
 | cmEspFinal | 24 | Final |
 
-dispatch_chaves_special_code is the numeric entry point for input adapters. It runs the common [Acao] prelude that clears P.Defendendo, then invokes the C01 [Acao] transition. start_chaves_special remains the character-only transition for callers that already executed the common prelude.
+dispatch_chaves_special_code is the numeric entry point for input adapters. The full dispatcher executes Common [Acao] (clears P.Defendendo), then C01 [Acao], then Common [AcaoFim]. The action-end phase advances QuadroAcao only if the fighter remains in acAndando, wrapping after frame 16. This also applies when a special is rejected and the fighter remains walking. start_chaves_special remains the character-only transition for callers that already executed the common prelude; it does not run Common [AcaoFim].
 
 Special 1 queries the live 80-slot EffectArena for a type-7 instance owned by the current player. This is the actual ExisteEfeito(7, Jog) query against simulation state, not an injected boolean or a parallel effect list.
 

@@ -231,6 +231,24 @@ fn special_one_starts_when_the_live_effect_slot_is_empty_and_records_source_orde
 }
 
 #[test]
+fn accepted_special_from_walking_does_not_run_walking_action_end() {
+    let mut state = state_with_action(ACTION_WALKING);
+    state.fighters[1].action_frame = 16;
+
+    let result = state
+        .dispatch_chaves_special(1, Command::Esp2Weak, context())
+        .unwrap();
+
+    assert!(result.applied);
+    assert_eq!(state.fighters[1].action_id, ACTION_SPECIAL2);
+    assert_eq!(state.fighters[1].action_frame, 0);
+    assert!(!result
+        .events
+        .iter()
+        .any(|event| matches!(event, Event::CommonWalkingFrameAdvanced { .. })));
+}
+
+#[test]
 fn special_two_preserves_strength_durations_and_does_not_clamp_charge() {
     let mut weak = state_with_action(ACTION_LOW_DEFENDING);
     weak.fighters[1].charge_power = 101.0;
