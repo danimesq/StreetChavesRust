@@ -99,7 +99,7 @@ fn type7_uses_weak_ini_values_and_consumes_one_random_five() {
     assert!(effect.bottom_anchor);
     assert!(effect.variant_flag);
     assert_eq!(effect.facing, EFFECT_SIDE_LEFT);
-    assert_eq!(effect.horizontal_velocity, velocity);
+    assert_eq!(effect.horizontal_velocity, 8);
     assert_eq!(effect.damage, 12);
     assert_eq!(effect.guard_damage, 3);
     assert_eq!(
@@ -132,7 +132,7 @@ fn type7_uses_weak_ini_values_and_consumes_one_random_five() {
 }
 
 #[test]
-fn types13_and15_use_their_source_hitboxes_rng_and_sprite_sequences() {
+fn types13_15_18_and19_use_source_hitboxes_rng_and_sprite_sequences() {
     for (effect_type, expected_bounds, velocity, first_sprite, second_sprite) in [
         (
             13,
