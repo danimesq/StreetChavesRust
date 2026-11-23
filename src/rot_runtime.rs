@@ -1,8 +1,9 @@
 //! Source-preserving lexer, parser and expression evaluator for the pinned Pascal ROT dialect.
 //!
-//! The evaluator currently covers literals, typed local frames, scalar operators,
-//! sets and pure math/conversion functions. It deliberately does not execute
-//! statements, bind fighter/global state, invoke game helpers, or consume RNG.
+//! The runtime parses and executes typed ROT statements. Its host-aware path
+//! binds live fighter/global state and delegates RNG and engine helpers to the
+//! fight simulation adapter. The adapter's current coverage is intentionally
+//! bounded to audited commands and mapped host operations.
 
 use std::collections::BTreeMap;
 use std::error::Error;
