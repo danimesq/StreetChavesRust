@@ -505,7 +505,7 @@ impl FightSimulation {
             command_code,
         });
 
-        if self.state.fighters[fighter_index].character_id == 2 && matches!(command_code, 16 | 17) {
+        if self.state.fighters[fighter_index].character_id == 2 && matches!(command_code, 16..=23) {
             match self.execute_character_rot_action(fighter_index, 2, command_code) {
                 Ok(()) => report
                     .rot_action_executions
@@ -1444,4 +1444,94 @@ mod rot_runtime_integration_tests {
         assert_eq!(report.rot_action_executions, vec![(0, 2, 16)]);
         assert!(report.errors.is_empty());
     }
+    #[test]
+    fn c02_special_two_weak_and_strong_execute_their_rot_branch() {
+        for (command_code, button, force) in [
+            (18, AttackButton::WeakPunch, 1),
+            (19, AttackButton::StrongPunch, 2),
+        ] {
+            let mut fight = simulation();
+            fight.state.fighters[0].character_id = 2;
+            let mut report = FightTickReport::default();
+
+            fight.dispatch_character_command(0, button, command_code, &mut report);
+
+            let fighter = &fight.state.fighters[0];
+            assert_eq!(fighter.action_id, ACTION_SPECIAL2, "command {command_code}");
+            assert_eq!(fighter.action_frame, 0);
+            assert_eq!(fighter.action_duration, 30);
+            assert_eq!(fighter.force_strength, force);
+            assert_eq!(fighter.charge_power, 6.0);
+            assert_eq!(report.rot_action_executions, vec![(0, 2, command_code)]);
+            assert!(report.errors.is_empty());
+        }
+    }
+
+    #[test]
+    fn c02_special_three_weak_and_strong_execute_rot_and_clear_air_state() {
+        for (command_code, button, force) in [
+            (20, AttackButton::WeakKick, 1),
+            (21, AttackButton::StrongKick, 2),
+        ] {
+            let mut fight = simulation();
+            fight.state.fighters[0].character_id = 2;
+            fight.state.fighters[0].action_id = ACTION_JUMPING;
+            fight.state.fighters[0].in_air = true;
+            let mut report = FightTickReport::default();
+
+            fight.dispatch_character_command(0, button, command_code, &mut report);
+
+            let fighter = &fight.state.fighters[0];
+            assert_eq!(fighter.action_id, ACTION_SPECIAL3, "command {command_code}");
+            assert_eq!(fighter.action_frame, 0);
+            assert_eq!(fighter.action_duration, 20);
+            assert_eq!(fighter.force_strength, force);
+            assert_eq!(fighter.charge_power, 5.0);
+            assert!(fighter.is_kick);
+            assert!(!fighter.in_air);
+            assert_eq!(fight.state.pending_sound, Some(21));
+            assert_eq!(report.rot_action_executions, vec![(0, 2, command_code)]);
+            assert!(report.errors.is_empty());
+        }
+    }
+
+    #[test]
+    fn c02_special_four_weak_executes_rot_and_applies_charge_gain() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 2;
+        let mut report = FightTickReport::default();
+
+        fight.dispatch_character_command(0, AttackButton::WeakKick, 22, &mut report);
+
+        let fighter = &fight.state.fighters[0];
+        assert_eq!(fighter.action_id, ACTION_SPECIAL4);
+        assert_eq!(fighter.action_frame, 0);
+        assert_eq!(fighter.action_duration, 45);
+        assert_eq!(fighter.charge_power, 7.0);
+        assert_eq!(report.rot_action_executions, vec![(0, 2, 22)]);
+        assert!(report.errors.is_empty());
+    }
+
+    #[test]
+    fn c02_final_special_executes_rot_and_writes_power_flash_and_sound() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 2;
+        fight.state.fighters[0].power = 1;
+        let mut report = FightTickReport::default();
+
+        fight.dispatch_character_command(0, AttackButton::StrongKick, 23, &mut report);
+
+        let fighter = &fight.state.fighters[0];
+        assert_eq!(fighter.action_id, 30); // Pascal acEspecial6
+        assert_eq!(fighter.action_frame, 0);
+        assert_eq!(fighter.action_duration, 13);
+        assert_eq!(fighter.force_strength, 2);
+        assert_eq!(fighter.power, 0);
+        assert_eq!(fighter.sprite_frame, 44);
+        assert_eq!(fight.state.screen_flash, 22);
+        assert_eq!(fight.state.pending_sound, Some(19));
+        assert_eq!(report.rot_action_executions, vec![(0, 2, 23)]);
+        assert!(report.errors.is_empty());
+    }
+
 }
