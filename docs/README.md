@@ -63,3 +63,5 @@ These repositories are independent projects, not a parent/child chain. For the R
 5. Do not copy source code or assets until provenance and license compatibility have been reviewed.
 6. Keep the Rust core independent from SDL and the operating system.
 7. Every behavior that can be tested should eventually have a deterministic test or replay fixture.
+
+- [C01 remaining integration gates](c01-remaining-integration-gates.md): SDL human input, melee hit-resolution hook, effect collision consequences and Pascal checkpoint capture status.
