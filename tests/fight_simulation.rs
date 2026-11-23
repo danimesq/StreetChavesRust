@@ -142,15 +142,7 @@ fn effect_arena_advances_once_per_logical_tick_without_renderer() {
     fight
         .state
         .effects
-        .spawn(
-            2,
-            None,
-            0,
-            EFFECT_SIDE_RIGHT,
-            120.0,
-            80.0,
-            &mut NoDrawRng,
-        )
+        .spawn(2, None, 0, EFFECT_SIDE_RIGHT, 120.0, 80.0, &mut NoDrawRng)
         .unwrap();
     fight.tick(InputFrame::default());
 
