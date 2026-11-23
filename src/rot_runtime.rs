@@ -572,7 +572,6 @@ pub struct RotProgram {
     pub body: Statement,
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum RotValue {
     Integer { value: i64, wide: bool },
@@ -731,7 +730,10 @@ impl RotExecutionFrame {
             &slot.declared_type,
             value,
         )?;
-        self.locals.get_mut(&key).expect("local slot was checked").value = converted;
+        self.locals
+            .get_mut(&key)
+            .expect("local slot was checked")
+            .value = converted;
         Ok(())
     }
 
@@ -870,9 +872,10 @@ fn evaluate_expression(
 ) -> Result<RotValue, RotError> {
     match &expression.kind {
         ExpressionKind::Literal(literal) => Ok(match literal {
-            Literal::Integer(value) => {
-                integer(*value, *value < i64::from(i32::MIN) || *value > i64::from(i32::MAX))
-            }
+            Literal::Integer(value) => integer(
+                *value,
+                *value < i64::from(i32::MIN) || *value > i64::from(i32::MAX),
+            ),
             Literal::Real(value) => RotValue::Real(*value),
             Literal::String(value) => RotValue::String(value.clone()),
             Literal::Boolean(value) => RotValue::Boolean(*value),
@@ -910,9 +913,7 @@ fn evaluate_expression(
         ExpressionKind::Unary { operator, value } => {
             let value = evaluate_expression(frame, value)?;
             match (operator, value) {
-                (UnaryOperator::Not, RotValue::Boolean(value)) => {
-                    Ok(RotValue::Boolean(!value))
-                }
+                (UnaryOperator::Not, RotValue::Boolean(value)) => Ok(RotValue::Boolean(!value)),
                 (UnaryOperator::Not, RotValue::Integer { value, wide }) => {
                     Ok(integer(!value, wide))
                 }
@@ -921,9 +922,7 @@ fn evaluate_expression(
                 (UnaryOperator::Negative, RotValue::Integer { value, wide }) => {
                     Ok(integer(value.wrapping_neg(), wide))
                 }
-                (UnaryOperator::Negative, RotValue::Real(value)) => {
-                    Ok(RotValue::Real(-value))
-                }
+                (UnaryOperator::Negative, RotValue::Real(value)) => Ok(RotValue::Real(-value)),
                 (UnaryOperator::Not, _) => {
                     Err(frame.error(expression.span, "not requires Boolean or integer"))
                 }
@@ -995,9 +994,7 @@ fn evaluate_binary(
         | BinaryOperator::Less
         | BinaryOperator::Greater
         | BinaryOperator::LessEqual
-        | BinaryOperator::GreaterEqual => {
-            evaluate_comparison(frame, span, operator, left, right)
-        }
+        | BinaryOperator::GreaterEqual => evaluate_comparison(frame, span, operator, left, right),
         BinaryOperator::And | BinaryOperator::Or | BinaryOperator::Xor => {
             evaluate_logic(frame, span, operator, left, right)
         }
@@ -1008,9 +1005,7 @@ fn evaluate_binary(
         | BinaryOperator::IntegerDivide
         | BinaryOperator::Modulo
         | BinaryOperator::ShiftLeft
-        | BinaryOperator::ShiftRight => {
-            evaluate_arithmetic(frame, span, operator, left, right)
-        }
+        | BinaryOperator::ShiftRight => evaluate_arithmetic(frame, span, operator, left, right),
         BinaryOperator::In => unreachable!("in was handled before evaluating the right operand"),
     }
 }
@@ -1023,12 +1018,14 @@ fn evaluate_logic(
     right: RotValue,
 ) -> Result<RotValue, RotError> {
     match (left, right) {
-        (RotValue::Boolean(left), RotValue::Boolean(right)) => Ok(RotValue::Boolean(match operator {
-            BinaryOperator::And => left && right,
-            BinaryOperator::Or => left || right,
-            BinaryOperator::Xor => left ^ right,
-            _ => unreachable!(),
-        })),
+        (RotValue::Boolean(left), RotValue::Boolean(right)) => {
+            Ok(RotValue::Boolean(match operator {
+                BinaryOperator::And => left && right,
+                BinaryOperator::Or => left || right,
+                BinaryOperator::Xor => left ^ right,
+                _ => unreachable!(),
+            }))
+        }
         (
             RotValue::Integer {
                 value: left,
@@ -1129,8 +1126,10 @@ fn evaluate_comparison(
         (RotValue::Integer { value: left, .. }, RotValue::Integer { value: right, .. }) => {
             Some(compare_ordering(operator, left.cmp(&right)))
         }
-        (left @ (RotValue::Integer { .. } | RotValue::Real(_)),
-         right @ (RotValue::Integer { .. } | RotValue::Real(_))) => {
+        (
+            left @ (RotValue::Integer { .. } | RotValue::Real(_)),
+            right @ (RotValue::Integer { .. } | RotValue::Real(_)),
+        ) => {
             let left = require_real(frame, span, left)?;
             let right = require_real(frame, span, right)?;
             Some(match operator {
@@ -1183,10 +1182,7 @@ fn evaluate_pure_function(
         ));
     }
     if arguments.len() != 1 {
-        return Err(frame.error(
-            span,
-            format!("{name} expects exactly one argument"),
-        ));
+        return Err(frame.error(span, format!("{name} expects exactly one argument")));
     }
 
     let value = evaluate_expression(frame, &arguments[0])?;
@@ -1221,11 +1217,7 @@ fn evaluate_pure_function(
     }
 }
 
-fn float_to_i64(
-    frame: &RotExecutionFrame,
-    span: SourceSpan,
-    value: f64,
-) -> Result<i64, RotError> {
+fn float_to_i64(frame: &RotExecutionFrame, span: SourceSpan, value: f64) -> Result<i64, RotError> {
     const LIMIT: f64 = 9_223_372_036_854_775_808.0;
     if !value.is_finite() || value < -LIMIT || value >= LIMIT {
         return Err(frame.error(span, "real value is outside the Int64 range"));
@@ -2107,14 +2099,21 @@ else
 
         player_two.set_local("B", integer(258, true)).unwrap();
         player_two.set_local("S", integer(130, false)).unwrap();
-        player_two.set_local("I", integer(i64::from(i32::MAX) + 1, true)).unwrap();
+        player_two
+            .set_local("I", integer(i64::from(i32::MAX) + 1, true))
+            .unwrap();
         player_two.set_local("L", integer(7, false)).unwrap();
         player_two.set_local("D", integer(7, true)).unwrap();
-        player_two.set_local("Flag", RotValue::Boolean(true)).unwrap();
+        player_two
+            .set_local("Flag", RotValue::Boolean(true))
+            .unwrap();
 
         assert_eq!(player_two.local("B"), Some(&integer(2, false)));
         assert_eq!(player_two.local("S"), Some(&integer(-126, false)));
-        assert_eq!(player_two.local("I"), Some(&integer(i64::from(i32::MIN), false)));
+        assert_eq!(
+            player_two.local("I"),
+            Some(&integer(i64::from(i32::MIN), false))
+        );
         assert_eq!(player_two.local("L"), Some(&integer(7, true)));
         assert_eq!(player_two.local("D"), Some(&RotValue::Real(7.0)));
         assert_eq!(player_two.local("Flag"), Some(&RotValue::Boolean(true)));
@@ -2138,9 +2137,7 @@ else
 
         let program = expression_program("true and (Random(1) > 0)");
         let frame = RotExecutionFrame::new(&program, 1, 0).unwrap();
-        let error = frame
-            .evaluate(only_assignment_value(&program))
-            .unwrap_err();
+        let error = frame.evaluate(only_assignment_value(&program)).unwrap_err();
         assert!(error.message.contains("runtime host/helper bridge"));
     }
 
