@@ -1,5 +1,7 @@
 //! Headless integration tests for the concrete fight tick orchestrator.
 
+use std::time::Duration;
+
 use street_chaves::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext};
 use street_chaves::combat_runtime::{
     BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_IDLE, ACTION_SPECIAL1,
@@ -10,7 +12,6 @@ use street_chaves::fight_simulation::{FightSimulation, FightSimulationConfig};
 use street_chaves::input::{Button, InputEvent, InputFrame};
 use street_chaves::pascal_replay::PascalRandomSource;
 use street_chaves::runtime::{FixedStepRunner, SimulationTick};
-use std::time::Duration;
 
 fn fighter(character_id: u8, action_id: u16, action_frame: u16) -> FighterState {
     FighterState {
@@ -121,7 +122,10 @@ fn c01_frame_10_spawns_a_live_type7_effect_before_effect_phase() {
     let effect = fight.state.effects.instance(0).unwrap();
     assert_eq!(effect.effect_type, 7);
     assert_eq!(effect.owner, 1);
-    assert_eq!(fight.last_report().c01_frames[0].1.spawned_effect_slots, vec![0]);
+    assert_eq!(
+        fight.last_report().c01_frames[0].1.spawned_effect_slots,
+        vec![0]
+    );
     assert_eq!(fight.last_report().effects.render_snapshots.len(), 1);
 }
 
