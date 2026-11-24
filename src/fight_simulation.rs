@@ -2998,8 +2998,8 @@ mod rot_runtime_integration_tests {
             crate::RawBounds {
                 x1: 10,
                 y1: 25,
-                x2: 55,
-                y2: 70,
+                x2: 70,
+                y2: 55,
             }
         );
         assert_eq!(strong.damage, 18);
