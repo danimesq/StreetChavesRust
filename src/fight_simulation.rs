@@ -1648,7 +1648,7 @@ mod rot_runtime_integration_tests {
         ] {
             let mut fight = simulation();
             fight.state.fighters[0].character_id = 12;
-            fight.state.fighters[0].action_id = ACTION_SPECIAL6;
+            fight.state.fighters[0].action_id = crate::combat_runtime::ACTION_SPECIAL6;
             fight.state.fighters[0].attack_active = false;
             let mut report = FightTickReport::default();
 
