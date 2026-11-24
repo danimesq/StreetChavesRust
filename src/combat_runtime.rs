@@ -40,6 +40,8 @@ pub const ACTION_SPECIAL2: u16 = 26;
 pub const ACTION_SPECIAL3: u16 = 27;
 pub const ACTION_SPECIAL4: u16 = 28;
 pub const ACTION_SPECIAL_FINAL: u16 = 29;
+/// Pascal `acEspecial6` (30), a continuation state used by selected fighter scripts.
+pub const ACTION_SPECIAL6: u16 = 30;
 pub const FORCE_NONE: u8 = 0;
 pub const FORCE_WEAK: u8 = 1;
 pub const FORCE_STRONG: u8 = 2;
@@ -69,6 +71,9 @@ pub struct FighterState {
     pub defending: bool,
     pub invulnerable: bool,
     pub hit_count: u8,
+    /// Pascal `TLutador.GolpeAtivo`: whether this fighter's current attack may still hit.
+    /// This is fighter state, not the `active` metadata stored in a hitbox row.
+    pub attack_active: bool,
     pub is_kick: bool,
     pub recoil: u8,
     pub vertical_velocity: i8,
