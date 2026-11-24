@@ -488,3 +488,12 @@ Current Rust branch:
 - Broader interpreter limitations and Pascal differential validation remain outside this batch.
 
 - Validation for the C13–C15 action-entry batch: [GitHub Actions run 45286642440](https://github.com/danimesq/StreetChavesRust/actions/runs/45286642440) passed formatting and all test targets on `ffabd727fffb860a1e9534d9d00d87e04872ecc9` (178 tests, 0 failures).
+
+
+## 2026-11-24 — Fighter-level GolpeAtivo binding and C12 continuation
+
+- Added the Pascal `TLutador.GolpeAtivo` Boolean to the live Rust `FighterState` as `attack_active`, keeping it distinct from `HitboxRecord.active`.
+- Exposed the field through ROT host reads and writes for both `P` and `O`.
+- Routed C12 / Sr. Furtado commands 18 and 19 through the actual C12 `[Acao]` script. Its original guard remains: the `acEspecial6` continuation is accepted only when `GolpeAtivo` is false, while the ordinary allowed-action branch remains unchanged.
+- Added tests for host reads/writes, both weak/strong entries, rejection while the attack remains active, and the ordinary idle allowlist.
+- This does not connect `AplicarCaixas`, attack-box selection, melee collision, or `[Quadro]` / `[IA]` / `[Acerto]` execution.

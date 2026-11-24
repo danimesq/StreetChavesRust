@@ -149,6 +149,8 @@ This is a concrete port-level behavioral divergence hidden by the 379/379 row-mu
 
 The Pascal adapter is the normative Rust path. The C last-match adapter is retained only for comparison fixtures and must not be used as the default selector.
 
+The Rust fighter model now exposes Pascal's `TLutador.GolpeAtivo` as `FighterState.attack_active`, separately from `HitboxRecord.active`. The ROT host reads and writes this Boolean on the acting fighter (`P`) and opponent (`O`); C12's special-2 continuation guard uses it. This is a state binding only: the full hitbox selector and collision lifecycle are not yet connected to the fight simulation.
+
 The Rust library now provides:
 
 - RawBounds::mirrored_horizontally for the source endpoint transform.

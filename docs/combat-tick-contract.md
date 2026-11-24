@@ -46,6 +46,8 @@ Still unverified against the original executable:
 
 The Rust model exposes Replace, Clear, and Retain as explicit operations, plus AttackDeactivated for a state-machine active-flag write. The current source adapters map a C/Pascal lookup miss to Retain, a matched inactive row to Replace with active=false, and writes such as GolpeAtivo := False / attacking = false to AttackDeactivated. Clear is reserved for actual record removal. These are confirmed port semantics; whether the original executable shares every detail remains an open compatibility check.
 
+`FighterState.attack_active` now stores the Pascal fighter-level `TLutador.GolpeAtivo` Boolean and is exposed through the ROT host for both `P` and `O`. It remains separate from `HitboxRecord.active`: the former is the actor's current attack-enable flag, while the latter is the active value carried by one selected attack-table row. This binding does not claim that `AplicarCaixas`, hitbox selection, or collision consequences are wired into `FightSimulation`.
+
 ## 🌈 Tick timeline normalization
 
 For each fighter/action, the next research pass must produce one record per logical tick:

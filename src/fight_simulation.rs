@@ -6,8 +6,8 @@ use crate::combat_runtime::{
     ACTION_CROUCH_STRONG_KICK, ACTION_CROUCH_STRONG_PUNCH, ACTION_CROUCH_WEAK_KICK,
     ACTION_CROUCH_WEAK_PUNCH, ACTION_DEFENDING, ACTION_IDLE, ACTION_JUMPING, ACTION_LOW_DEFENDING,
     ACTION_POSE, ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4,
-    ACTION_SPECIAL_FINAL, ACTION_STRONG_KICK, ACTION_STRONG_PUNCH, ACTION_VICTORY, ACTION_WALKING,
-    ACTION_WEAK_KICK, ACTION_WEAK_PUNCH,
+    ACTION_SPECIAL6, ACTION_SPECIAL_FINAL, ACTION_STRONG_KICK, ACTION_STRONG_PUNCH, ACTION_VICTORY,
+    ACTION_WALKING, ACTION_WEAK_KICK, ACTION_WEAK_PUNCH,
 };
 use crate::command_recognition::{AttackButton, CommandRecognizer};
 use crate::effect_runtime::{EffectTickContext, EffectTickResult, EFFECT_SIDE_RIGHT};
@@ -101,6 +101,7 @@ impl RotExecutionHost for RotCombatHost<'_> {
             "cargasoco" => rot_int(i64::from(fighter.punch_charge)),
             "cargachute" => rot_int(i64::from(fighter.kick_charge)),
             "acertos" => rot_int(i64::from(fighter.hit_count)),
+            "golpeativo" => RotValue::Boolean(fighter.attack_active),
             _ => return Err(format!("{base}.{name} is not mapped to live FighterState")),
         };
         Ok(value)
@@ -143,6 +144,7 @@ impl RotExecutionHost for RotCombatHost<'_> {
             "cargasoco" => fighter.punch_charge = rot_value_int(&value)? as u8,
             "cargachute" => fighter.kick_charge = rot_value_int(&value)? as u8,
             "acertos" => fighter.hit_count = rot_value_int(&value)? as u8,
+            "golpeativo" => fighter.attack_active = rot_value_bool(&value)?,
             _ => {
                 return Err(format!(
                     "{base}.{name} is not writable in live FighterState"
@@ -636,7 +638,7 @@ impl FightSimulation {
                 )),
             }
         } else if self.state.fighters[fighter_index].character_id == 12
-            && matches!(command_code, 14..=17 | 20..=22)
+            && matches!(command_code, 14..=22)
         {
             match self.execute_character_rot_action(fighter_index, 12, command_code) {
                 Ok(()) => report
@@ -1201,6 +1203,7 @@ mod rot_runtime_integration_tests {
             defending: true,
             invulnerable: false,
             hit_count: 0,
+            attack_active: false,
             is_kick: false,
             recoil: 0,
             vertical_velocity: 0,
@@ -1259,6 +1262,120 @@ mod rot_runtime_integration_tests {
             },
             2026,
         )
+    }
+
+    #[test]
+    fn rot_host_reads_and_writes_golpe_ativo_on_both_live_fighters() {
+        let mut fight = simulation();
+        fight.state.fighters[0].attack_active = true;
+        fight.state.fighters[1].attack_active = false;
+
+        let mut host = RotCombatHost {
+            state: &mut fight.state,
+            rng: &mut fight.rng,
+            player_index: 0,
+            charge_gain: 1.0,
+            charge_max: 100.0,
+            ground_y: 240.0,
+        };
+
+        assert!(matches!(
+            host.read_fighter_field('P', "GolpeAtivo"),
+            Ok(RotValue::Boolean(true))
+        ));
+        assert!(matches!(
+            host.read_fighter_field('O', "GolpeAtivo"),
+            Ok(RotValue::Boolean(false))
+        ));
+
+        host.write_fighter_field('P', "GolpeAtivo", RotValue::Boolean(false))
+            .unwrap();
+        host.write_fighter_field('O', "GolpeAtivo", RotValue::Boolean(true))
+            .unwrap();
+
+        assert!(matches!(
+            host.read_fighter_field('P', "GolpeAtivo"),
+            Ok(RotValue::Boolean(false))
+        ));
+        assert!(matches!(
+            host.read_fighter_field('O', "GolpeAtivo"),
+            Ok(RotValue::Boolean(true))
+        ));
+    }
+
+    #[test]
+    fn c12_esp2_weak_and_strong_chain_from_special6_only_after_attack_deactivation() {
+        for (command_code, button, expected_force) in [
+            (18, AttackButton::WeakPunch, 1),
+            (19, AttackButton::StrongPunch, 2),
+        ] {
+            let mut fight = simulation();
+            fight.state.fighters[0].character_id = 12;
+            fight.state.fighters[0].action_id = ACTION_SPECIAL6;
+            fight.state.fighters[0].attack_active = false;
+            let mut report = FightTickReport::default();
+
+            fight.dispatch_character_command(0, button, command_code, &mut report);
+
+            let fighter = &fight.state.fighters[0];
+            assert_eq!(fighter.action_id, ACTION_SPECIAL2);
+            assert_eq!(fighter.action_frame, 0);
+            assert_eq!(fighter.action_duration, 20);
+            assert_eq!(fighter.force_strength, expected_force);
+            assert_eq!(fighter.charge_power, 6.0);
+            assert!(!fighter.attack_active);
+            assert_eq!(report.rot_action_executions, vec![(0, 12, command_code)]);
+            assert!(report.unhandled_commands.is_empty());
+            assert!(report.errors.is_empty());
+        }
+    }
+
+    #[test]
+    fn c12_esp2_does_not_chain_from_special6_while_attack_is_still_active() {
+        for (command_code, button) in [
+            (18, AttackButton::WeakPunch),
+            (19, AttackButton::StrongPunch),
+        ] {
+            let mut fight = simulation();
+            fight.state.fighters[0].character_id = 12;
+            fight.state.fighters[0].action_id = ACTION_SPECIAL6;
+            fight.state.fighters[0].action_frame = 7;
+            fight.state.fighters[0].force_strength = 2;
+            fight.state.fighters[0].charge_power = 9.0;
+            fight.state.fighters[0].attack_active = true;
+            // Common [Acao] always clears Defendendo before this character guard.
+            fight.state.fighters[0].defending = false;
+            let before = fight.state.fighters[0].clone();
+            let mut report = FightTickReport::default();
+
+            fight.dispatch_character_command(0, button, command_code, &mut report);
+
+            assert_eq!(fight.state.fighters[0], before);
+            assert_eq!(report.rot_action_executions, vec![(0, 12, command_code)]);
+            assert!(report.unhandled_commands.is_empty());
+            assert!(report.errors.is_empty());
+        }
+    }
+
+    #[test]
+    fn c12_esp2_keeps_the_original_idle_allowlist_even_when_attack_flag_is_set() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 12;
+        fight.state.fighters[0].action_id = ACTION_IDLE;
+        fight.state.fighters[0].attack_active = true;
+        let mut report = FightTickReport::default();
+
+        fight.dispatch_character_command(0, AttackButton::WeakPunch, 18, &mut report);
+
+        let fighter = &fight.state.fighters[0];
+        assert_eq!(fighter.action_id, ACTION_SPECIAL2);
+        assert_eq!(fighter.action_duration, 20);
+        assert_eq!(fighter.force_strength, 1);
+        assert_eq!(fighter.charge_power, 6.0);
+        assert!(fighter.attack_active);
+        assert_eq!(report.rot_action_executions, vec![(0, 12, 18)]);
+        assert!(report.unhandled_commands.is_empty());
+        assert!(report.errors.is_empty());
     }
 
     #[test]

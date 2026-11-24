@@ -64,6 +64,7 @@ fn fighter(character_id: u8, action_id: u16) -> FighterState {
         defending: true,
         invulnerable: false,
         hit_count: 0,
+        attack_active: false,
         is_kick: false,
         recoil: 0,
         vertical_velocity: -4,
