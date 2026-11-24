@@ -74,6 +74,10 @@ pub struct FighterState {
     /// Pascal `TLutador.GolpeAtivo`: whether this fighter's current attack may still hit.
     /// This is fighter state, not the `active` metadata stored in a hitbox row.
     pub attack_active: bool,
+    /// Pascal `TLutador.AndandoFrente`, used by the common walking [Quadro] branch.
+    pub walking_forward: bool,
+    /// Last selected Pascal [Ataque] row. A selector miss retains this record.
+    pub attack_box: Option<crate::HitboxRecord>,
     pub is_kick: bool,
     pub recoil: u8,
     pub vertical_velocity: i8,
