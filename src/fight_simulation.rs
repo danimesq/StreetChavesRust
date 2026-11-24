@@ -1106,6 +1106,198 @@ impl FightSimulation {
         }
     }
 
+    /// Run one Pascal AtualizaQuadro update in source order.
+    fn advance_fighter_frame(&mut self, fighter_index: usize, report: &mut FightTickReport) {
+        if self.state.clock_stopped || self.state.screen_flash != 0 {
+            return;
+        }
+
+        let character_id = self.state.fighters[fighter_index].character_id;
+        let action_id = self.state.fighters[fighter_index].action_id;
+        let frame_before = self.state.fighters[fighter_index].action_frame;
+        let jog = (fighter_index + 1) as u8;
+        let special = self.config.special;
+
+        let common = match RotDocument::from_str(
+            "Comum.rot",
+            include_str!("../research/pascal-rot/Comum.rot"),
+        ) {
+            Ok(document) => document,
+            Err(error) => {
+                report.errors.push(format!("Comum.rot [Quadro]: {error}"));
+                return;
+            }
+        };
+
+        // Pascal executes Common [Quadro] first, using the fight's shared state/RNG.
+        let common_result = {
+            let mut host = RotCombatHost {
+                state: &mut self.state,
+                rng: &mut self.rng,
+                player_index: fighter_index,
+                charge_gain: special.charge_gain,
+                charge_max: special.charge_max,
+                ground_y: special.ground_y,
+            };
+            execute_rot_section(&common, "Quadro", jog, 0, &mut host)
+        };
+        if let Err(error) = common_result {
+            report.errors.push(format!(
+                "Comum.rot [Quadro] fighter {fighter_index}: {error}"
+            ));
+            return;
+        }
+
+        // Preserve the existing, tested C01 manual frame path for its implemented
+        // special/victory/pose branches. Other branches and C02-C15 use live ROT.
+        let c01_manual = character_id == 1
+            && matches!(
+                action_id,
+                ACTION_SPECIAL1
+                    | ACTION_SPECIAL2
+                    | ACTION_SPECIAL3
+                    | ACTION_SPECIAL4
+                    | ACTION_SPECIAL_FINAL
+                    | ACTION_VICTORY
+                    | ACTION_POSE
+            );
+
+        if c01_manual {
+            let previous_errors = report.errors.len();
+            self.advance_c01_frame(fighter_index, report);
+            if report.errors.len() != previous_errors {
+                return;
+            }
+        } else {
+            let (filename, source) = match character_id {
+                1 => ("C01.rot", include_str!("../research/pascal-rot/C01.rot")),
+                2 => ("C02.rot", include_str!("../research/pascal-rot/C02.rot")),
+                3 => ("C03.rot", include_str!("../research/pascal-rot/C03.rot")),
+                4 => ("C04.rot", include_str!("../research/pascal-rot/C04.rot")),
+                5 => ("C05.rot", include_str!("../research/pascal-rot/C05.rot")),
+                6 => ("C06.rot", include_str!("../research/pascal-rot/C06.rot")),
+                7 => ("C07.rot", include_str!("../research/pascal-rot/C07.rot")),
+                8 => ("C08.rot", include_str!("../research/pascal-rot/C08.rot")),
+                9 => ("C09.rot", include_str!("../research/pascal-rot/C09.rot")),
+                10 => ("C10.rot", include_str!("../research/pascal-rot/C10.rot")),
+                11 => ("C11.rot", include_str!("../research/pascal-rot/C11.rot")),
+                12 => ("C12.rot", include_str!("../research/pascal-rot/C12.rot")),
+                13 => ("C13.rot", include_str!("../research/pascal-rot/C13.rot")),
+                14 => ("C14.rot", include_str!("../research/pascal-rot/C14.rot")),
+                15 => ("C15.rot", include_str!("../research/pascal-rot/C15.rot")),
+                _ => {
+                    report.errors.push(format!(
+                        "fighter {fighter_index} has no pinned [Quadro] script for character {character_id}"
+                    ));
+                    return;
+                }
+            };
+            let character = match RotDocument::from_str(filename, source) {
+                Ok(document) => document,
+                Err(error) => {
+                    report.errors.push(format!("{filename} [Quadro]: {error}"));
+                    return;
+                }
+            };
+            let character_result = {
+                let mut host = RotCombatHost {
+                    state: &mut self.state,
+                    rng: &mut self.rng,
+                    player_index: fighter_index,
+                    charge_gain: special.charge_gain,
+                    charge_max: special.charge_max,
+                    ground_y: special.ground_y,
+                };
+                execute_rot_section(&character, "Quadro", jog, 0, &mut host)
+            };
+            if let Err(error) = character_result {
+                report.errors.push(format!(
+                    "{filename} [Quadro] fighter {fighter_index}: {error}"
+                ));
+                return;
+            }
+            report
+                .rot_frame_executions
+                .push((fighter_index, character_id));
+        }
+
+        // AplicarCaixas runs only after both frame sections completed successfully.
+        if let Err(error) = self.apply_fighter_boxes(fighter_index) {
+            report.errors.push(format!(
+                "AplicarCaixas fighter {fighter_index}: {error}"
+            ));
+            return;
+        }
+        report.box_updates.push(fighter_index);
+
+        // The C01 hand-port owns its counter update. Other interpreted paths use
+        // the existing bounded frame-counter rule after the box lookup.
+        if !c01_manual {
+            let fighter = &mut self.state.fighters[fighter_index];
+            if fighter.action_frame == frame_before
+                && fighter.action_duration != 99
+                && fighter.action_frame < fighter.action_duration
+            {
+                fighter.action_frame = fighter.action_frame.saturating_add(1);
+            }
+        }
+    }
+
+    /// Apply the current character's Corpo row and all matching Ataque rows.
+    /// A selector miss retains the previously stored box, as in Pascal.
+    fn apply_fighter_boxes(&mut self, fighter_index: usize) -> Result<(), String> {
+        let tables = self.frame_boxes[fighter_index]
+            .as_ref()
+            .ok_or_else(|| format!("no source frame/box table loaded for fighter {fighter_index}"))?;
+        let fighter = &mut self.state.fighters[fighter_index];
+
+        // Pascal subtracts the second player's 50-frame strip offset only for Corpo.
+        let body_frame = fighter.sprite_frame - if fighter_index == 1 { 50 } else { 0 };
+        if (0..=74).contains(&body_frame) {
+            if let Some(row) = tables
+                .hurtboxes
+                .iter()
+                .find(|row| i32::from(row.frame) == body_frame)
+            {
+                let bounds = if fighter.facing == SIDE_LEFT {
+                    row.bounds.mirrored_horizontally()
+                } else {
+                    row.bounds
+                };
+                fighter.body = crate::combat_runtime::BodyBox {
+                    x1: f64::from(bounds.x1),
+                    y1: f64::from(bounds.y1),
+                    x2: f64::from(bounds.x2),
+                    y2: f64::from(bounds.y2),
+                };
+            }
+        }
+
+        // Evaluate force conditions against current force in original INI order.
+        let mut attack_state = PascalAttackState {
+            current_force: fighter.force_strength,
+            current_box: fighter.attack_box,
+        };
+        let applied = attack_state.apply_ordered_rows(
+            ActionId(fighter.action_id),
+            fighter.action_frame,
+            &tables.attacks,
+        );
+        if applied > 0 {
+            let mut selected = attack_state
+                .current_box
+                .ok_or_else(|| "attack selector reported a match without a box".to_owned())?;
+            if fighter.facing == SIDE_LEFT {
+                selected.bounds = selected.bounds.mirrored_horizontally();
+            }
+            fighter.force_strength = attack_state.current_force;
+            fighter.attack_active = selected.active;
+            fighter.attack_box = Some(selected);
+        }
+
+        Ok(())
+    }
+
     fn advance_c01_frame(&mut self, fighter_index: usize, report: &mut FightTickReport) {
         if self.state.fighters[fighter_index].character_id != 1 {
             return;
@@ -1181,7 +1373,7 @@ impl FightSimulation {
             }
 
             for fighter_index in 0..self.state.fighters.len() {
-                self.advance_c01_frame(fighter_index, &mut report);
+                self.advance_fighter_frame(fighter_index, &mut report);
             }
         }
 
