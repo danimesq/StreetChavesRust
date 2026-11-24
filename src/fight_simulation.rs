@@ -11,8 +11,8 @@ use crate::combat_runtime::{
 };
 use crate::command_recognition::{AttackButton, CommandRecognizer};
 use crate::effect_runtime::{EffectTickContext, EffectTickResult, EFFECT_SIDE_RIGHT};
-use crate::fighter_command_data::{embedded_character_command_rules, CharacterCommandRules};
 use crate::fighter_box_data::{load_fighter_frame_boxes, FighterFrameBoxes};
+use crate::fighter_command_data::{embedded_character_command_rules, CharacterCommandRules};
 use crate::input::{Direction, InputFrame};
 use crate::pascal_replay::PascalRandomSource;
 use crate::rot_runtime::{RotDocument, RotExecutionFrame, RotExecutionHost, RotValue};
@@ -3078,5 +3078,4 @@ mod rot_runtime_integration_tests {
         let source = fight.frame_boxes[0].as_ref().unwrap();
         assert_eq!(source.attacks[12].bounds.x1, 10);
     }
-
 }
