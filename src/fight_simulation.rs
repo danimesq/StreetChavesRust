@@ -1246,9 +1246,9 @@ impl FightSimulation {
     /// Apply the current character's Corpo row and all matching Ataque rows.
     /// A selector miss retains the previously stored box, as in Pascal.
     fn apply_fighter_boxes(&mut self, fighter_index: usize) -> Result<(), String> {
-        let tables = self.frame_boxes[fighter_index]
-            .as_ref()
-            .ok_or_else(|| format!("no source frame/box table loaded for fighter {fighter_index}"))?;
+        let tables = self.frame_boxes[fighter_index].as_ref().ok_or_else(|| {
+            format!("no source frame/box table loaded for fighter {fighter_index}")
+        })?;
         let fighter = &mut self.state.fighters[fighter_index];
 
         // Pascal subtracts the second player's 50-frame strip offset only for Corpo.
@@ -2992,7 +2992,12 @@ mod rot_runtime_integration_tests {
         let weak = fight.state.fighters[0].attack_box.unwrap();
         assert_eq!(
             weak.bounds,
-            crate::RawBounds { x1: 10, y1: 130, x2: 82, y2: 158 }
+            crate::RawBounds {
+                x1: 10,
+                y1: 130,
+                x2: 82,
+                y2: 158,
+            }
         );
         assert!(weak.active);
         assert_eq!(weak.damage, 18);
@@ -3003,7 +3008,12 @@ mod rot_runtime_integration_tests {
         let strong = fight.state.fighters[0].attack_box.unwrap();
         assert_eq!(
             strong.bounds,
-            crate::RawBounds { x1: 10, y1: 25, x2: 55, y2: 70 }
+            crate::RawBounds {
+                x1: 10,
+                y1: 25,
+                x2: 55,
+                y2: 70,
+            }
         );
         assert_eq!(strong.damage, 18);
         assert_eq!(fight.state.fighters[0].force_strength, 2);
@@ -3045,7 +3055,12 @@ mod rot_runtime_integration_tests {
         let stored = fight.state.fighters[0].attack_box.unwrap();
         assert_eq!(
             stored.bounds,
-            crate::RawBounds { x1: 10, y1: 5, x2: 50, y2: 95 }
+            crate::RawBounds {
+                x1: 10,
+                y1: 5,
+                x2: 50,
+                y2: 95,
+            }
         );
         assert!(!stored.active);
         assert!(!fight.state.fighters[0].attack_active);
@@ -3066,7 +3081,12 @@ mod rot_runtime_integration_tests {
         let selected = fight.state.fighters[0].attack_box.unwrap();
         assert_eq!(
             selected.bounds,
-            crate::RawBounds { x1: -82, y1: 130, x2: -10, y2: 158 }
+            crate::RawBounds {
+                x1: -82,
+                y1: 130,
+                x2: -10,
+                y2: 158,
+            }
         );
         let source = fight.frame_boxes[0].as_ref().unwrap();
         assert_eq!(source.attacks[12].bounds.x1, 10);
