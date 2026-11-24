@@ -1230,16 +1230,14 @@ impl FightSimulation {
         }
         report.box_updates.push(fighter_index);
 
-        // The C01 hand-port owns its counter update. Other interpreted paths use
-        // the existing bounded frame-counter rule after the box lookup.
-        if !c01_manual {
-            let fighter = &mut self.state.fighters[fighter_index];
-            if fighter.action_frame == frame_before
-                && fighter.action_duration != 99
-                && fighter.action_frame < fighter.action_duration
-            {
-                fighter.action_frame = fighter.action_frame.saturating_add(1);
-            }
+        // AtualizaQuadro/AplicarCaixas observe the same action timer. Advance
+        // only after the selected boxes have been stored for this frame.
+        let fighter = &mut self.state.fighters[fighter_index];
+        if fighter.action_frame == frame_before
+            && fighter.action_duration != 99
+            && fighter.action_frame < fighter.action_duration
+        {
+            fighter.action_frame = fighter.action_frame.saturating_add(1);
         }
     }
 
@@ -1321,21 +1319,11 @@ impl FightSimulation {
         let mut context = self.config.frame;
         context.sprite_offset = (fighter_index as i32) * 50;
         context.camera_x = self.state.camera_x;
-        let frame_before = self.state.fighters[fighter_index].action_frame;
-
         match self
             .state
             .update_c01_character_frame(fighter_index, context, &mut self.rng)
         {
-            Ok(frame_result) => {
-                report.c01_frames.push((fighter_index, frame_result));
-                let fighter = &mut self.state.fighters[fighter_index];
-                if fighter.action_frame == frame_before
-                    && fighter.action_frame < fighter.action_duration
-                {
-                    fighter.action_frame = fighter.action_frame.saturating_add(1);
-                }
-            }
+            Ok(frame_result) => report.c01_frames.push((fighter_index, frame_result)),
             Err(error) => report
                 .errors
                 .push(format!("C01 [Quadro] fighter {fighter_index}: {error}")),
