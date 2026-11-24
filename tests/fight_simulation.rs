@@ -359,7 +359,9 @@ fn common_weak_punch_executes_with_pascal_duration_charge_and_sound() {
 
     let fighter = &fight.state.fighters[0];
     assert_eq!(fighter.action_id, ACTION_WEAK_PUNCH);
-    assert_eq!(fighter.action_frame, 0);
+    // The fight tick has already run [Quadro] + AplicarCaixas at frame zero,
+    // then advanced the visible action counter at the end of the tick.
+    assert_eq!(fighter.action_frame, 1);
     assert_eq!(fighter.action_duration, 6);
     assert_eq!(fighter.charge_power, 1.0);
     assert_eq!(fight.state.pending_sound, Some(5));
