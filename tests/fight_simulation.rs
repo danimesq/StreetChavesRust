@@ -155,7 +155,11 @@ fn common_and_character_quadro_update_both_players_before_box_application() {
         vec![(0, 1), (1, 4)]
     );
     assert_eq!(fight.last_report().box_updates, vec![0, 1]);
-    assert!(fight.last_report().errors.is_empty(), "frame/runtime errors: {:?}", fight.last_report().errors);
+    assert!(
+        fight.last_report().errors.is_empty(),
+        "frame/runtime errors: {:?}",
+        fight.last_report().errors
+    );
 }
 
 #[test]
