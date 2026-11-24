@@ -503,5 +503,5 @@ Current Rust branch:
 
 - Bound Pascal frame fields `TempoAcertos` (Byte), `DanoGolpe` (Byte) and `VelAngular` (SmallInt) to live Rust fighter state, with ROT reads/writes.
 - Implemented recursive `AcaoJogador(Jog, Codigo)` inside the ROT host: common [Acao] → target fighter's character [Acao] → common [AcaoFim]. Nested calls share both fighters, effect arena and the same RNG cursor, and have a 16-call depth limit.
-- Added integration coverage for all three field bindings and a nested call targeting player 2. CI on head `f64fcb11f820767ca7c67f85487cbd11b5c66e77` is pending; results will be recorded after it completes.
+- Added integration coverage for all three field bindings and a nested call targeting player 2. CI passed on head `f37a27c831b76e6bb945136b9da2d6760df22577`: formatting and all targets, 192 tests with 0 failures (Actions run #744).
 - This closes the specific host-binding/nested-call gap for frame scripts where these fields and helper are used; it does not claim complete ROT host coverage, action-lifecycle differential parity, or collision/reaction execution.
