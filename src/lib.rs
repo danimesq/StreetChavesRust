@@ -34,6 +34,9 @@ pub mod command_recognition;
 /// Pinned per-character [Botoes]/[Sequencias] data and INI rule loader.
 pub mod fighter_command_data;
 
+/// Source-ordered per-fighter sprite-frame, hurtbox and attack-box tables.
+pub mod fighter_box_data;
+
 /// Host-independent logical input sampling with edge and hold-state tracking.
 pub mod input;
 
