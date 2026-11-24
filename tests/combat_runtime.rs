@@ -48,6 +48,8 @@ fn fighter_from_snapshot(value: &Value) -> FighterState {
         hit_count: value["hits"].as_u64().unwrap_or(0) as u8,
         // The captured Common [IA] snapshot omits GolpeAtivo and this replay path does not read it.
         attack_active: false,
+        walking_forward: false,
+        attack_box: None,
         is_kick: false,
         recoil: 0,
         vertical_velocity: required_i32(value, "velocity_y") as i8,
