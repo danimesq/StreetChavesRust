@@ -46,6 +46,9 @@ fn fighter_from_snapshot(value: &Value) -> FighterState {
         defending: value["defending"].as_bool().expect("snapshot defending"),
         invulnerable: value["invulnerable"].as_bool().unwrap_or(false),
         hit_count: value["hits"].as_u64().unwrap_or(0) as u8,
+        hit_timer: 0,
+        attack_damage: 0,
+        angular_velocity: 0,
         // The captured Common [IA] snapshot omits GolpeAtivo and this replay path does not read it.
         attack_active: false,
         walking_forward: false,
