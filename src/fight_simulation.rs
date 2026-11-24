@@ -6,7 +6,7 @@ use crate::combat_runtime::{
     ACTION_CROUCH_STRONG_KICK, ACTION_CROUCH_STRONG_PUNCH, ACTION_CROUCH_WEAK_KICK,
     ACTION_CROUCH_WEAK_PUNCH, ACTION_DEFENDING, ACTION_IDLE, ACTION_JUMPING, ACTION_LOW_DEFENDING,
     ACTION_POSE, ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4,
-    ACTION_SPECIAL6, ACTION_SPECIAL_FINAL, ACTION_STRONG_KICK, ACTION_STRONG_PUNCH, ACTION_VICTORY,
+    ACTION_SPECIAL_FINAL, ACTION_STRONG_KICK, ACTION_STRONG_PUNCH, ACTION_VICTORY,
     ACTION_WALKING, ACTION_WEAK_KICK, ACTION_WEAK_PUNCH, SIDE_LEFT,
 };
 use crate::command_recognition::{AttackButton, CommandRecognizer};
@@ -1579,6 +1579,11 @@ mod rot_runtime_integration_tests {
     #[test]
     fn rot_host_reads_and_writes_golpe_ativo_on_both_live_fighters() {
         let mut fight = simulation();
+        let common = RotDocument::from_str(
+            "Comum.rot",
+            include_str!("../research/pascal-rot/Comum.rot"),
+        )
+        .unwrap();
         fight.state.fighters[0].attack_active = true;
         fight.state.fighters[1].attack_active = false;
 
