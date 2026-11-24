@@ -2975,4 +2975,101 @@ mod rot_runtime_integration_tests {
         assert_eq!(report.rot_action_executions, vec![(0, 3, 24)]);
         assert!(report.errors.is_empty());
     }
+    #[test]
+    fn aplicar_caixas_selects_pascal_strength_rows_in_original_ini_order() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 11;
+        fight.frame_boxes[0] = Some(load_fighter_frame_boxes(11).unwrap());
+        {
+            let fighter = &mut fight.state.fighters[0];
+            fighter.action_id = 27;
+            fighter.action_frame = 1;
+            fighter.force_strength = 1;
+            fighter.facing = crate::combat_runtime::SIDE_RIGHT;
+        }
+
+        fight.apply_fighter_boxes(0).unwrap();
+        let weak = fight.state.fighters[0].attack_box.unwrap();
+        assert_eq!(
+            weak.bounds,
+            crate::RawBounds { x1: 10, y1: 130, x2: 82, y2: 158 }
+        );
+        assert!(weak.active);
+        assert_eq!(weak.damage, 18);
+        assert_eq!(fight.state.fighters[0].force_strength, 1);
+
+        fight.state.fighters[0].force_strength = 2;
+        fight.apply_fighter_boxes(0).unwrap();
+        let strong = fight.state.fighters[0].attack_box.unwrap();
+        assert_eq!(
+            strong.bounds,
+            crate::RawBounds { x1: 10, y1: 25, x2: 55, y2: 70 }
+        );
+        assert_eq!(strong.damage, 18);
+        assert_eq!(fight.state.fighters[0].force_strength, 2);
+    }
+
+    #[test]
+    fn aplicar_caixas_retains_attack_record_and_active_flag_on_lookup_miss() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 11;
+        fight.frame_boxes[0] = Some(load_fighter_frame_boxes(11).unwrap());
+        {
+            let fighter = &mut fight.state.fighters[0];
+            fighter.action_id = 27;
+            fighter.action_frame = 1;
+            fighter.force_strength = 2;
+            fighter.facing = crate::combat_runtime::SIDE_RIGHT;
+        }
+        fight.apply_fighter_boxes(0).unwrap();
+        let previous = fight.state.fighters[0].attack_box;
+        assert!(fight.state.fighters[0].attack_active);
+
+        fight.state.fighters[0].action_frame = 99;
+        fight.apply_fighter_boxes(0).unwrap();
+        assert_eq!(fight.state.fighters[0].attack_box, previous);
+        assert!(fight.state.fighters[0].attack_active);
+    }
+
+    #[test]
+    fn aplicar_caixas_keeps_matched_inactive_rows_as_stored_boxes() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 3;
+        fight.frame_boxes[0] = Some(load_fighter_frame_boxes(3).unwrap());
+        let fighter = &mut fight.state.fighters[0];
+        fighter.action_id = 26;
+        fighter.action_frame = 7;
+        fighter.attack_active = true;
+
+        fight.apply_fighter_boxes(0).unwrap();
+        let stored = fight.state.fighters[0].attack_box.unwrap();
+        assert_eq!(
+            stored.bounds,
+            crate::RawBounds { x1: 10, y1: 5, x2: 50, y2: 95 }
+        );
+        assert!(!stored.active);
+        assert!(!fight.state.fighters[0].attack_active);
+    }
+
+    #[test]
+    fn aplicar_caixas_mirrors_attack_bounds_without_mutating_the_source_table() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 11;
+        fight.frame_boxes[0] = Some(load_fighter_frame_boxes(11).unwrap());
+        let fighter = &mut fight.state.fighters[0];
+        fighter.action_id = 27;
+        fighter.action_frame = 1;
+        fighter.force_strength = 1;
+        fighter.facing = SIDE_LEFT;
+
+        fight.apply_fighter_boxes(0).unwrap();
+        let selected = fight.state.fighters[0].attack_box.unwrap();
+        assert_eq!(
+            selected.bounds,
+            crate::RawBounds { x1: -82, y1: 130, x2: -10, y2: 158 }
+        );
+        let source = fight.frame_boxes[0].as_ref().unwrap();
+        assert_eq!(source.attacks[12].bounds.x1, 10);
+    }
+
 }
