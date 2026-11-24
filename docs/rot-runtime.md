@@ -64,7 +64,9 @@ The following limitations remain:
 
 The host adapter uses the authoritative `CombatState`, fighter frame/box state, effect arena and same `Fpc322Rng` owned by `FightSimulation`; it does not create a parallel script-only fighter state or random generator.
 
-The `[Quadro]` route remains bounded: unmapped fields/helpers and unsupported nested action calls produce report errors. The existing C01 special/victory/pose frame branches remain on their source-derived tested implementation; the generic ROT route handles the other character frame sections only within the mapped host surface.
+The frame host now maps the previously missing `TempoAcertos` (Byte), `DanoGolpe` (Byte) and `VelAngular` (SmallInt) fields to live `FighterState`, including ROT writes. Nested `AcaoJogador(Jog, Codigo)` calls execute the complete common [Acao] → target character [Acao] → common [AcaoFim] sequence recursively against the same two fighters, effect arena and RNG cursor. Recursion is bounded to 16 nested action calls to protect the runtime from pathological cycles; exceeding the limit reports an explicit runtime error.
+
+The `[Quadro]` route remains bounded: unmapped fields/helpers produce report errors. The existing C01 special/victory/pose frame branches remain on their source-derived tested implementation; the generic ROT route handles the other character frame sections only within the mapped host surface.
 
 Rust currently represents real values as `f64`, while the Pascal interpreter uses `Extended` internally. High-precision differential validation remains open. No floating-point equivalence is claimed.
 
