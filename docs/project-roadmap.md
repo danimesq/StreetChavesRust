@@ -127,6 +127,44 @@ Exit criteria:
 - State hashes or snapshots can identify the first divergent tick.
 - Headless tests do not initialize SDL.
 
+## Upcoming combat-runtime implementation sequence
+
+The following PR sequence turns the source-audited frame and collision contracts into live simulation behavior. These are planned milestones, not claims of completed functionality.
+
+### PR #24 — Frame update and box application
+
+Connect the per-fighter frame update to the authoritative simulation in Pascal source order:
+
+1. Execute the common `[Quadro]` script.
+2. Execute the character-specific `[Quadro]` script.
+3. Apply the current frame's hurtbox and the current action/timer's hitbox rows through `AplicarCaixas`.
+
+Preserve source table order, player-two's 50-frame sprite-strip offset, horizontal mirroring, force-condition evaluation, and the distinct replace/inactive/retain semantics. Keep hit detection and hit consequences outside this milestone.
+
+### Collision Resolution
+
+Conectar hitboxes e hurtboxes à simulação, com AABB, detecção de acertos, bloqueios, hit-stop e consequências de colisão.
+
+### Acerto + Character Reactions
+
+Integrar `ExecutarAcerto`, scripts `[Acerto]`, transições de estado e atualização da vítima após receber um golpe.
+
+The collision and reaction milestones depend on the frame/box pipeline being connected and covered by deterministic tests. They must remain separately reviewable so that selector correctness is not conflated with collision consequences.
+
+## Exploratory visual variant — Omarchy theme-adaptive edition
+
+A deliberately experimental visual direction is to create a separate Omarchy-inspired edition in which every sprite is manually redrawn as a silhouette with an outline and deliberately authored mask colors. At runtime, the presentation layer would map those mask colors to the active operating-system theme palette, allowing a theme such as Dracula to recolor the game's characters and compatible visual elements.
+
+This is a plausible rendering/asset-pipeline experiment, not an established capability or a committed release target. Its viability depends on:
+
+- a sprite format that preserves explicit palette/mask regions instead of baking final colors into every pixel;
+- a renderer-side palette mapping stage, isolated from gameplay simulation;
+- a defined mapping contract between mask channels and semantic theme roles (outline, primary fill, secondary fill, accents);
+- a fallback palette when the desktop environment exposes no usable theme colors;
+- tests for transparency, antialiasing, effects, UI assets, and sprites with details that should not be recolored.
+
+The manual redraw requirement is intentional: this is an original art direction, not an automatic recoloring pass over copyrighted source sprites. The first prototype should validate a small representative sprite set before the idea becomes a packaging or release commitment.
+
 ## Phase 4 — Fighter data, animation, and state machine
 
 **Status: Planned**
