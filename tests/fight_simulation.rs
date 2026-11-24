@@ -6,7 +6,7 @@ use street_chaves::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext}
 use street_chaves::combat_runtime::{
     BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_CROUCHING,
     ACTION_CROUCH_STRONG_KICK, ACTION_IDLE, ACTION_SPECIAL1, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL,
-    ACTION_WEAK_PUNCH, FORCE_WEAK, SIDE_RIGHT,
+    ACTION_WEAK_PUNCH, FORCE_WEAK, SIDE_LEFT, SIDE_RIGHT,
 };
 use street_chaves::effect_runtime::EFFECT_SIDE_RIGHT;
 use street_chaves::fight_simulation::{FightSimulation, FightSimulationConfig};
@@ -114,6 +114,38 @@ fn fixed_runner_invokes_concrete_fight_at_28ms_and_advances_c01_frame() {
     assert_eq!(fight.state.fighters[0].sprite_frame, 36);
     assert_eq!(fight.state.fighters[0].action_frame, 1);
     assert_eq!(fight.last_report().c01_frames.len(), 1);
+}
+
+#[test]
+fn common_and_character_quadro_update_both_players_before_box_application() {
+    let mut fight = simulation(ACTION_IDLE, 0);
+    fight.tick(InputFrame::default());
+
+    assert_eq!(fight.state.fighters[0].sprite_frame, 1);
+    assert_eq!(fight.state.fighters[1].sprite_frame, 51);
+    assert_eq!(
+        fight.state.fighters[0].body,
+        BodyBox { x1: -13.0, y1: 35.0, x2: 19.0, y2: 164.0 }
+    );
+    assert_eq!(
+        fight.state.fighters[1].body,
+        BodyBox { x1: -17.0, y1: 35.0, x2: 14.0, y2: 160.0 }
+    );
+    assert_eq!(fight.last_report().rot_frame_executions, vec![(0, 1), (1, 2)]);
+    assert_eq!(fight.last_report().box_updates, vec![0, 1]);
+    assert!(fight.last_report().errors.is_empty());
+}
+
+#[test]
+fn applied_hurtbox_is_mirrored_when_the_fighter_faces_left() {
+    let mut fight = simulation(ACTION_IDLE, 0);
+    fight.state.fighters[0].facing = SIDE_LEFT;
+    fight.tick(InputFrame::default());
+
+    assert_eq!(fight.state.fighters[0].body.x1, -19.0);
+    assert_eq!(fight.state.fighters[0].body.x2, 13.0);
+    assert_eq!(fight.state.fighters[0].body.y1, 35.0);
+    assert_eq!(fight.state.fighters[0].body.y2, 164.0);
 }
 
 #[test]
