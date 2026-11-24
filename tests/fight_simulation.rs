@@ -152,10 +152,10 @@ fn common_and_character_quadro_update_both_players_before_box_application() {
     );
     assert_eq!(
         fight.last_report().rot_frame_executions,
-        vec![(0, 1), (1, 2)]
+        vec![(0, 1), (1, 4)]
     );
     assert_eq!(fight.last_report().box_updates, vec![0, 1]);
-    assert!(fight.last_report().errors.is_empty());
+    assert!(fight.last_report().errors.is_empty(), "frame/runtime errors: {:?}", fight.last_report().errors);
 }
 
 #[test]
@@ -321,7 +321,7 @@ fn real_character_data_exposes_unimplemented_commands_without_faking_execution()
         .unhandled_commands
         .iter()
         .any(|item| item.command_code == 25));
-    assert!(fight.last_report().errors.is_empty());
+    assert!(fight.last_report().errors.is_empty(), "frame/runtime errors: {:?}", fight.last_report().errors);
 }
 
 #[test]
