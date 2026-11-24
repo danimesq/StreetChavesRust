@@ -1344,6 +1344,8 @@ mod rot_runtime_integration_tests {
             fight.state.fighters[0].force_strength = 2;
             fight.state.fighters[0].charge_power = 9.0;
             fight.state.fighters[0].attack_active = true;
+            // Common [Acao] always clears Defendendo before this character guard.
+            fight.state.fighters[0].defending = false;
             let before = fight.state.fighters[0].clone();
             let mut report = FightTickReport::default();
 
