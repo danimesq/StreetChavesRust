@@ -83,6 +83,44 @@ The schema version is independent of the game/runtime version. Behavior must rem
 
 The JSON manifest is a new format. The existing Pascal loader reads INI data and `.rot` scripts; the presence of a `.json` file in the same folder does not make that legacy loader understand it. Existing `C##.ini` and `C##.rot` files may be supplied as explicit legacy companion data for a target that needs them, but they are not required by the JSON package and must not silently become a second source of truth. A `.rot` file is executable script, not passive animation metadata, and must not be assumed to be losslessly generated from the declarative manifest.
 
+A minimal shape example (illustrative, not a finalized executable schema or a playable character):
+
+```json
+{
+  "schema_version": 1,
+  "id": "example_character",
+  "display_name": "Example Character",
+  "author": "Package Author",
+  "version": "1.0.0",
+  "attributes": {},
+  "moves": [],
+  "animations": {},
+  "assets": {
+    "fighter_strip": "Lutadores/C17.bmp",
+    "portraits": {
+      "a": "Rostos/R17-a.bmp",
+      "b": "Rostos/R17-b.bmp",
+      "c": "Rostos/R17-c.bmp"
+    },
+    "victory_voices": {
+      "a": "Falas/Fala-17-a.wav",
+      "b": "Falas/Fala-17-b.wav"
+    },
+    "sound_effects": [
+      {
+        "id": "special_impact",
+        "path": "Sons/Som-72.wav"
+      }
+    ]
+  },
+  "compatibility": {
+    "required_capabilities": []
+  }
+}
+```
+
+The sample's numbered filenames are placeholders for an allocated installation slot and allocated shared sound-bank entry. A package's stable `id` must not be derived from those numbers.
+
 ## Resource mapping
 
 All manifest asset paths are logical paths relative to the **game data root**, matching the base used by `Dados/Recursos.ini`. They are not relative to the manifest's own directory.
