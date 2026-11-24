@@ -2,20 +2,21 @@
 
 ## Status
 
-The Rust core now has its first concrete implementation of `SimulationTick`: `FightSimulation`. It composes existing source-backed components without creating a window, renderer, SDL dependency, browser API or WASM binding.
+The Rust core has a headless `SimulationTick` implementation: `FightSimulation`. It now runs the common `[Quadro]` section, the character frame path, and source-ordered box selection without creating a window, renderer, SDL dependency, browser API or WASM binding.
 
 ## Tick order
 
 For each 28 ms call from `FixedStepRunner`:
 
 1. Receive the immutable `InputFrame` and retain it in the tick report.
-2. If the fight is not stopped, dispatch explicitly queued C01 special commands through the existing Common [Acao] + C01 [Acao] + Common [AcaoFim] path.
-3. Run the existing C01 [Quadro] executor for C01 special, victory and pose actions.
-4. Advance an eligible C01 action frame once, unless its frame script reset the frame.
-5. Advance the existing live `EffectArena` exactly once and retain its ordered render snapshots.
-6. Increment the fight tick and publish a `FightTickReport`.
+2. Dispatch input and queued actions when the fight is not hit-stopped or screen-flashing.
+3. For each fighter, run common `[Quadro]` from `Comum.rot`.
+4. Run the character-specific `[Quadro]` path. C01's already-tested special/victory/pose branches retain their bounded hand-port; other mapped character frame sections execute through ROT.
+5. After both frame sections succeed, apply the current hurtbox and all matching attack rows using Pascal's source-ordered `AplicarCaixas` semantics.
+6. Advance the live `EffectArena` exactly once and retain its ordered render snapshots.
+7. Increment the fight tick and publish a `FightTickReport`.
 
-The runtime uses the existing `Fpc322Rng` stream, seeded explicitly by the caller. No second effect collection or renderer-owned simulation state is introduced.
+The frame scripts and effect helpers use the existing `Fpc322Rng` stream, seeded explicitly by the caller. `FightTickReport` records character frame executions, successful box updates and source-located errors. A frame-script error prevents that fighter's box-application step for the tick.
 
 ## Current executable path
 
@@ -25,7 +26,8 @@ host events
   -> FixedStepRunner (28 ms)
   -> FightSimulation::tick(InputFrame)
   -> queued C01 command (explicit API, if supplied)
-  -> existing C01 [Acao] / [Quadro]
+  -> common [Quadro] + character [Quadro]
+  -> Pascal AplicarCaixas (hurtbox + ordered hitbox rows)
   -> live EffectArena::advance
   -> FightTickReport + read-only effect snapshots
 ```
@@ -36,8 +38,9 @@ A host can inspect `last_report()` and consume the effect snapshots later in its
 
 - `InputFrame` reaches the concrete fight tick unchanged. Direction-to-movement, physical key/controller mappings and the source-derived multi-button command recognizer are not invented by this slice.
 - C01 special commands can be queued explicitly with `queue_chaves_special`; this is a simulation entry point, not a claim that keyboard/gamepad gestures are recognized.
-- The current C01 [Quadro] executor is reused only for its implemented special, victory and pose paths. Other actions do not receive fabricated frame logic.
-- Action-frame advancement is bounded by the state's existing `action_duration`. Generic Common [Quadro], action-end transitions, physics and the full fight-loop ordering are not implemented here.
+- Common [Quadro] and the character-specific frame path now run before box selection. C01 special/victory/pose branches remain on the existing tested hand-port; other character sections use ROT within the mapped host boundary.
+- `AplicarCaixas` uses the checked-in C01-C15 `CentroX`, `Corpo` and `Ataque` data. It preserves row order, player-two's 50-frame body offset, mirroring and retain-on-miss.
+- The action-frame counter still uses the bounded runtime rule; action-end transitions, full L7 physics and exact global fight-loop parity are not claimed.
 - The effect arena advances once after fighter frame work. Effect-vs-fighter/effect-vs-effect collision consequences remain pending source audit and integration.
 - Runtime errors are recorded in the report instead of being replaced by silent fallback behavior.
 
@@ -46,6 +49,8 @@ A host can inspect `last_report()` and consume the effect snapshots later in its
 `tests/fight_simulation.rs` covers:
 
 - the real 28 ms runner invoking the concrete fight implementation;
+- common/character [Quadro] execution for both fighters and player-two's 50-frame hurtbox offset;
+- left-facing hurtbox mirroring and source-table-driven box application;
 - explicit C01 command entry followed by its existing frame executor;
 - C01 frame 10 allocating a live type-7 effect before the effect phase;
 - live effect movement/lifetime advancing without a renderer;
