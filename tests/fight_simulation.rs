@@ -325,7 +325,11 @@ fn real_character_data_exposes_unimplemented_commands_without_faking_execution()
         .unhandled_commands
         .iter()
         .any(|item| item.command_code == 25));
-    assert!(fight.last_report().errors.is_empty(), "frame/runtime errors: {:?}", fight.last_report().errors);
+    assert!(
+        fight.last_report().errors.is_empty(),
+        "frame/runtime errors: {:?}",
+        fight.last_report().errors
+    );
 }
 
 #[test]
