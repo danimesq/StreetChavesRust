@@ -76,7 +76,11 @@ impl RotCombatHost<'_> {
 impl RotCombatHost<'_> {
     /// Recursively executes the same common/character/common-end action lifecycle
     /// as Pascal AcaoJogador, sharing the live fighters, effects and RNG cursor.
-    fn execute_nested_action(&mut self, fighter_index: usize, command_code: u8) -> Result<(), String> {
+    fn execute_nested_action(
+        &mut self,
+        fighter_index: usize,
+        command_code: u8,
+    ) -> Result<(), String> {
         const MAX_NESTED_ACTION_DEPTH: usize = 16;
         if self.recursion_depth >= MAX_NESTED_ACTION_DEPTH {
             return Err(format!(
@@ -100,7 +104,11 @@ impl RotCombatHost<'_> {
             13 => ("C13.rot", include_str!("../research/pascal-rot/C13.rot")),
             14 => ("C14.rot", include_str!("../research/pascal-rot/C14.rot")),
             15 => ("C15.rot", include_str!("../research/pascal-rot/C15.rot")),
-            _ => return Err(format!("AcaoJogador has no ROT route for C{character_id:02}")),
+            _ => {
+                return Err(format!(
+                    "AcaoJogador has no ROT route for C{character_id:02}"
+                ))
+            }
         };
         let character = RotDocument::from_str(filename, source).map_err(|e| e.to_string())?;
         let jog = (fighter_index + 1) as u8;
@@ -403,7 +411,9 @@ impl RotExecutionHost for RotCombatHost<'_> {
                     return Err(format!("AcaoJogador Jog must be 1 or 2, got {player}"));
                 }
                 if !(1..=26).contains(&command) {
-                    return Err(format!("AcaoJogador Codigo must be in 1..=26, got {command}"));
+                    return Err(format!(
+                        "AcaoJogador Codigo must be in 1..=26, got {command}"
+                    ));
                 }
                 self.execute_nested_action(player as usize - 1, command as u8)?;
                 Ok(rot_int(0))
@@ -1544,11 +1554,8 @@ mod rot_runtime_integration_tests {
             include_str!("../research/pascal-rot/Comum.rot"),
         )
         .unwrap();
-        let caller = RotDocument::from_str(
-            "fixture.rot",
-            "[Quadro]\nAcaoJogador(2, cmSocoFraco);",
-        )
-        .unwrap();
+        let caller =
+            RotDocument::from_str("fixture.rot", "[Quadro]\nAcaoJogador(2, cmSocoFraco);").unwrap();
         let program = caller.parse_optional("Quadro").unwrap().unwrap();
         let mut host = RotCombatHost {
             state: &mut fight.state,
@@ -1597,9 +1604,12 @@ mod rot_runtime_integration_tests {
 
         host.write_fighter_field('P', "GolpeAtivo", RotValue::Boolean(false))
             .unwrap();
-        host.write_fighter_field('P', "TempoAcertos", rot_int(44)).unwrap();
-        host.write_fighter_field('P', "DanoGolpe", rot_int(18)).unwrap();
-        host.write_fighter_field('P', "VelAngular", rot_int(-25)).unwrap();
+        host.write_fighter_field('P', "TempoAcertos", rot_int(44))
+            .unwrap();
+        host.write_fighter_field('P', "DanoGolpe", rot_int(18))
+            .unwrap();
+        host.write_fighter_field('P', "VelAngular", rot_int(-25))
+            .unwrap();
         host.write_fighter_field('O', "GolpeAtivo", RotValue::Boolean(true))
             .unwrap();
 
@@ -1607,9 +1617,18 @@ mod rot_runtime_integration_tests {
             host.read_fighter_field('P', "GolpeAtivo"),
             Ok(RotValue::Boolean(false))
         ));
-        assert_eq!(host.read_fighter_field('P', "TempoAcertos").unwrap(), rot_int(44));
-        assert_eq!(host.read_fighter_field('P', "DanoGolpe").unwrap(), rot_int(18));
-        assert_eq!(host.read_fighter_field('P', "VelAngular").unwrap(), rot_int(-25));
+        assert_eq!(
+            host.read_fighter_field('P', "TempoAcertos").unwrap(),
+            rot_int(44)
+        );
+        assert_eq!(
+            host.read_fighter_field('P', "DanoGolpe").unwrap(),
+            rot_int(18)
+        );
+        assert_eq!(
+            host.read_fighter_field('P', "VelAngular").unwrap(),
+            rot_int(-25)
+        );
         assert!(matches!(
             host.read_fighter_field('O', "GolpeAtivo"),
             Ok(RotValue::Boolean(true))
