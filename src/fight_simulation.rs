@@ -1274,6 +1274,8 @@ impl FightSimulation {
                     charge_gain: special.charge_gain,
                     charge_max: special.charge_max,
                     ground_y: special.ground_y,
+                    common: &common,
+                    recursion_depth: 0,
                 };
                 execute_rot_section(&character, "Quadro", jog, 0, &mut host)
             };
@@ -1535,6 +1537,39 @@ mod rot_runtime_integration_tests {
     }
 
     #[test]
+    fn rot_host_recursively_executes_nested_acao_jogador_for_player_two() {
+        let mut fight = simulation();
+        let common = RotDocument::from_str(
+            "Comum.rot",
+            include_str!("../research/pascal-rot/Comum.rot"),
+        )
+        .unwrap();
+        let caller = RotDocument::from_str(
+            "fixture.rot",
+            "[Quadro]\nAcaoJogador(2, cmSocoFraco);",
+        )
+        .unwrap();
+        let program = caller.parse_optional("Quadro").unwrap().unwrap();
+        let mut host = RotCombatHost {
+            state: &mut fight.state,
+            rng: &mut fight.rng,
+            player_index: 0,
+            charge_gain: 1.0,
+            charge_max: 100.0,
+            ground_y: 240.0,
+            common: &common,
+            recursion_depth: 0,
+        };
+        let mut frame = RotExecutionFrame::new(&program, 1, 0).unwrap();
+        frame.execute_with_host(&program, &mut host).unwrap();
+
+        assert_eq!(host.state.fighters[1].action_id, ACTION_WEAK_PUNCH);
+        assert_eq!(host.state.fighters[1].action_duration, 6);
+        assert_eq!(host.state.pending_sound, Some(5));
+        assert_eq!(host.recursion_depth, 0);
+    }
+
+    #[test]
     fn rot_host_reads_and_writes_golpe_ativo_on_both_live_fighters() {
         let mut fight = simulation();
         fight.state.fighters[0].attack_active = true;
@@ -1562,6 +1597,9 @@ mod rot_runtime_integration_tests {
 
         host.write_fighter_field('P', "GolpeAtivo", RotValue::Boolean(false))
             .unwrap();
+        host.write_fighter_field('P', "TempoAcertos", rot_int(44)).unwrap();
+        host.write_fighter_field('P', "DanoGolpe", rot_int(18)).unwrap();
+        host.write_fighter_field('P', "VelAngular", rot_int(-25)).unwrap();
         host.write_fighter_field('O', "GolpeAtivo", RotValue::Boolean(true))
             .unwrap();
 
@@ -1569,6 +1607,9 @@ mod rot_runtime_integration_tests {
             host.read_fighter_field('P', "GolpeAtivo"),
             Ok(RotValue::Boolean(false))
         ));
+        assert_eq!(host.read_fighter_field('P', "TempoAcertos").unwrap(), rot_int(44));
+        assert_eq!(host.read_fighter_field('P', "DanoGolpe").unwrap(), rot_int(18));
+        assert_eq!(host.read_fighter_field('P', "VelAngular").unwrap(), rot_int(-25));
         assert!(matches!(
             host.read_fighter_field('O', "GolpeAtivo"),
             Ok(RotValue::Boolean(true))
