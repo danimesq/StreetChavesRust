@@ -4,7 +4,7 @@
 //! OpenStreetChaves revision. This module preserves attack-row order because
 //! Pascal's AplicarCaixas evaluates force conditions as it walks the INI rows.
 
-use crate::{HurtboxRecord, PascalAttackDefinition, RawBounds, ActionId};
+use crate::{ActionId, HurtboxRecord, PascalAttackDefinition, RawBounds};
 
 const SOURCE_TABLES: &str = include_str!("../data/fighter-boxes.ini");
 
@@ -21,7 +21,9 @@ pub struct FighterFrameBoxes {
 /// Load and validate the source tables for one fighter (IDs 1 through 15).
 pub fn load_fighter_frame_boxes(character_id: u8) -> Result<FighterFrameBoxes, String> {
     if !(1..=15).contains(&character_id) {
-        return Err(format!("fighter frame tables do not contain C{character_id:02}"));
+        return Err(format!(
+            "fighter frame tables do not contain C{character_id:02}"
+        ));
     }
 
     let prefix = format!("C{character_id:02}");
@@ -67,8 +69,7 @@ pub fn load_fighter_frame_boxes(character_id: u8) -> Result<FighterFrameBoxes, S
                 },
             });
         } else if section == format!("{prefix}.Ataque") {
-            let (action, timer, strength_condition) =
-                parse_attack_key(key, &section, line_number)?;
+            let (action, timer, strength_condition) = parse_attack_key(key, &section, line_number)?;
             let values = parse_csv::<8>(value, &section, line_number)?;
             output.attacks.push(PascalAttackDefinition {
                 action: ActionId(action),
@@ -101,16 +102,8 @@ fn parse_attack_key(
     line_number: usize,
 ) -> Result<(u16, u16, Option<u8>), String> {
     let mut parts = key.split('.');
-    let action = parse_number::<u16>(
-        parts.next().unwrap_or_default(),
-        section,
-        line_number,
-    )?;
-    let timer = parse_number::<u16>(
-        parts.next().unwrap_or_default(),
-        section,
-        line_number,
-    )?;
+    let action = parse_number::<u16>(parts.next().unwrap_or_default(), section, line_number)?;
+    let timer = parse_number::<u16>(parts.next().unwrap_or_default(), section, line_number)?;
     let strength = match parts.next() {
         None => None,
         Some(suffix) if suffix.len() >= 2 && suffix[..1].eq_ignore_ascii_case("f") => {
@@ -206,9 +199,7 @@ mod tests {
     fn retains_force_suffix_and_duplicate_selector_rows_in_source_order() {
         let c01 = load_fighter_frame_boxes(1).unwrap();
         let special = c01.attacks.iter().find(|row| {
-            row.action == ActionId(26)
-                && row.action_timer == 6
-                && row.strength_condition == Some(1)
+            row.action == ActionId(26) && row.action_timer == 6 && row.strength_condition == Some(1)
         });
         assert!(special.is_some());
 
