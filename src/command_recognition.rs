@@ -251,6 +251,8 @@ mod tests {
             invulnerable: false,
             hit_count: 0,
             attack_active: false,
+            walking_forward: false,
+            attack_box: None,
             is_kick: false,
             recoil: 0,
             vertical_velocity: 0,
