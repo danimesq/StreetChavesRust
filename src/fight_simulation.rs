@@ -28,6 +28,8 @@ struct RotCombatHost<'a> {
     charge_gain: f64,
     charge_max: f64,
     ground_y: f64,
+    common: &'a RotDocument,
+    recursion_depth: usize,
 }
 
 fn rot_int(value: i64) -> RotValue {
@@ -71,6 +73,46 @@ impl RotCombatHost<'_> {
     }
 }
 
+impl RotCombatHost<'_> {
+    /// Recursively executes the same common/character/common-end action lifecycle
+    /// as Pascal AcaoJogador, sharing the live fighters, effects and RNG cursor.
+    fn execute_nested_action(&mut self, fighter_index: usize, command_code: u8) -> Result<(), String> {
+        const MAX_NESTED_ACTION_DEPTH: usize = 16;
+        if self.recursion_depth >= MAX_NESTED_ACTION_DEPTH {
+            return Err(format!(
+                "AcaoJogador recursion limit ({MAX_NESTED_ACTION_DEPTH}) exceeded"
+            ));
+        }
+        let character_id = self.state.fighters[fighter_index].character_id;
+        let (filename, source) = match character_id {
+            1 => ("C01.rot", include_str!("../research/pascal-rot/C01.rot")),
+            2 => ("C02.rot", include_str!("../research/pascal-rot/C02.rot")),
+            3 => ("C03.rot", include_str!("../research/pascal-rot/C03.rot")),
+            4 => ("C04.rot", include_str!("../research/pascal-rot/C04.rot")),
+            5 => ("C05.rot", include_str!("../research/pascal-rot/C05.rot")),
+            6 => ("C06.rot", include_str!("../research/pascal-rot/C06.rot")),
+            7 => ("C07.rot", include_str!("../research/pascal-rot/C07.rot")),
+            8 => ("C08.rot", include_str!("../research/pascal-rot/C08.rot")),
+            9 => ("C09.rot", include_str!("../research/pascal-rot/C09.rot")),
+            10 => ("C10.rot", include_str!("../research/pascal-rot/C10.rot")),
+            11 => ("C11.rot", include_str!("../research/pascal-rot/C11.rot")),
+            12 => ("C12.rot", include_str!("../research/pascal-rot/C12.rot")),
+            13 => ("C13.rot", include_str!("../research/pascal-rot/C13.rot")),
+            14 => ("C14.rot", include_str!("../research/pascal-rot/C14.rot")),
+            15 => ("C15.rot", include_str!("../research/pascal-rot/C15.rot")),
+            _ => return Err(format!("AcaoJogador has no ROT route for C{character_id:02}")),
+        };
+        let character = RotDocument::from_str(filename, source).map_err(|e| e.to_string())?;
+        let jog = (fighter_index + 1) as u8;
+        self.recursion_depth += 1;
+        let result = execute_rot_section(self.common, "Acao", jog, command_code, self)
+            .and_then(|()| execute_rot_section(&character, "Acao", jog, command_code, self))
+            .and_then(|()| execute_rot_section(self.common, "AcaoFim", jog, command_code, self));
+        self.recursion_depth -= 1;
+        result
+    }
+}
+
 impl RotExecutionHost for RotCombatHost<'_> {
     fn read_fighter_field(&self, base: char, name: &str) -> Result<RotValue, String> {
         let fighter = self.fighter(base)?;
@@ -103,6 +145,9 @@ impl RotExecutionHost for RotCombatHost<'_> {
             "cargasoco" => rot_int(i64::from(fighter.punch_charge)),
             "cargachute" => rot_int(i64::from(fighter.kick_charge)),
             "acertos" => rot_int(i64::from(fighter.hit_count)),
+            "tempoacertos" => rot_int(i64::from(fighter.hit_timer)),
+            "danogolpe" => rot_int(i64::from(fighter.attack_damage)),
+            "velangular" => rot_int(i64::from(fighter.angular_velocity)),
             "golpeativo" => RotValue::Boolean(fighter.attack_active),
             "andandofrente" => RotValue::Boolean(fighter.walking_forward),
             _ => return Err(format!("{base}.{name} is not mapped to live FighterState")),
@@ -147,6 +192,9 @@ impl RotExecutionHost for RotCombatHost<'_> {
             "cargasoco" => fighter.punch_charge = rot_value_int(&value)? as u8,
             "cargachute" => fighter.kick_charge = rot_value_int(&value)? as u8,
             "acertos" => fighter.hit_count = rot_value_int(&value)? as u8,
+            "tempoacertos" => fighter.hit_timer = rot_value_int(&value)? as u8,
+            "danogolpe" => fighter.attack_damage = rot_value_int(&value)? as u8,
+            "velangular" => fighter.angular_velocity = rot_value_int(&value)? as i16,
             "golpeativo" => fighter.attack_active = rot_value_bool(&value)?,
             "andandofrente" => fighter.walking_forward = rot_value_bool(&value)?,
             _ => {
@@ -343,6 +391,21 @@ impl RotExecutionHost for RotCombatHost<'_> {
                     .effects
                     .spawn(effect_type, variant, owner, owner_facing, x, y, rng)
                     .map_err(|error| error.to_string())?;
+                Ok(rot_int(0))
+            }
+            "acaojogador" => {
+                if arguments.len() != 2 {
+                    return Err("AcaoJogador expects two arguments".to_owned());
+                }
+                let player = rot_value_int(&arguments[0])?;
+                let command = rot_value_int(&arguments[1])?;
+                if !(1..=2).contains(&player) {
+                    return Err(format!("AcaoJogador Jog must be 1 or 2, got {player}"));
+                }
+                if !(1..=26).contains(&command) {
+                    return Err(format!("AcaoJogador Codigo must be in 1..=26, got {command}"));
+                }
+                self.execute_nested_action(player as usize - 1, command as u8)?;
                 Ok(rot_int(0))
             }
             "empurra" => {
@@ -750,6 +813,8 @@ impl FightSimulation {
             charge_gain: special.charge_gain,
             charge_max: special.charge_max,
             ground_y: special.ground_y,
+            common: &common,
+            recursion_depth: 0,
         };
 
         execute_rot_section(&common, "Acao", jog, command_code, &mut host)?;
@@ -1138,6 +1203,8 @@ impl FightSimulation {
                 charge_gain: special.charge_gain,
                 charge_max: special.charge_max,
                 ground_y: special.ground_y,
+                common: &common,
+                recursion_depth: 0,
             };
             execute_rot_section(&common, "Quadro", jog, 0, &mut host)
         };
@@ -1480,6 +1547,8 @@ mod rot_runtime_integration_tests {
             charge_gain: 1.0,
             charge_max: 100.0,
             ground_y: 240.0,
+            common: &common,
+            recursion_depth: 0,
         };
 
         assert!(matches!(
