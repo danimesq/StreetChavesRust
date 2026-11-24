@@ -134,13 +134,26 @@ fn common_and_character_quadro_update_both_players_before_box_application() {
     assert_eq!(fight.state.fighters[1].sprite_frame, 51);
     assert_eq!(
         fight.state.fighters[0].body,
-        BodyBox { x1: -13.0, y1: 35.0, x2: 19.0, y2: 164.0 }
+        BodyBox {
+            x1: -13.0,
+            y1: 35.0,
+            x2: 19.0,
+            y2: 164.0,
+        }
     );
     assert_eq!(
         fight.state.fighters[1].body,
-        BodyBox { x1: -17.0, y1: 20.0, x2: 14.0, y2: 160.0 }
+        BodyBox {
+            x1: -17.0,
+            y1: 20.0,
+            x2: 14.0,
+            y2: 160.0,
+        }
     );
-    assert_eq!(fight.last_report().rot_frame_executions, vec![(0, 1), (1, 2)]);
+    assert_eq!(
+        fight.last_report().rot_frame_executions,
+        vec![(0, 1), (1, 2)]
+    );
     assert_eq!(fight.last_report().box_updates, vec![0, 1]);
     assert!(fight.last_report().errors.is_empty());
 }
