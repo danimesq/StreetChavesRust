@@ -112,11 +112,16 @@ impl RotCombatHost<'_> {
         };
         let character = RotDocument::from_str(filename, source).map_err(|e| e.to_string())?;
         let jog = (fighter_index + 1) as u8;
+        // Nested AcaoJogador changes the host's P/O perspective to its target
+        // while preserving the same underlying fighter array and RNG cursor.
+        let previous_player_index = self.player_index;
+        self.player_index = fighter_index;
         self.recursion_depth += 1;
         let result = execute_rot_section(self.common, "Acao", jog, command_code, self)
             .and_then(|()| execute_rot_section(&character, "Acao", jog, command_code, self))
             .and_then(|()| execute_rot_section(self.common, "AcaoFim", jog, command_code, self));
         self.recursion_depth -= 1;
+        self.player_index = previous_player_index;
         result
     }
 }
