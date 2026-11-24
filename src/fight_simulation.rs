@@ -6,17 +6,19 @@ use crate::combat_runtime::{
     ACTION_CROUCH_STRONG_KICK, ACTION_CROUCH_STRONG_PUNCH, ACTION_CROUCH_WEAK_KICK,
     ACTION_CROUCH_WEAK_PUNCH, ACTION_DEFENDING, ACTION_IDLE, ACTION_JUMPING, ACTION_LOW_DEFENDING,
     ACTION_POSE, ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4,
-    ACTION_SPECIAL6, ACTION_SPECIAL_FINAL, ACTION_STRONG_KICK, ACTION_STRONG_PUNCH, ACTION_VICTORY,
-    ACTION_WALKING, ACTION_WEAK_KICK, ACTION_WEAK_PUNCH,
+    ACTION_SPECIAL_FINAL, ACTION_STRONG_KICK, ACTION_STRONG_PUNCH, ACTION_VICTORY, ACTION_WALKING,
+    ACTION_WEAK_KICK, ACTION_WEAK_PUNCH, SIDE_LEFT,
 };
 use crate::command_recognition::{AttackButton, CommandRecognizer};
 use crate::effect_runtime::{EffectTickContext, EffectTickResult, EFFECT_SIDE_RIGHT};
+use crate::fighter_box_data::{load_fighter_frame_boxes, FighterFrameBoxes};
 use crate::fighter_command_data::{embedded_character_command_rules, CharacterCommandRules};
 use crate::input::{Direction, InputFrame};
 use crate::pascal_replay::PascalRandomSource;
 use crate::rot_runtime::{RotDocument, RotExecutionFrame, RotExecutionHost, RotValue};
 use crate::runtime::SimulationTick;
 use crate::Fpc322Rng;
+use crate::{ActionId, PascalAttackState};
 
 /// Bridge from Pascal ROT field/helper names to the authoritative fight state.
 struct RotCombatHost<'a> {
@@ -26,6 +28,8 @@ struct RotCombatHost<'a> {
     charge_gain: f64,
     charge_max: f64,
     ground_y: f64,
+    common: &'a RotDocument,
+    recursion_depth: usize,
 }
 
 fn rot_int(value: i64) -> RotValue {
@@ -69,6 +73,59 @@ impl RotCombatHost<'_> {
     }
 }
 
+impl RotCombatHost<'_> {
+    /// Recursively executes the same common/character/common-end action lifecycle
+    /// as Pascal AcaoJogador, sharing the live fighters, effects and RNG cursor.
+    fn execute_nested_action(
+        &mut self,
+        fighter_index: usize,
+        command_code: u8,
+    ) -> Result<(), String> {
+        const MAX_NESTED_ACTION_DEPTH: usize = 16;
+        if self.recursion_depth >= MAX_NESTED_ACTION_DEPTH {
+            return Err(format!(
+                "AcaoJogador recursion limit ({MAX_NESTED_ACTION_DEPTH}) exceeded"
+            ));
+        }
+        let character_id = self.state.fighters[fighter_index].character_id;
+        let (filename, source) = match character_id {
+            1 => ("C01.rot", include_str!("../research/pascal-rot/C01.rot")),
+            2 => ("C02.rot", include_str!("../research/pascal-rot/C02.rot")),
+            3 => ("C03.rot", include_str!("../research/pascal-rot/C03.rot")),
+            4 => ("C04.rot", include_str!("../research/pascal-rot/C04.rot")),
+            5 => ("C05.rot", include_str!("../research/pascal-rot/C05.rot")),
+            6 => ("C06.rot", include_str!("../research/pascal-rot/C06.rot")),
+            7 => ("C07.rot", include_str!("../research/pascal-rot/C07.rot")),
+            8 => ("C08.rot", include_str!("../research/pascal-rot/C08.rot")),
+            9 => ("C09.rot", include_str!("../research/pascal-rot/C09.rot")),
+            10 => ("C10.rot", include_str!("../research/pascal-rot/C10.rot")),
+            11 => ("C11.rot", include_str!("../research/pascal-rot/C11.rot")),
+            12 => ("C12.rot", include_str!("../research/pascal-rot/C12.rot")),
+            13 => ("C13.rot", include_str!("../research/pascal-rot/C13.rot")),
+            14 => ("C14.rot", include_str!("../research/pascal-rot/C14.rot")),
+            15 => ("C15.rot", include_str!("../research/pascal-rot/C15.rot")),
+            _ => {
+                return Err(format!(
+                    "AcaoJogador has no ROT route for C{character_id:02}"
+                ))
+            }
+        };
+        let character = RotDocument::from_str(filename, source).map_err(|e| e.to_string())?;
+        let jog = (fighter_index + 1) as u8;
+        // Nested AcaoJogador changes the host's P/O perspective to its target
+        // while preserving the same underlying fighter array and RNG cursor.
+        let previous_player_index = self.player_index;
+        self.player_index = fighter_index;
+        self.recursion_depth += 1;
+        let result = execute_rot_section(self.common, "Acao", jog, command_code, self)
+            .and_then(|()| execute_rot_section(&character, "Acao", jog, command_code, self))
+            .and_then(|()| execute_rot_section(self.common, "AcaoFim", jog, command_code, self));
+        self.recursion_depth -= 1;
+        self.player_index = previous_player_index;
+        result
+    }
+}
+
 impl RotExecutionHost for RotCombatHost<'_> {
     fn read_fighter_field(&self, base: char, name: &str) -> Result<RotValue, String> {
         let fighter = self.fighter(base)?;
@@ -101,7 +158,11 @@ impl RotExecutionHost for RotCombatHost<'_> {
             "cargasoco" => rot_int(i64::from(fighter.punch_charge)),
             "cargachute" => rot_int(i64::from(fighter.kick_charge)),
             "acertos" => rot_int(i64::from(fighter.hit_count)),
+            "tempoacertos" => rot_int(i64::from(fighter.hit_timer)),
+            "danogolpe" => rot_int(i64::from(fighter.attack_damage)),
+            "velangular" => rot_int(i64::from(fighter.angular_velocity)),
             "golpeativo" => RotValue::Boolean(fighter.attack_active),
+            "andandofrente" => RotValue::Boolean(fighter.walking_forward),
             _ => return Err(format!("{base}.{name} is not mapped to live FighterState")),
         };
         Ok(value)
@@ -144,7 +205,11 @@ impl RotExecutionHost for RotCombatHost<'_> {
             "cargasoco" => fighter.punch_charge = rot_value_int(&value)? as u8,
             "cargachute" => fighter.kick_charge = rot_value_int(&value)? as u8,
             "acertos" => fighter.hit_count = rot_value_int(&value)? as u8,
+            "tempoacertos" => fighter.hit_timer = rot_value_int(&value)? as u8,
+            "danogolpe" => fighter.attack_damage = rot_value_int(&value)? as u8,
+            "velangular" => fighter.angular_velocity = rot_value_int(&value)? as i16,
             "golpeativo" => fighter.attack_active = rot_value_bool(&value)?,
+            "andandofrente" => fighter.walking_forward = rot_value_bool(&value)?,
             _ => {
                 return Err(format!(
                     "{base}.{name} is not writable in live FighterState"
@@ -187,6 +252,7 @@ impl RotExecutionHost for RotCombatHost<'_> {
             ("acEspecial4", 28),
             ("acEspecial5", 29),
             ("acEspecial6", 30),
+            ("acEspecial7", 31),
             ("cmEsquerda", 1),
             ("cmDireita", 2),
             ("cmSocoFraco", 3),
@@ -340,6 +406,23 @@ impl RotExecutionHost for RotCombatHost<'_> {
                     .map_err(|error| error.to_string())?;
                 Ok(rot_int(0))
             }
+            "acaojogador" => {
+                if arguments.len() != 2 {
+                    return Err("AcaoJogador expects two arguments".to_owned());
+                }
+                let player = rot_value_int(&arguments[0])?;
+                let command = rot_value_int(&arguments[1])?;
+                if !(1..=2).contains(&player) {
+                    return Err(format!("AcaoJogador Jog must be 1 or 2, got {player}"));
+                }
+                if !(1..=26).contains(&command) {
+                    return Err(format!(
+                        "AcaoJogador Codigo must be in 1..=26, got {command}"
+                    ));
+                }
+                self.execute_nested_action(player as usize - 1, command as u8)?;
+                Ok(rot_int(0))
+            }
             "empurra" => {
                 if arguments.len() != 2 {
                     return Err("Empurra expects two arguments".to_owned());
@@ -423,6 +506,10 @@ pub struct FightTickReport {
     pub special_outcomes: Vec<(usize, ChavesSpecialOutcome)>,
     /// Character action sections executed by the pinned ROT interpreter.
     pub rot_action_executions: Vec<(usize, u8, u8)>,
+    /// Character-specific [Quadro] scripts executed by the live ROT interpreter.
+    pub rot_frame_executions: Vec<(usize, u8)>,
+    /// Fighters whose current boxes were successfully updated after both [Quadro] sections.
+    pub box_updates: Vec<usize>,
     pub c01_frames: Vec<(usize, C01FrameResult)>,
     pub effects: EffectTickResult,
     pub errors: Vec<String>,
@@ -438,6 +525,8 @@ pub struct FightSimulation {
     command_rules: [Option<CharacterCommandRules>; 2],
     command_recognizers: [CommandRecognizer; 2],
     command_data_errors: Vec<String>,
+    /// INI frame/box rows, loaded once per fighter and kept in source order.
+    frame_boxes: [Option<FighterFrameBoxes>; 2],
     last_report: FightTickReport,
 }
 
@@ -445,12 +534,18 @@ impl FightSimulation {
     /// Build a deterministic headless fight and load real per-character command tables.
     pub fn new(state: CombatState, config: FightSimulationConfig, rng_seed: i32) -> Self {
         let mut command_rules: [Option<CharacterCommandRules>; 2] = [None, None];
+        let mut frame_boxes: [Option<FighterFrameBoxes>; 2] = [None, None];
         let mut command_data_errors = Vec::new();
         for fighter_index in 0..2 {
             let character_id = state.fighters[fighter_index].character_id;
             match embedded_character_command_rules(character_id) {
                 Ok(rules) => command_rules[fighter_index] = Some(rules),
                 Err(error) => command_data_errors.push(error.to_string()),
+            }
+            match load_fighter_frame_boxes(character_id) {
+                Ok(tables) => frame_boxes[fighter_index] = Some(tables),
+                Err(error) => command_data_errors
+                    .push(format!("fighter {fighter_index} frame tables: {error}")),
             }
         }
         Self {
@@ -461,6 +556,7 @@ impl FightSimulation {
             command_rules,
             command_recognizers: [CommandRecognizer::default(); 2],
             command_data_errors,
+            frame_boxes,
             last_report: FightTickReport::default(),
         }
     }
@@ -732,6 +828,8 @@ impl FightSimulation {
             charge_gain: special.charge_gain,
             charge_max: special.charge_max,
             ground_y: special.ground_y,
+            common: &common,
+            recursion_depth: 0,
         };
 
         execute_rot_section(&common, "Acao", jog, command_code, &mut host)?;
@@ -1088,6 +1186,200 @@ impl FightSimulation {
         }
     }
 
+    /// Run one Pascal AtualizaQuadro update in source order.
+    fn advance_fighter_frame(&mut self, fighter_index: usize, report: &mut FightTickReport) {
+        if self.state.clock_stopped || self.state.screen_flash != 0 {
+            return;
+        }
+
+        let character_id = self.state.fighters[fighter_index].character_id;
+        let action_id = self.state.fighters[fighter_index].action_id;
+        let frame_before = self.state.fighters[fighter_index].action_frame;
+        let jog = (fighter_index + 1) as u8;
+        let special = self.config.special;
+
+        let common = match RotDocument::from_str(
+            "Comum.rot",
+            include_str!("../research/pascal-rot/Comum.rot"),
+        ) {
+            Ok(document) => document,
+            Err(error) => {
+                report.errors.push(format!("Comum.rot [Quadro]: {error}"));
+                return;
+            }
+        };
+
+        // Pascal executes Common [Quadro] first, using the fight's shared state/RNG.
+        let common_result = {
+            let mut host = RotCombatHost {
+                state: &mut self.state,
+                rng: &mut self.rng,
+                player_index: fighter_index,
+                charge_gain: special.charge_gain,
+                charge_max: special.charge_max,
+                ground_y: special.ground_y,
+                common: &common,
+                recursion_depth: 0,
+            };
+            execute_rot_section(&common, "Quadro", jog, 0, &mut host)
+        };
+        if let Err(error) = common_result {
+            report.errors.push(format!(
+                "Comum.rot [Quadro] fighter {fighter_index}: {error}"
+            ));
+            return;
+        }
+
+        // Preserve the existing, tested C01 manual frame path for its implemented
+        // special/victory/pose branches. Other branches and C02-C15 use live ROT.
+        let c01_manual = character_id == 1
+            && matches!(
+                action_id,
+                ACTION_SPECIAL1
+                    | ACTION_SPECIAL2
+                    | ACTION_SPECIAL3
+                    | ACTION_SPECIAL4
+                    | ACTION_SPECIAL_FINAL
+                    | ACTION_VICTORY
+                    | ACTION_POSE
+            );
+
+        if c01_manual {
+            let previous_errors = report.errors.len();
+            self.advance_c01_frame(fighter_index, report);
+            if report.errors.len() != previous_errors {
+                return;
+            }
+        } else {
+            let (filename, source) = match character_id {
+                1 => ("C01.rot", include_str!("../research/pascal-rot/C01.rot")),
+                2 => ("C02.rot", include_str!("../research/pascal-rot/C02.rot")),
+                3 => ("C03.rot", include_str!("../research/pascal-rot/C03.rot")),
+                4 => ("C04.rot", include_str!("../research/pascal-rot/C04.rot")),
+                5 => ("C05.rot", include_str!("../research/pascal-rot/C05.rot")),
+                6 => ("C06.rot", include_str!("../research/pascal-rot/C06.rot")),
+                7 => ("C07.rot", include_str!("../research/pascal-rot/C07.rot")),
+                8 => ("C08.rot", include_str!("../research/pascal-rot/C08.rot")),
+                9 => ("C09.rot", include_str!("../research/pascal-rot/C09.rot")),
+                10 => ("C10.rot", include_str!("../research/pascal-rot/C10.rot")),
+                11 => ("C11.rot", include_str!("../research/pascal-rot/C11.rot")),
+                12 => ("C12.rot", include_str!("../research/pascal-rot/C12.rot")),
+                13 => ("C13.rot", include_str!("../research/pascal-rot/C13.rot")),
+                14 => ("C14.rot", include_str!("../research/pascal-rot/C14.rot")),
+                15 => ("C15.rot", include_str!("../research/pascal-rot/C15.rot")),
+                _ => {
+                    report.errors.push(format!(
+                        "fighter {fighter_index} has no pinned [Quadro] script for character {character_id}"
+                    ));
+                    return;
+                }
+            };
+            let character = match RotDocument::from_str(filename, source) {
+                Ok(document) => document,
+                Err(error) => {
+                    report.errors.push(format!("{filename} [Quadro]: {error}"));
+                    return;
+                }
+            };
+            let character_result = {
+                let mut host = RotCombatHost {
+                    state: &mut self.state,
+                    rng: &mut self.rng,
+                    player_index: fighter_index,
+                    charge_gain: special.charge_gain,
+                    charge_max: special.charge_max,
+                    ground_y: special.ground_y,
+                    common: &common,
+                    recursion_depth: 0,
+                };
+                execute_rot_section(&character, "Quadro", jog, 0, &mut host)
+            };
+            if let Err(error) = character_result {
+                report.errors.push(format!(
+                    "{filename} [Quadro] fighter {fighter_index}: {error}"
+                ));
+                return;
+            }
+            report
+                .rot_frame_executions
+                .push((fighter_index, character_id));
+        }
+
+        // AplicarCaixas runs only after both frame sections completed successfully.
+        if let Err(error) = self.apply_fighter_boxes(fighter_index) {
+            report
+                .errors
+                .push(format!("AplicarCaixas fighter {fighter_index}: {error}"));
+            return;
+        }
+        report.box_updates.push(fighter_index);
+
+        // AtualizaQuadro/AplicarCaixas observe the same action timer. Advance
+        // only after the selected boxes have been stored for this frame.
+        let fighter = &mut self.state.fighters[fighter_index];
+        if fighter.action_frame == frame_before
+            && fighter.action_duration != 99
+            && fighter.action_frame < fighter.action_duration
+        {
+            fighter.action_frame = fighter.action_frame.saturating_add(1);
+        }
+    }
+
+    /// Apply the current character's Corpo row and all matching Ataque rows.
+    /// A selector miss retains the previously stored box, as in Pascal.
+    fn apply_fighter_boxes(&mut self, fighter_index: usize) -> Result<(), String> {
+        let tables = self.frame_boxes[fighter_index].as_ref().ok_or_else(|| {
+            format!("no source frame/box table loaded for fighter {fighter_index}")
+        })?;
+        let fighter = &mut self.state.fighters[fighter_index];
+
+        // Pascal subtracts the second player's 50-frame strip offset only for Corpo.
+        let body_frame = fighter.sprite_frame - if fighter_index == 1 { 50 } else { 0 };
+        if (0..=74).contains(&body_frame) {
+            if let Some(row) = tables
+                .hurtboxes
+                .iter()
+                .find(|row| i32::from(row.frame) == body_frame)
+            {
+                let bounds = if fighter.facing == SIDE_LEFT {
+                    row.bounds.mirrored_horizontally()
+                } else {
+                    row.bounds
+                };
+                fighter.body = crate::combat_runtime::BodyBox {
+                    x1: f64::from(bounds.x1),
+                    y1: f64::from(bounds.y1),
+                    x2: f64::from(bounds.x2),
+                    y2: f64::from(bounds.y2),
+                };
+            }
+        }
+
+        // Evaluate force conditions against current force in original INI order.
+        let mut attack_state = PascalAttackState {
+            current_force: fighter.force_strength,
+            current_box: fighter.attack_box,
+        };
+        let applied = attack_state.apply_ordered_rows(
+            ActionId(fighter.action_id),
+            fighter.action_frame,
+            &tables.attacks,
+        );
+        if applied > 0 {
+            let mut selected = attack_state
+                .current_box
+                .ok_or_else(|| "attack selector reported a match without a box".to_owned())?;
+            if fighter.facing == SIDE_LEFT {
+                selected.bounds = selected.bounds.mirrored_horizontally();
+            }
+            fighter.force_strength = attack_state.current_force;
+            fighter.attack_active = selected.active;
+            fighter.attack_box = Some(selected);
+        }
+
+        Ok(())
+    }
+
     fn advance_c01_frame(&mut self, fighter_index: usize, report: &mut FightTickReport) {
         if self.state.fighters[fighter_index].character_id != 1 {
             return;
@@ -1111,21 +1403,11 @@ impl FightSimulation {
         let mut context = self.config.frame;
         context.sprite_offset = (fighter_index as i32) * 50;
         context.camera_x = self.state.camera_x;
-        let frame_before = self.state.fighters[fighter_index].action_frame;
-
         match self
             .state
             .update_c01_character_frame(fighter_index, context, &mut self.rng)
         {
-            Ok(frame_result) => {
-                report.c01_frames.push((fighter_index, frame_result));
-                let fighter = &mut self.state.fighters[fighter_index];
-                if fighter.action_frame == frame_before
-                    && fighter.action_frame < fighter.action_duration
-                {
-                    fighter.action_frame = fighter.action_frame.saturating_add(1);
-                }
-            }
+            Ok(frame_result) => report.c01_frames.push((fighter_index, frame_result)),
             Err(error) => report
                 .errors
                 .push(format!("C01 [Quadro] fighter {fighter_index}: {error}")),
@@ -1163,7 +1445,7 @@ impl FightSimulation {
             }
 
             for fighter_index in 0..self.state.fighters.len() {
-                self.advance_c01_frame(fighter_index, &mut report);
+                self.advance_fighter_frame(fighter_index, &mut report);
             }
         }
 
@@ -1203,7 +1485,12 @@ mod rot_runtime_integration_tests {
             defending: true,
             invulnerable: false,
             hit_count: 0,
+            hit_timer: 0,
+            attack_damage: 0,
+            angular_velocity: 0,
             attack_active: false,
+            walking_forward: false,
+            attack_box: None,
             is_kick: false,
             recoil: 0,
             vertical_velocity: 0,
@@ -1265,8 +1552,43 @@ mod rot_runtime_integration_tests {
     }
 
     #[test]
+    fn rot_host_recursively_executes_nested_acao_jogador_for_player_two() {
+        let mut fight = simulation();
+        let common = RotDocument::from_str(
+            "Comum.rot",
+            include_str!("../research/pascal-rot/Comum.rot"),
+        )
+        .unwrap();
+        let caller =
+            RotDocument::from_str("fixture.rot", "[Quadro]\nAcaoJogador(2, cmSocoFraco);").unwrap();
+        let program = caller.parse_optional("Quadro").unwrap().unwrap();
+        let mut host = RotCombatHost {
+            state: &mut fight.state,
+            rng: &mut fight.rng,
+            player_index: 0,
+            charge_gain: 1.0,
+            charge_max: 100.0,
+            ground_y: 240.0,
+            common: &common,
+            recursion_depth: 0,
+        };
+        let mut frame = RotExecutionFrame::new(&program, 1, 0).unwrap();
+        frame.execute_with_host(&program, &mut host).unwrap();
+
+        assert_eq!(host.state.fighters[1].action_id, ACTION_WEAK_PUNCH);
+        assert_eq!(host.state.fighters[1].action_duration, 6);
+        assert_eq!(host.state.pending_sound, Some(5));
+        assert_eq!(host.recursion_depth, 0);
+    }
+
+    #[test]
     fn rot_host_reads_and_writes_golpe_ativo_on_both_live_fighters() {
         let mut fight = simulation();
+        let common = RotDocument::from_str(
+            "Comum.rot",
+            include_str!("../research/pascal-rot/Comum.rot"),
+        )
+        .unwrap();
         fight.state.fighters[0].attack_active = true;
         fight.state.fighters[1].attack_active = false;
 
@@ -1277,6 +1599,8 @@ mod rot_runtime_integration_tests {
             charge_gain: 1.0,
             charge_max: 100.0,
             ground_y: 240.0,
+            common: &common,
+            recursion_depth: 0,
         };
 
         assert!(matches!(
@@ -1290,6 +1614,12 @@ mod rot_runtime_integration_tests {
 
         host.write_fighter_field('P', "GolpeAtivo", RotValue::Boolean(false))
             .unwrap();
+        host.write_fighter_field('P', "TempoAcertos", rot_int(44))
+            .unwrap();
+        host.write_fighter_field('P', "DanoGolpe", rot_int(18))
+            .unwrap();
+        host.write_fighter_field('P', "VelAngular", rot_int(-25))
+            .unwrap();
         host.write_fighter_field('O', "GolpeAtivo", RotValue::Boolean(true))
             .unwrap();
 
@@ -1297,6 +1627,18 @@ mod rot_runtime_integration_tests {
             host.read_fighter_field('P', "GolpeAtivo"),
             Ok(RotValue::Boolean(false))
         ));
+        assert_eq!(
+            host.read_fighter_field('P', "TempoAcertos").unwrap(),
+            rot_int(44)
+        );
+        assert_eq!(
+            host.read_fighter_field('P', "DanoGolpe").unwrap(),
+            rot_int(18)
+        );
+        assert_eq!(
+            host.read_fighter_field('P', "VelAngular").unwrap(),
+            rot_int(-25)
+        );
         assert!(matches!(
             host.read_fighter_field('O', "GolpeAtivo"),
             Ok(RotValue::Boolean(true))
@@ -1311,7 +1653,7 @@ mod rot_runtime_integration_tests {
         ] {
             let mut fight = simulation();
             fight.state.fighters[0].character_id = 12;
-            fight.state.fighters[0].action_id = ACTION_SPECIAL6;
+            fight.state.fighters[0].action_id = crate::combat_runtime::ACTION_SPECIAL6;
             fight.state.fighters[0].attack_active = false;
             let mut report = FightTickReport::default();
 
@@ -1338,7 +1680,7 @@ mod rot_runtime_integration_tests {
         ] {
             let mut fight = simulation();
             fight.state.fighters[0].character_id = 12;
-            fight.state.fighters[0].action_id = ACTION_SPECIAL6;
+            fight.state.fighters[0].action_id = crate::combat_runtime::ACTION_SPECIAL6;
             fight.state.fighters[0].action_frame = 7;
             fight.state.fighters[0].force_strength = 2;
             fight.state.fighters[0].charge_power = 9.0;
@@ -2762,5 +3104,121 @@ mod rot_runtime_integration_tests {
         assert_eq!(fight.state.pending_sound, Some(19));
         assert_eq!(report.rot_action_executions, vec![(0, 3, 24)]);
         assert!(report.errors.is_empty());
+    }
+    #[test]
+    fn aplicar_caixas_selects_pascal_strength_rows_in_original_ini_order() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 11;
+        fight.frame_boxes[0] = Some(load_fighter_frame_boxes(11).unwrap());
+        {
+            let fighter = &mut fight.state.fighters[0];
+            fighter.action_id = 27;
+            fighter.action_frame = 1;
+            fighter.force_strength = 1;
+            fighter.facing = crate::combat_runtime::SIDE_RIGHT;
+        }
+
+        fight.apply_fighter_boxes(0).unwrap();
+        let weak = fight.state.fighters[0].attack_box.unwrap();
+        assert_eq!(
+            weak.bounds,
+            crate::RawBounds {
+                x1: 10,
+                y1: 130,
+                x2: 82,
+                y2: 158,
+            }
+        );
+        assert!(weak.active);
+        assert_eq!(weak.damage, 18);
+        assert_eq!(fight.state.fighters[0].force_strength, 1);
+
+        fight.state.fighters[0].force_strength = 2;
+        fight.apply_fighter_boxes(0).unwrap();
+        let strong = fight.state.fighters[0].attack_box.unwrap();
+        assert_eq!(
+            strong.bounds,
+            crate::RawBounds {
+                x1: 10,
+                y1: 25,
+                x2: 70,
+                y2: 55,
+            }
+        );
+        assert_eq!(strong.damage, 18);
+        assert_eq!(fight.state.fighters[0].force_strength, 2);
+    }
+
+    #[test]
+    fn aplicar_caixas_retains_attack_record_and_active_flag_on_lookup_miss() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 11;
+        fight.frame_boxes[0] = Some(load_fighter_frame_boxes(11).unwrap());
+        {
+            let fighter = &mut fight.state.fighters[0];
+            fighter.action_id = 27;
+            fighter.action_frame = 1;
+            fighter.force_strength = 2;
+            fighter.facing = crate::combat_runtime::SIDE_RIGHT;
+        }
+        fight.apply_fighter_boxes(0).unwrap();
+        let previous = fight.state.fighters[0].attack_box;
+        assert!(fight.state.fighters[0].attack_active);
+
+        fight.state.fighters[0].action_frame = 99;
+        fight.apply_fighter_boxes(0).unwrap();
+        assert_eq!(fight.state.fighters[0].attack_box, previous);
+        assert!(fight.state.fighters[0].attack_active);
+    }
+
+    #[test]
+    fn aplicar_caixas_keeps_matched_inactive_rows_as_stored_boxes() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 3;
+        fight.frame_boxes[0] = Some(load_fighter_frame_boxes(3).unwrap());
+        let fighter = &mut fight.state.fighters[0];
+        fighter.action_id = 26;
+        fighter.action_frame = 7;
+        fighter.attack_active = true;
+
+        fight.apply_fighter_boxes(0).unwrap();
+        let stored = fight.state.fighters[0].attack_box.unwrap();
+        assert_eq!(
+            stored.bounds,
+            crate::RawBounds {
+                x1: 10,
+                y1: 5,
+                x2: 50,
+                y2: 95,
+            }
+        );
+        assert!(!stored.active);
+        assert!(!fight.state.fighters[0].attack_active);
+    }
+
+    #[test]
+    fn aplicar_caixas_mirrors_attack_bounds_without_mutating_the_source_table() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 11;
+        fight.frame_boxes[0] = Some(load_fighter_frame_boxes(11).unwrap());
+        let fighter = &mut fight.state.fighters[0];
+        fighter.action_id = 27;
+        fighter.action_frame = 1;
+        fighter.force_strength = 1;
+        fighter.facing = SIDE_LEFT;
+
+        fight.apply_fighter_boxes(0).unwrap();
+        let selected = fight.state.fighters[0].attack_box.unwrap();
+        assert_eq!(
+            selected.bounds,
+            crate::RawBounds {
+                x1: -82,
+                y1: 130,
+                x2: -10,
+                y2: 158,
+            }
+        );
+        let source = fight.frame_boxes[0].as_ref().unwrap();
+        assert_eq!(source.attacks[12].bounds.x1, 10);
     }
 }

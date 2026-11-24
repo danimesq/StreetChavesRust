@@ -131,15 +131,15 @@ Exit criteria:
 
 The following PR sequence turns the source-audited frame and collision contracts into live simulation behavior. These are planned milestones, not claims of completed functionality.
 
-### PR #24 — Frame update and box application
+### PR #24 — Frame update and box application plan (merged documentation milestone)
 
-Connect the per-fighter frame update to the authoritative simulation in Pascal source order:
+The source-order contract was documented and merged on 2026-11-24. The implementation now proceeds in PR #25.
 
-1. Execute the common `[Quadro]` script.
-2. Execute the character-specific `[Quadro]` script.
-3. Apply the current frame's hurtbox and the current action/timer's hitbox rows through `AplicarCaixas`.
+### PR #25 — Live [Quadro] and AplicarCaixas integration (in progress)
 
-Preserve source table order, player-two's 50-frame sprite-strip offset, horizontal mirroring, force-condition evaluation, and the distinct replace/inactive/retain semantics. Keep hit detection and hit consequences outside this milestone.
+Connects common and character frame execution to the live fight simulation, then applies the current hurtbox and all matching action/timer attack rows. The implementation imports the 15 pinned fighter INI tables, preserves their order and connects player-two's 50-frame body lookup offset, horizontal mirroring, force-condition evaluation, and replace/inactive/retain behavior.
+
+This is a bounded frame-runtime integration. Full character ROT branch coverage, action-end/physics parity, and unsupported nested `AcaoJogador` calls remain open and are reported rather than silently ignored. See [PR #25 frame and box runtime](frame-box-runtime-pr25.md).
 
 ### Collision Resolution
 
@@ -167,7 +167,7 @@ The manual redraw requirement is intentional: this is an original art direction,
 
 ## Phase 4 — Fighter data, animation, and state machine
 
-**Status: Planned**
+**Status: In progress (bounded frame/box integration started; roster-wide parity remains open)**
 
 Goals:
 - Define validated fighter and move data schemas from evidence, not from one port's file format.

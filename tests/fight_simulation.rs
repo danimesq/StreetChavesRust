@@ -6,7 +6,7 @@ use street_chaves::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext}
 use street_chaves::combat_runtime::{
     BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_CROUCHING,
     ACTION_CROUCH_STRONG_KICK, ACTION_IDLE, ACTION_SPECIAL1, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL,
-    ACTION_WEAK_PUNCH, FORCE_WEAK, SIDE_RIGHT,
+    ACTION_WEAK_PUNCH, FORCE_WEAK, SIDE_LEFT, SIDE_RIGHT,
 };
 use street_chaves::effect_runtime::EFFECT_SIDE_RIGHT;
 use street_chaves::fight_simulation::{FightSimulation, FightSimulationConfig};
@@ -26,7 +26,12 @@ fn fighter(character_id: u8, action_id: u16, action_frame: u16) -> FighterState 
         defending: false,
         invulnerable: false,
         hit_count: 0,
+        hit_timer: 0,
+        attack_damage: 0,
+        angular_velocity: 0,
         attack_active: false,
+        walking_forward: false,
+        attack_box: None,
         is_kick: false,
         recoil: 0,
         vertical_velocity: 0,
@@ -63,6 +68,15 @@ fn simulation_for_character(
     first_action: u16,
     first_frame: u16,
 ) -> FightSimulation {
+    simulation_for_matchup(first_character_id, 2, first_action, first_frame)
+}
+
+fn simulation_for_matchup(
+    first_character_id: u8,
+    second_character_id: u8,
+    first_action: u16,
+    first_frame: u16,
+) -> FightSimulation {
     let state = CombatState {
         tick_index: 0,
         game_state: 7,
@@ -70,7 +84,7 @@ fn simulation_for_character(
         clock_stopped: false,
         fighters: [
             fighter(first_character_id, first_action, first_frame),
-            fighter(2, ACTION_IDLE, 0),
+            fighter(second_character_id, ACTION_IDLE, 0),
         ],
         effects: Default::default(),
         pending_sound: None,
@@ -112,6 +126,55 @@ fn fixed_runner_invokes_concrete_fight_at_28ms_and_advances_c01_frame() {
     assert_eq!(fight.state.fighters[0].sprite_frame, 36);
     assert_eq!(fight.state.fighters[0].action_frame, 1);
     assert_eq!(fight.last_report().c01_frames.len(), 1);
+}
+
+#[test]
+fn common_and_character_quadro_update_both_players_before_box_application() {
+    let mut fight = simulation_for_matchup(1, 4, ACTION_IDLE, 0);
+    fight.tick(InputFrame::default());
+
+    assert_eq!(fight.state.fighters[0].sprite_frame, 1);
+    assert_eq!(fight.state.fighters[1].sprite_frame, 51);
+    assert_eq!(
+        fight.state.fighters[0].body,
+        BodyBox {
+            x1: -13.0,
+            y1: 35.0,
+            x2: 19.0,
+            y2: 164.0,
+        }
+    );
+    assert_eq!(
+        fight.state.fighters[1].body,
+        BodyBox {
+            x1: -17.0,
+            y1: 20.0,
+            x2: 14.0,
+            y2: 160.0,
+        }
+    );
+    assert_eq!(
+        fight.last_report().rot_frame_executions,
+        vec![(0, 1), (1, 4)]
+    );
+    assert_eq!(fight.last_report().box_updates, vec![0, 1]);
+    assert!(
+        fight.last_report().errors.is_empty(),
+        "frame/runtime errors: {:?}",
+        fight.last_report().errors
+    );
+}
+
+#[test]
+fn applied_hurtbox_is_mirrored_when_the_fighter_faces_left() {
+    let mut fight = simulation(ACTION_IDLE, 0);
+    fight.state.fighters[0].facing = SIDE_LEFT;
+    fight.tick(InputFrame::default());
+
+    assert_eq!(fight.state.fighters[0].body.x1, -19.0);
+    assert_eq!(fight.state.fighters[0].body.x2, 13.0);
+    assert_eq!(fight.state.fighters[0].body.y1, 35.0);
+    assert_eq!(fight.state.fighters[0].body.y2, 164.0);
 }
 
 #[test]
@@ -265,7 +328,11 @@ fn real_character_data_exposes_unimplemented_commands_without_faking_execution()
         .unhandled_commands
         .iter()
         .any(|item| item.command_code == 25));
-    assert!(fight.last_report().errors.is_empty());
+    assert!(
+        fight.last_report().errors.is_empty(),
+        "frame/runtime errors: {:?}",
+        fight.last_report().errors
+    );
 }
 
 #[test]
@@ -295,7 +362,9 @@ fn common_weak_punch_executes_with_pascal_duration_charge_and_sound() {
 
     let fighter = &fight.state.fighters[0];
     assert_eq!(fighter.action_id, ACTION_WEAK_PUNCH);
-    assert_eq!(fighter.action_frame, 0);
+    // The fight tick has already run [Quadro] + AplicarCaixas at frame zero,
+    // then advanced the visible action counter at the end of the tick.
+    assert_eq!(fighter.action_frame, 1);
     assert_eq!(fighter.action_duration, 6);
     assert_eq!(fighter.charge_power, 1.0);
     assert_eq!(fight.state.pending_sound, Some(5));

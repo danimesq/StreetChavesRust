@@ -497,3 +497,11 @@ Current Rust branch:
 - Routed C12 / Sr. Furtado commands 18 and 19 through the actual C12 `[Acao]` script. Its original guard remains: the `acEspecial6` continuation is accepted only when `GolpeAtivo` is false, while the ordinary allowed-action branch remains unchanged.
 - Added tests for host reads/writes, both weak/strong entries, rejection while the attack remains active, and the ordinary idle allowlist.
 - This does not connect `AplicarCaixas`, attack-box selection, melee collision, or `[Quadro]` / `[IA]` / `[Acerto]` execution.
+
+
+## 2026-11-24 — Frame host follow-up in PR #25 (CI pending)
+
+- Bound Pascal frame fields `TempoAcertos` (Byte), `DanoGolpe` (Byte) and `VelAngular` (SmallInt) to live Rust fighter state, with ROT reads/writes.
+- Implemented recursive `AcaoJogador(Jog, Codigo)` inside the ROT host: common [Acao] → target fighter's character [Acao] → common [AcaoFim]. Nested calls share both fighters, effect arena and the same RNG cursor, and have a 16-call depth limit.
+- Added integration coverage for all three field bindings and a nested call targeting player 2. CI passed on head `f37a27c831b76e6bb945136b9da2d6760df22577`: formatting and all targets, 192 tests with 0 failures (Actions run #744).
+- This closes the specific host-binding/nested-call gap for frame scripts where these fields and helper are used; it does not claim complete ROT host coverage, action-lifecycle differential parity, or collision/reaction execution.

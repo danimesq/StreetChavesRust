@@ -71,9 +71,19 @@ pub struct FighterState {
     pub defending: bool,
     pub invulnerable: bool,
     pub hit_count: u8,
+    /// Pascal TLutador.TempoAcertos (combo timer, Byte).
+    pub hit_timer: u8,
+    /// Pascal TLutador.DanoGolpe (Byte) consumed by collision resolution.
+    pub attack_damage: u8,
+    /// Pascal TLutador.VelAngular (SmallInt) used for spinning knockback.
+    pub angular_velocity: i16,
     /// Pascal `TLutador.GolpeAtivo`: whether this fighter's current attack may still hit.
     /// This is fighter state, not the `active` metadata stored in a hitbox row.
     pub attack_active: bool,
+    /// Pascal `TLutador.AndandoFrente`, used by the common walking [Quadro] branch.
+    pub walking_forward: bool,
+    /// Last selected Pascal [Ataque] row. A selector miss retains this record.
+    pub attack_box: Option<crate::HitboxRecord>,
     pub is_kick: bool,
     pub recoil: u8,
     pub vertical_velocity: i8,
