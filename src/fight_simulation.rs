@@ -7,11 +7,13 @@ use crate::combat_runtime::{
     ACTION_CROUCH_WEAK_PUNCH, ACTION_DEFENDING, ACTION_IDLE, ACTION_JUMPING, ACTION_LOW_DEFENDING,
     ACTION_POSE, ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4,
     ACTION_SPECIAL6, ACTION_SPECIAL_FINAL, ACTION_STRONG_KICK, ACTION_STRONG_PUNCH, ACTION_VICTORY,
-    ACTION_WALKING, ACTION_WEAK_KICK, ACTION_WEAK_PUNCH,
+    ACTION_WALKING, ACTION_WEAK_KICK, ACTION_WEAK_PUNCH, SIDE_LEFT,
 };
+use crate::{ActionId, PascalAttackState};
 use crate::command_recognition::{AttackButton, CommandRecognizer};
 use crate::effect_runtime::{EffectTickContext, EffectTickResult, EFFECT_SIDE_RIGHT};
 use crate::fighter_command_data::{embedded_character_command_rules, CharacterCommandRules};
+use crate::fighter_box_data::{load_fighter_frame_boxes, FighterFrameBoxes};
 use crate::input::{Direction, InputFrame};
 use crate::pascal_replay::PascalRandomSource;
 use crate::rot_runtime::{RotDocument, RotExecutionFrame, RotExecutionHost, RotValue};
@@ -102,6 +104,7 @@ impl RotExecutionHost for RotCombatHost<'_> {
             "cargachute" => rot_int(i64::from(fighter.kick_charge)),
             "acertos" => rot_int(i64::from(fighter.hit_count)),
             "golpeativo" => RotValue::Boolean(fighter.attack_active),
+            "andandofrente" => RotValue::Boolean(fighter.walking_forward),
             _ => return Err(format!("{base}.{name} is not mapped to live FighterState")),
         };
         Ok(value)
@@ -145,6 +148,7 @@ impl RotExecutionHost for RotCombatHost<'_> {
             "cargachute" => fighter.kick_charge = rot_value_int(&value)? as u8,
             "acertos" => fighter.hit_count = rot_value_int(&value)? as u8,
             "golpeativo" => fighter.attack_active = rot_value_bool(&value)?,
+            "andandofrente" => fighter.walking_forward = rot_value_bool(&value)?,
             _ => {
                 return Err(format!(
                     "{base}.{name} is not writable in live FighterState"
@@ -423,6 +427,10 @@ pub struct FightTickReport {
     pub special_outcomes: Vec<(usize, ChavesSpecialOutcome)>,
     /// Character action sections executed by the pinned ROT interpreter.
     pub rot_action_executions: Vec<(usize, u8, u8)>,
+    /// Character-specific [Quadro] scripts executed by the live ROT interpreter.
+    pub rot_frame_executions: Vec<(usize, u8)>,
+    /// Fighters whose current boxes were successfully updated after both [Quadro] sections.
+    pub box_updates: Vec<usize>,
     pub c01_frames: Vec<(usize, C01FrameResult)>,
     pub effects: EffectTickResult,
     pub errors: Vec<String>,
@@ -438,6 +446,8 @@ pub struct FightSimulation {
     command_rules: [Option<CharacterCommandRules>; 2],
     command_recognizers: [CommandRecognizer; 2],
     command_data_errors: Vec<String>,
+    /// INI frame/box rows, loaded once per fighter and kept in source order.
+    frame_boxes: [Option<FighterFrameBoxes>; 2],
     last_report: FightTickReport,
 }
 
@@ -445,12 +455,19 @@ impl FightSimulation {
     /// Build a deterministic headless fight and load real per-character command tables.
     pub fn new(state: CombatState, config: FightSimulationConfig, rng_seed: i32) -> Self {
         let mut command_rules: [Option<CharacterCommandRules>; 2] = [None, None];
+        let mut frame_boxes: [Option<FighterFrameBoxes>; 2] = [None, None];
         let mut command_data_errors = Vec::new();
         for fighter_index in 0..2 {
             let character_id = state.fighters[fighter_index].character_id;
             match embedded_character_command_rules(character_id) {
                 Ok(rules) => command_rules[fighter_index] = Some(rules),
                 Err(error) => command_data_errors.push(error.to_string()),
+            }
+            match load_fighter_frame_boxes(character_id) {
+                Ok(tables) => frame_boxes[fighter_index] = Some(tables),
+                Err(error) => command_data_errors.push(format!(
+                    "fighter {fighter_index} frame tables: {error}"
+                )),
             }
         }
         Self {
@@ -461,6 +478,7 @@ impl FightSimulation {
             command_rules,
             command_recognizers: [CommandRecognizer::default(); 2],
             command_data_errors,
+            frame_boxes,
             last_report: FightTickReport::default(),
         }
     }
