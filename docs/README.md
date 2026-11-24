@@ -10,6 +10,7 @@ This directory records the research and engineering decisions for an independent
 ## Architecture
 
 - [Rust architecture proposal](rust-architecture.md): a proposed separation of deterministic game logic from SDL3 presentation and platform services.
+- [Custom character package format](custom-character-package-format.md): JSON character definitions mapped onto the existing Street Chaves data folders, with filesystem loading for native targets and a host resource API for WASM/Canvas and Construct.
 - [Rendering backends and WebAssembly/Canvas architecture](rendering-backends-wasm-canvas.md): one shared Rust engine with replaceable native SDL3 and browser Canvas 2D adapters, build boundaries, timing, resources, tests and staged implementation.
 - [Construct 2/3 integration: embedded WASM + Canvas](construct-wasm-canvas-integration.md): embedding the Rust engine's own Canvas into exported Construct projects, overlay/underlay composition, generic plugin boundaries, host commands/events, and external sprite registration.
 - [Reusable WASM Canvas host compatibility contract](wasm-canvas-host-compatibility.md): the application-side requirements for interoperating with a generic host, including facade operations, version negotiation, lifecycle, viewport, resources, events and a minimum compatibility fixture.
