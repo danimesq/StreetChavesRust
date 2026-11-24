@@ -6,7 +6,8 @@ use crate::combat_runtime::{
     ACTION_CROUCH_STRONG_KICK, ACTION_CROUCH_STRONG_PUNCH, ACTION_CROUCH_WEAK_KICK,
     ACTION_CROUCH_WEAK_PUNCH, ACTION_DEFENDING, ACTION_IDLE, ACTION_JUMPING, ACTION_LOW_DEFENDING,
     ACTION_POSE, ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4,
-    ACTION_SPECIAL_FINAL, ACTION_STRONG_KICK, ACTION_STRONG_PUNCH, ACTION_VICTORY, ACTION_WALKING,
+    ACTION_SPECIAL6, ACTION_SPECIAL_FINAL, ACTION_STRONG_KICK, ACTION_STRONG_PUNCH, ACTION_VICTORY,
+    ACTION_WALKING,
     ACTION_WEAK_KICK, ACTION_WEAK_PUNCH,
 };
 use crate::command_recognition::{AttackButton, CommandRecognizer};
@@ -101,6 +102,7 @@ impl RotExecutionHost for RotCombatHost<'_> {
             "cargasoco" => rot_int(i64::from(fighter.punch_charge)),
             "cargachute" => rot_int(i64::from(fighter.kick_charge)),
             "acertos" => rot_int(i64::from(fighter.hit_count)),
+            "golpeativo" => RotValue::Boolean(fighter.attack_active),
             _ => return Err(format!("{base}.{name} is not mapped to live FighterState")),
         };
         Ok(value)
@@ -143,6 +145,7 @@ impl RotExecutionHost for RotCombatHost<'_> {
             "cargasoco" => fighter.punch_charge = rot_value_int(&value)? as u8,
             "cargachute" => fighter.kick_charge = rot_value_int(&value)? as u8,
             "acertos" => fighter.hit_count = rot_value_int(&value)? as u8,
+            "golpeativo" => fighter.attack_active = rot_value_bool(&value)?,
             _ => {
                 return Err(format!(
                     "{base}.{name} is not writable in live FighterState"
@@ -636,7 +639,7 @@ impl FightSimulation {
                 )),
             }
         } else if self.state.fighters[fighter_index].character_id == 12
-            && matches!(command_code, 14..=17 | 20..=22)
+            && matches!(command_code, 14..=22)
         {
             match self.execute_character_rot_action(fighter_index, 12, command_code) {
                 Ok(()) => report
@@ -1201,6 +1204,7 @@ mod rot_runtime_integration_tests {
             defending: true,
             invulnerable: false,
             hit_count: 0,
+            attack_active: false,
             is_kick: false,
             recoil: 0,
             vertical_velocity: 0,
