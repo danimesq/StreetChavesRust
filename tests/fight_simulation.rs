@@ -65,6 +65,15 @@ fn simulation_for_character(
     first_action: u16,
     first_frame: u16,
 ) -> FightSimulation {
+    simulation_for_matchup(first_character_id, 2, first_action, first_frame)
+}
+
+fn simulation_for_matchup(
+    first_character_id: u8,
+    second_character_id: u8,
+    first_action: u16,
+    first_frame: u16,
+) -> FightSimulation {
     let state = CombatState {
         tick_index: 0,
         game_state: 7,
@@ -72,7 +81,7 @@ fn simulation_for_character(
         clock_stopped: false,
         fighters: [
             fighter(first_character_id, first_action, first_frame),
-            fighter(2, ACTION_IDLE, 0),
+            fighter(second_character_id, ACTION_IDLE, 0),
         ],
         effects: Default::default(),
         pending_sound: None,
@@ -118,7 +127,7 @@ fn fixed_runner_invokes_concrete_fight_at_28ms_and_advances_c01_frame() {
 
 #[test]
 fn common_and_character_quadro_update_both_players_before_box_application() {
-    let mut fight = simulation(ACTION_IDLE, 0);
+    let mut fight = simulation_for_matchup(1, 4, ACTION_IDLE, 0);
     fight.tick(InputFrame::default());
 
     assert_eq!(fight.state.fighters[0].sprite_frame, 1);
@@ -129,7 +138,7 @@ fn common_and_character_quadro_update_both_players_before_box_application() {
     );
     assert_eq!(
         fight.state.fighters[1].body,
-        BodyBox { x1: -17.0, y1: 35.0, x2: 14.0, y2: 160.0 }
+        BodyBox { x1: -17.0, y1: 20.0, x2: 14.0, y2: 160.0 }
     );
     assert_eq!(fight.last_report().rot_frame_executions, vec![(0, 1), (1, 2)]);
     assert_eq!(fight.last_report().box_updates, vec![0, 1]);
