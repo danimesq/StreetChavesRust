@@ -191,6 +191,7 @@ impl RotExecutionHost for RotCombatHost<'_> {
             ("acEspecial4", 28),
             ("acEspecial5", 29),
             ("acEspecial6", 30),
+            ("acEspecial7", 31),
             ("cmEsquerda", 1),
             ("cmDireita", 2),
             ("cmSocoFraco", 3),
