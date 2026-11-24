@@ -49,6 +49,7 @@ fn main() -> ExitCode {
         pending_sound: None,
         screen_flash: 0,
         screen_shake: 0,
+        // This captured Common [IA] fixture omits GolpeAtivo; the replayed path does not read it.
         fighters: [
             FighterState {
                 sprite_frame: 0,
@@ -61,6 +62,7 @@ fn main() -> ExitCode {
                 defending: false,
                 invulnerable: false,
                 hit_count: 0,
+                attack_active: false,
                 is_kick: false,
                 recoil: 0,
                 vertical_velocity: 0,
@@ -97,6 +99,7 @@ fn main() -> ExitCode {
                 defending: false,
                 invulnerable: false,
                 hit_count: 0,
+                attack_active: false,
                 is_kick: false,
                 recoil: 0,
                 vertical_velocity: 0,
