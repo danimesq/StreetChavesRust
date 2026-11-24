@@ -9,7 +9,6 @@ use crate::combat_runtime::{
     ACTION_SPECIAL6, ACTION_SPECIAL_FINAL, ACTION_STRONG_KICK, ACTION_STRONG_PUNCH, ACTION_VICTORY,
     ACTION_WALKING, ACTION_WEAK_KICK, ACTION_WEAK_PUNCH, SIDE_LEFT,
 };
-use crate::{ActionId, PascalAttackState};
 use crate::command_recognition::{AttackButton, CommandRecognizer};
 use crate::effect_runtime::{EffectTickContext, EffectTickResult, EFFECT_SIDE_RIGHT};
 use crate::fighter_command_data::{embedded_character_command_rules, CharacterCommandRules};
@@ -19,6 +18,7 @@ use crate::pascal_replay::PascalRandomSource;
 use crate::rot_runtime::{RotDocument, RotExecutionFrame, RotExecutionHost, RotValue};
 use crate::runtime::SimulationTick;
 use crate::Fpc322Rng;
+use crate::{ActionId, PascalAttackState};
 
 /// Bridge from Pascal ROT field/helper names to the authoritative fight state.
 struct RotCombatHost<'a> {
@@ -465,9 +465,8 @@ impl FightSimulation {
             }
             match load_fighter_frame_boxes(character_id) {
                 Ok(tables) => frame_boxes[fighter_index] = Some(tables),
-                Err(error) => command_data_errors.push(format!(
-                    "fighter {fighter_index} frame tables: {error}"
-                )),
+                Err(error) => command_data_errors
+                    .push(format!("fighter {fighter_index} frame tables: {error}")),
             }
         }
         Self {
@@ -1223,9 +1222,9 @@ impl FightSimulation {
 
         // AplicarCaixas runs only after both frame sections completed successfully.
         if let Err(error) = self.apply_fighter_boxes(fighter_index) {
-            report.errors.push(format!(
-                "AplicarCaixas fighter {fighter_index}: {error}"
-            ));
+            report
+                .errors
+                .push(format!("AplicarCaixas fighter {fighter_index}: {error}"));
             return;
         }
         report.box_updates.push(fighter_index);
