@@ -1,6 +1,9 @@
 //! First concrete, renderer-free fight orchestrator.
 use crate::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome};
-use crate::combat_resolution::{resolve_melee_contact, CombatResolution, CombatResolutionContext};
+use crate::combat_resolution::{
+    resolve_melee_contact, resolve_melee_contact_after_guard_break, CombatResolution,
+    CombatResolutionContext,
+};
 use crate::combat_runtime::{
     C01FrameResult, CombatState, VictoryAnimationContext, ACTION_AIR_STRONG_KICK,
     ACTION_AIR_STRONG_PUNCH, ACTION_AIR_WEAK_KICK, ACTION_AIR_WEAK_PUNCH, ACTION_CROUCHING,
@@ -1436,11 +1439,55 @@ impl FightSimulation {
             match result {
                 CombatResolution::Blocked {
                     defender_knocked_out,
+                    chip_damage,
                     ..
                 } => {
-                    // Pascal requests the knockdown before consuming P.GolpeAtivo.
+                    // Pascal calls the knockdown action before testing the guard again.
+                    // Common [Acao] clears defending, so a chip KO continues as a hit
+                    // without applying chip damage a second time.
                     if defender_knocked_out {
                         self.execute_character_rot_action(defender_index, defender_character, 10)?;
+                        let continued = resolve_melee_contact_after_guard_break(
+                            &mut self.state.fighters,
+                            contact,
+                            CombatResolutionContext {
+                                damage_level,
+                                entry_warning,
+                                clock_stopped: self.state.clock_stopped,
+                                ground_y: self.config.special.ground_y,
+                            },
+                            chip_damage,
+                        )
+                        .map_err(|error| format!("chip-KO continuation: {error:?}"))?;
+                        match continued {
+                            CombatResolution::Hit {
+                                defender_knocked_out,
+                                knockdown_after_reaction,
+                                defender_reaction,
+                                ..
+                            } => {
+                                if defender_knocked_out {
+                                    self.execute_character_rot_action(defender_index, defender_character, 10)?;
+                                }
+                                self.execute_character_rot_action(
+                                    defender_index,
+                                    defender_character,
+                                    if defender_reaction == 18 { 9 } else { 8 },
+                                )?;
+                                if knockdown_after_reaction {
+                                    self.execute_character_rot_action(defender_index, defender_character, 10)?;
+                                }
+                                self.state.fighters[defender_index].recoil = 4;
+                                self.state.fighters[attacker_index].attack_active = false;
+                                self.state.fighters[defender_index].attack_active = false;
+                                self.execute_character_acerto(attacker_index)?;
+                                resolutions.push(continued);
+                                continue;
+                            }
+                            CombatResolution::Blocked { .. } => {
+                                return Err("chip-KO continuation unexpectedly remained blocked".to_owned());
+                            }
+                        }
                     }
                     self.state.fighters[attacker_index].attack_active = false;
                 }
