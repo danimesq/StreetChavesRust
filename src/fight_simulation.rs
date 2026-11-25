@@ -1439,31 +1439,36 @@ impl FightSimulation {
                     defender_knocked_out,
                     ..
                 } => {
+                    // Pascal requests the knockdown before consuming P.GolpeAtivo.
                     if defender_knocked_out {
                         self.execute_character_rot_action(defender_index, defender_character, 10)?;
                     }
+                    self.state.fighters[attacker_index].attack_active = false;
                 }
                 CombatResolution::Hit {
-                    defender_action, ..
+                    defender_knocked_out,
+                    knockdown_after_reaction,
+                    defender_reaction,
+                    ..
                 } => {
-                    // Pascal first chooses ApanharBaixo for the listed kicks/crouch
-                    // attacks, otherwise ApanharAlto. Knockdown is a second action.
-                    let low_reaction = matches!(
-                        attacker_action,
-                        ACTION_WEAK_KICK
-                            | ACTION_STRONG_KICK
-                            | ACTION_CROUCH_WEAK_PUNCH
-                            | ACTION_CROUCH_WEAK_KICK
-                            | ACTION_CROUCH_STRONG_PUNCH
-                    );
+                    // A KO first requests cmDerrubar. Pascal then runs the standard
+                    // high/low reaction, and may request a second knockdown afterwards.
+                    if defender_knocked_out {
+                        self.execute_character_rot_action(defender_index, defender_character, 10)?;
+                    }
                     self.execute_character_rot_action(
                         defender_index,
                         defender_character,
-                        if low_reaction { 9 } else { 8 },
+                        if defender_reaction == 18 { 9 } else { 8 },
                     )?;
-                    if defender_action == 19 {
+                    if knockdown_after_reaction {
                         self.execute_character_rot_action(defender_index, defender_character, 10)?;
                     }
+                    // L7_Acertos writes O.Recuo only after the reaction commands.
+                    self.state.fighters[defender_index].recoil = 4;
+                    // Both active flags are consumed immediately before ExecutarAcerto.
+                    self.state.fighters[attacker_index].attack_active = false;
+                    self.state.fighters[defender_index].attack_active = false;
                     self.execute_character_acerto(attacker_index)?;
                 }
             }
