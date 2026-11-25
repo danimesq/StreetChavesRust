@@ -70,7 +70,7 @@ fn is_air_attack(action_id: u16) -> bool {
 /// 2. If guard remains, apply chip damage and consume the attack.
 /// 3. Otherwise update facing/combo/damage and return the source-selected reaction
 ///    and knockdown predicates. FightSimulation executes the ordered ROT actions,
-///    writes recoil, consumes both active flags, and finally runs [Acerto.
+///    writes recoil, consumes both active flags, and finally runs [Acerto].
 pub fn resolve_melee_contact(
     fighters: &mut [FighterState; 2],
     contact: MeleeCollision,
