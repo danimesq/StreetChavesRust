@@ -273,7 +273,12 @@ mod tests {
 
     #[test]
     fn attack_flag_invulnerability_hit_stop_and_flash_gate_contact() {
-        let hit = attack(RawBounds { x1: 0, y1: 100, x2: 30, y2: 130 });
+        let hit = attack(RawBounds {
+            x1: 0,
+            y1: 100,
+            x2: 30,
+            y2: 130,
+        });
         for (active, invulnerable, hit_stop, flash) in [
             (false, false, false, false),
             (true, true, false, false),
@@ -306,7 +311,12 @@ mod tests {
 
     #[test]
     fn non_finite_positions_are_rejected() {
-        let hit = attack(RawBounds { x1: 0, y1: 100, x2: 30, y2: 130 });
+        let hit = attack(RawBounds {
+            x1: 0,
+            y1: 100,
+            x2: 30,
+            y2: 130,
+        });
         let result = detect_melee_contact(
             0,
             geometry(f64::NAN, 240.0),
