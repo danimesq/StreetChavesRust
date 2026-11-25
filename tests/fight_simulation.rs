@@ -5,8 +5,8 @@ use std::time::Duration;
 use street_chaves::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext};
 use street_chaves::combat_runtime::{
     BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_CROUCHING,
-    ACTION_CROUCH_STRONG_KICK, ACTION_IDLE, ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL,
-    ACTION_WEAK_PUNCH, FORCE_STRONG, FORCE_WEAK, SIDE_LEFT, SIDE_RIGHT,
+    ACTION_CROUCH_STRONG_KICK, ACTION_IDLE, ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL4,
+    ACTION_SPECIAL_FINAL, ACTION_WEAK_PUNCH, FORCE_STRONG, FORCE_WEAK, SIDE_LEFT, SIDE_RIGHT,
 };
 use street_chaves::effect_runtime::EFFECT_SIDE_RIGHT;
 use street_chaves::fight_simulation::{FightSimulation, FightSimulationConfig};
@@ -423,7 +423,6 @@ fn c13_extra2_consumes_power_and_enters_final_special() {
     assert_eq!(fight.state.screen_flash, 22);
 }
 
-
 #[test]
 fn melee_resolution_runs_common_damage_then_real_c01_acerto_script() {
     let mut fight = simulation_for_matchup(1, 2, ACTION_SPECIAL2, 9);
@@ -432,14 +431,21 @@ fn melee_resolution_runs_common_damage_then_real_c01_acerto_script() {
     fight.state.fighters[0].attack_box = Some(HitboxRecord {
         selector: ACTION_SPECIAL2,
         timer: 9,
-        bounds: RawBounds { x1: 0, y1: 80, x2: 40, y2: 120 },
+        bounds: RawBounds {
+            x1: 0,
+            y1: 80,
+            x2: 40,
+            y2: 120,
+        },
         active: true,
         strength: FORCE_STRONG,
         damage: 20,
         guard_damage: 5,
     });
 
-    let resolutions = fight.resolve_melee_contacts([180, 180], 1.0, false).unwrap();
+    let resolutions = fight
+        .resolve_melee_contacts([180, 180], 1.0, false)
+        .unwrap();
 
     assert_eq!(resolutions.len(), 1);
     assert_eq!(fight.state.fighters[1].health, 80.0);
@@ -448,7 +454,6 @@ fn melee_resolution_runs_common_damage_then_real_c01_acerto_script() {
     assert!(!fight.state.fighters[0].attack_active);
     assert!(!fight.state.fighters[1].attack_active);
 }
-
 
 #[test]
 fn melee_hit_dispatches_each_pinned_fighter_acerto_section_without_fabricating_missing_ones() {
