@@ -1467,7 +1467,11 @@ impl FightSimulation {
                                 ..
                             } => {
                                 if defender_knocked_out {
-                                    self.execute_character_rot_action(defender_index, defender_character, 10)?;
+                                    self.execute_character_rot_action(
+                                        defender_index,
+                                        defender_character,
+                                        10,
+                                    )?;
                                 }
                                 self.execute_character_rot_action(
                                     defender_index,
@@ -1485,7 +1489,9 @@ impl FightSimulation {
                                 continue;
                             }
                             CombatResolution::Blocked { .. } => {
-                                return Err("chip-KO continuation unexpectedly remained blocked".to_owned());
+                                return Err(
+                                    "chip-KO continuation unexpectedly remained blocked".to_owned()
+                                );
                             }
                         }
                     }
