@@ -464,7 +464,12 @@ fn melee_hit_dispatches_each_pinned_fighter_acerto_section_without_fabricating_m
         fight.state.fighters[0].attack_box = Some(HitboxRecord {
             selector: ACTION_SPECIAL2,
             timer: 9,
-            bounds: RawBounds { x1: 0, y1: 80, x2: 40, y2: 120 },
+            bounds: RawBounds {
+                x1: 0,
+                y1: 80,
+                x2: 40,
+                y2: 120,
+            },
             active: true,
             strength: FORCE_STRONG,
             damage: 10,
