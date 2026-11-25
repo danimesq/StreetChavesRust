@@ -8,7 +8,7 @@ The resolver follows the source order for one detected P→O contact:
 
 1. Cancel standing guard for crouching kicks (`acAgChuteFraco`, `acAgChuteForte`).
 2. Cancel crouching guard for aerial attacks (`acArSocoFraco`, `acArChuteFraco`, `acArSocoForte`, `acArChuteForte`).
-3. If the defender still guards: set `O.QuadroAcao := 1`, apply `P.DanoDefesa * NivelDano` unless entry warning / stopped clock suppresses health mutation, and consume only `P.GolpeAtivo`. A chip-kill requests `cmDerrubar`.
+3. If the defender still guards: set `O.QuadroAcao := 1`, apply `P.DanoDefesa * NivelDano` unless entry warning / stopped clock suppresses health mutation, and consume only `P.GolpeAtivo`. A chip-kill requests `cmDerrubar`; because common `[Acao]` clears `O.Defendendo`, execution then falls through into the clean-hit branch in the same `L7_Acertos` call.
 4. Otherwise: update defender facing; reset the combo when `P.TempoAcertos <= 35`; increment Byte `P.Acertos`; set `P.TempoAcertos := 44`, or 50 for crouching-strong / aerial-strong kick; apply `P.DanoGolpe * NivelDano` unless suppressed; choose the standard reaction; set `O.Recuo := 4`; consume both active-attack flags.
 5. Execute defender `cmApanharBaixo` or `cmApanharAlto` through the existing common/character/common-end ROT lifecycle. If the source knockdown predicate is true, execute `cmDerrubar` afterwards.
 6. Execute the attacker's actual character-specific `[Acerto]` section. This is the source hook after standard damage, reaction and recoil.
@@ -49,6 +49,7 @@ The ROT scripts, not this table, remain executable authority.
 
 - Successful hit: health, combo count/timer, recoil, standard reaction and both attack flags.
 - Guarded hit: chip damage and attacker-only attack consumption.
+- Chip-damage KO: knockdown action clears guard, then normal hit damage/combo/reaction/recoil/character `[Acerto]` run exactly once; chip damage is not applied twice.
 - Crouching kick vs standing guard and aerial attack vs crouching guard.
 - Health suppression during entry warning / stopped clock.
 - Integration test verifies common resolution precedes the real C01 `[Acerto]` script.
