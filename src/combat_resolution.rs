@@ -10,7 +10,6 @@ use crate::combat_runtime::{
     ACTION_AIR_STRONG_PUNCH, ACTION_AIR_STRONG_KICK,
 };
 use crate::melee_collision::MeleeCollision;
-use crate::Aabb;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CombatResolutionContext {
@@ -110,7 +109,7 @@ pub fn resolve_melee_contact(
         fighters[attacker_index].attack_active = false;
         let knocked_out = fighters[defender_index].health <= 0.0;
         if knocked_out {
-            fighters[defender_index].action_id = ACTION_BOUNCING - 1;
+            fighters[defender_index].action_id = 19;
         }
         return Ok(CombatResolution::Blocked {
             attacker_index,
