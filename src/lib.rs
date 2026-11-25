@@ -26,6 +26,9 @@ pub mod combat_runtime;
 /// Fixed-capacity live effect instances and source-ordered update snapshots.
 pub mod effect_runtime;
 
+/// Renderer-free melee contact detection using the Pascal L7_Acertos geometry contract.
+pub mod melee_collision;
+
 /// C01 special [Acao] entry and character-specific [IA] dispatch.
 pub mod chaves_specials;
 /// Pascal-style direction/button command recognition primitives.
