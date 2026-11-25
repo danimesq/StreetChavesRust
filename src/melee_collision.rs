@@ -18,7 +18,12 @@ pub struct FighterCollisionGeometry {
 
 impl FighterCollisionGeometry {
     pub fn from_fighter(fighter: &FighterState, sprite_height: i32) -> Self {
-        Self { x: fighter.x, y: fighter.y, sprite_height, body: fighter.body }
+        Self {
+            x: fighter.x,
+            y: fighter.y,
+            sprite_height,
+            body: fighter.body,
+        }
     }
 
     fn world_bounds(self, local: RawBounds) -> Result<Aabb, CollisionGeometryError> {
@@ -146,7 +151,9 @@ pub fn detect_fight_melee_contacts(
         let defender_index = 1 - attacker_index;
         let attacker = fighters[attacker_index];
         let defender = fighters[defender_index];
-        let Some(attack) = attacker.attack_box else { continue; };
+        let Some(attack) = attacker.attack_box else {
+            continue;
+        };
         if let Some(contact) = detect_melee_contact(
             attacker_index,
             FighterCollisionGeometry::from_fighter(attacker, sprite_heights[attacker_index]),
@@ -170,39 +177,97 @@ mod tests {
 
     fn attack(bounds: RawBounds) -> HitboxRecord {
         HitboxRecord {
-            selector: 25, timer: 3, bounds, active: true,
-            strength: 2, damage: 18, guard_damage: 7,
+            selector: 25,
+            timer: 3,
+            bounds,
+            active: true,
+            strength: 2,
+            damage: 18,
+            guard_damage: 7,
         }
     }
 
     fn geometry(x: f64, y: f64) -> FighterCollisionGeometry {
         FighterCollisionGeometry {
-            x, y, sprite_height: 180,
-            body: BodyBox { x1: -10.0, y1: 20.0, x2: 10.0, y2: 160.0 },
+            x,
+            y,
+            sprite_height: 180,
+            body: BodyBox {
+                x1: -10.0,
+                y1: 20.0,
+                x2: 10.0,
+                y2: 160.0,
+            },
         }
     }
 
     #[test]
     fn detects_world_space_overlap_and_preserves_attack_metadata() {
-        let hit = attack(RawBounds { x1: 0, y1: 100, x2: 30, y2: 130 });
+        let hit = attack(RawBounds {
+            x1: 0,
+            y1: 100,
+            x2: 30,
+            y2: 130,
+        });
         let contact = detect_melee_contact(
-            0, geometry(100.0, 240.0), hit, true,
-            1, geometry(125.0, 240.0), false, false, false,
-        ).unwrap().unwrap();
+            0,
+            geometry(100.0, 240.0),
+            hit,
+            true,
+            1,
+            geometry(125.0, 240.0),
+            false,
+            false,
+            false,
+        )
+        .unwrap()
+        .unwrap();
         assert_eq!((contact.attacker_index, contact.defender_index), (0, 1));
         assert_eq!((contact.selector, contact.action_timer), (25, 3));
-        assert_eq!((contact.strength, contact.damage, contact.guard_damage), (2, 18, 7));
-        assert_eq!(contact.attack_bounds, Aabb { left: 100, top: 160, right: 130, bottom: 190 });
-        assert_eq!(contact.hurt_bounds, Aabb { left: 115, top: 80, right: 135, bottom: 220 });
+        assert_eq!(
+            (contact.strength, contact.damage, contact.guard_damage),
+            (2, 18, 7)
+        );
+        assert_eq!(
+            contact.attack_bounds,
+            Aabb {
+                left: 100,
+                top: 160,
+                right: 130,
+                bottom: 190
+            }
+        );
+        assert_eq!(
+            contact.hurt_bounds,
+            Aabb {
+                left: 115,
+                top: 80,
+                right: 135,
+                bottom: 220
+            }
+        );
     }
 
     #[test]
     fn edge_touch_is_not_a_collision() {
-        let hit = attack(RawBounds { x1: 0, y1: 100, x2: 10, y2: 130 });
+        let hit = attack(RawBounds {
+            x1: 0,
+            y1: 100,
+            x2: 10,
+            y2: 130,
+        });
         let contact = detect_melee_contact(
-            0, geometry(100.0, 240.0), hit, true,
-            1, geometry(120.0, 240.0), false, false, false,
-        ).unwrap();
+            0,
+            geometry(100.0, 240.0),
+            hit,
+            true,
+            1,
+            geometry(120.0, 240.0),
+            false,
+            false,
+            false,
+        )
+        .unwrap();
         assert!(contact.is_none());
     }
 
@@ -210,13 +275,23 @@ mod tests {
     fn attack_flag_invulnerability_hit_stop_and_flash_gate_contact() {
         let hit = attack(RawBounds { x1: 0, y1: 100, x2: 30, y2: 130 });
         for (active, invulnerable, hit_stop, flash) in [
-            (false, false, false, false), (true, true, false, false),
-            (true, false, true, false), (true, false, false, true),
+            (false, false, false, false),
+            (true, true, false, false),
+            (true, false, true, false),
+            (true, false, false, true),
         ] {
             let contact = detect_melee_contact(
-                0, geometry(100.0, 240.0), hit, active,
-                1, geometry(125.0, 240.0), invulnerable, hit_stop, flash,
-            ).unwrap();
+                    0,
+                geometry(100.0, 240.0),
+                hit,
+                active,
+                1,
+                geometry(125.0, 240.0),
+                invulnerable,
+                hit_stop,
+                flash,
+            )
+            .unwrap();
             assert!(contact.is_none());
         }
     }
@@ -233,8 +308,15 @@ mod tests {
     fn non_finite_positions_are_rejected() {
         let hit = attack(RawBounds { x1: 0, y1: 100, x2: 30, y2: 130 });
         let result = detect_melee_contact(
-            0, geometry(f64::NAN, 240.0), hit, true,
-            1, geometry(125.0, 240.0), false, false, false,
+            0,
+            geometry(f64::NAN, 240.0),
+            hit,
+            true,
+            1,
+            geometry(125.0, 240.0),
+            false,
+            false,
+            false,
         );
         assert_eq!(result, Err(CollisionGeometryError::NonFiniteCoordinate));
     }
