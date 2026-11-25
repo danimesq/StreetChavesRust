@@ -1380,6 +1380,22 @@ impl FightSimulation {
         Ok(())
     }
 
+    /// Detect current melee contacts without applying damage or mutating fighter state.
+    ///
+    /// Sprite heights are explicit until the source AlturaSprite values are represented
+    /// in FighterState. Contacts are returned in Pascal P1-then-P2 evaluation order.
+    pub fn detect_melee_contacts(
+        &self,
+        sprite_heights: [i32; 2],
+    ) -> Result<Vec<crate::melee_collision::MeleeCollision>, crate::melee_collision::CollisionGeometryError> {
+        crate::melee_collision::detect_fight_melee_contacts(
+            [&self.state.fighters[0], &self.state.fighters[1]],
+            sprite_heights,
+            self.state.clock_stopped,
+            self.state.screen_flash != 0,
+        )
+    }
+
     fn advance_c01_frame(&mut self, fighter_index: usize, report: &mut FightTickReport) {
         if self.state.fighters[fighter_index].character_id != 1 {
             return;
