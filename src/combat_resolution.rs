@@ -34,6 +34,8 @@ pub enum CombatResolution {
     Hit {
         attacker_index: usize,
         defender_index: usize,
+        /// Chip damage already applied before a guard-break KO continued as a hit.
+        chip_damage: f64,
         damage: f64,
         combo_count: u8,
         defender_knocked_out: bool,
@@ -46,6 +48,7 @@ pub enum CombatResolution {
 pub enum CombatResolutionError {
     InvalidFighterIndex,
     InvalidDamageLevel,
+    GuardNotBroken,
 }
 
 fn is_low_attack(action_id: u16) -> bool {
@@ -73,10 +76,33 @@ fn is_air_attack(action_id: u16) -> bool {
 /// 3. Otherwise update facing/combo/damage and return the source-selected reaction
 ///    and knockdown predicates. FightSimulation executes the ordered ROT actions,
 ///    writes recoil, consumes both active flags, and finally runs [Acerto].
+/// Resolve one detected contact, including the initial guard decision.
 pub fn resolve_melee_contact(
     fighters: &mut [FighterState; 2],
     contact: MeleeCollision,
     context: CombatResolutionContext,
+) -> Result<CombatResolution, CombatResolutionError> {
+    resolve_melee_contact_inner(fighters, contact, context, false, 0.0)
+}
+
+/// Continue a chip-damage KO after the source-ordered knockdown action has
+/// run and cleared the defender's guard. This skips the guard branch so chip
+/// damage is not applied a second time.
+pub(crate) fn resolve_melee_contact_after_guard_break(
+    fighters: &mut [FighterState; 2],
+    contact: MeleeCollision,
+    context: CombatResolutionContext,
+    chip_damage: f64,
+) -> Result<CombatResolution, CombatResolutionError> {
+    resolve_melee_contact_inner(fighters, contact, context, true, chip_damage)
+}
+
+fn resolve_melee_contact_inner(
+    fighters: &mut [FighterState; 2],
+    contact: MeleeCollision,
+    context: CombatResolutionContext,
+    guard_already_broken: bool,
+    prior_chip_damage: f64,
 ) -> Result<CombatResolution, CombatResolutionError> {
     if contact.attacker_index > 1
         || contact.defender_index > 1
@@ -102,7 +128,7 @@ pub fn resolve_melee_contact(
         fighters[defender_index].defending = false;
     }
 
-    if fighters[defender_index].defending {
+    if !guard_already_broken && fighters[defender_index].defending {
         let chip_damage = f64::from(contact.guard_damage) * context.damage_level;
         fighters[defender_index].action_frame = 1;
         if !context.entry_warning && !context.clock_stopped {
@@ -119,6 +145,10 @@ pub fn resolve_melee_contact(
             },
             defender_knocked_out: knocked_out,
         });
+    }
+
+    if guard_already_broken && fighters[defender_index].defending {
+        return Err(CombatResolutionError::GuardNotBroken);
     }
 
     // Successful hit: the source resets the combo only when its timer is <= 35,
@@ -173,6 +203,7 @@ pub fn resolve_melee_contact(
     Ok(CombatResolution::Hit {
         attacker_index,
         defender_index,
+        chip_damage: prior_chip_damage,
         damage: if context.entry_warning || context.clock_stopped {
             0.0
         } else {
