@@ -5,9 +5,9 @@
 //! running the attacker's character-specific [Acerto] ROT section afterwards.
 
 use crate::combat_runtime::{
-    FighterState, ACTION_BOUNCING, ACTION_CROUCH_STRONG_KICK, ACTION_CROUCH_WEAK_KICK,
-    ACTION_DEFENDING, ACTION_LOW_DEFENDING, ACTION_AIR_WEAK_PUNCH, ACTION_AIR_WEAK_KICK,
-    ACTION_AIR_STRONG_PUNCH, ACTION_AIR_STRONG_KICK,
+    FighterState, ACTION_AIR_STRONG_KICK, ACTION_AIR_STRONG_PUNCH, ACTION_AIR_WEAK_KICK,
+    ACTION_AIR_WEAK_PUNCH, ACTION_CROUCH_STRONG_KICK, ACTION_CROUCH_WEAK_KICK, ACTION_DEFENDING,
+    ACTION_LOW_DEFENDING,
 };
 use crate::melee_collision::MeleeCollision;
 
@@ -47,7 +47,10 @@ pub enum CombatResolutionError {
 }
 
 fn is_low_attack(action_id: u16) -> bool {
-    matches!(action_id, ACTION_CROUCH_WEAK_KICK | ACTION_CROUCH_STRONG_KICK)
+    matches!(
+        action_id,
+        ACTION_CROUCH_WEAK_KICK | ACTION_CROUCH_STRONG_KICK
+    )
 }
 
 fn is_air_attack(action_id: u16) -> bool {
@@ -89,14 +92,10 @@ pub fn resolve_melee_contact(
 
     // Pascal L7_Acertos: crouching kicks beat standing guard; aerial attacks
     // beat crouching guard. The failed guard is cleared before the branch below.
-    if is_low_attack(attacker_action)
-        && fighters[defender_index].action_id == ACTION_DEFENDING
-    {
+    if is_low_attack(attacker_action) && fighters[defender_index].action_id == ACTION_DEFENDING {
         fighters[defender_index].defending = false;
     }
-    if is_air_attack(attacker_action)
-        && fighters[defender_index].action_id == ACTION_LOW_DEFENDING
-    {
+    if is_air_attack(attacker_action) && fighters[defender_index].action_id == ACTION_LOW_DEFENDING {
         fighters[defender_index].defending = false;
     }
 
@@ -131,7 +130,10 @@ pub fn resolve_melee_contact(
             attacker.hit_count = 0;
         }
         attacker.hit_count = attacker.hit_count.wrapping_add(1);
-        attacker.hit_timer = if matches!(attacker_action, ACTION_CROUCH_STRONG_KICK | ACTION_AIR_STRONG_KICK) {
+        attacker.hit_timer = if matches!(
+            attacker_action,
+            ACTION_CROUCH_STRONG_KICK | ACTION_AIR_STRONG_KICK
+        ) {
             50
         } else {
             44
@@ -178,7 +180,11 @@ pub fn resolve_melee_contact(
     Ok(CombatResolution::Hit {
         attacker_index,
         defender_index,
-        damage: if context.entry_warning || context.clock_stopped { 0.0 } else { damage },
+        damage: if context.entry_warning || context.clock_stopped {
+            0.0
+        } else {
+            damage
+        },
         combo_count,
         defender_action,
     })
@@ -187,7 +193,7 @@ pub fn resolve_melee_contact(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::combat_runtime::{FighterState, BodyBox};
+    use crate::combat_runtime::{BodyBox, FighterState};
     use crate::Aabb;
     use crate::melee_collision::MeleeCollision;
 
@@ -227,7 +233,12 @@ mod tests {
             sequence_timer: 0,
             punch_charge: 0,
             kick_charge: 0,
-            body: BodyBox { x1: -10.0, y1: 0.0, x2: 10.0, y2: 100.0 },
+            body: BodyBox {
+                x1: -10.0,
+                y1: 0.0,
+                x2: 10.0,
+                y2: 100.0,
+            },
         }
     }
 
@@ -240,8 +251,18 @@ mod tests {
             strength: 1,
             damage: 20,
             guard_damage: 5,
-            attack_bounds: Aabb { left: 0, top: 0, right: 10, bottom: 10 },
-            hurt_bounds: Aabb { left: 5, top: 5, right: 15, bottom: 15 },
+            attack_bounds: Aabb {
+                left: 0,
+                top: 0,
+                right: 10,
+                bottom: 10,
+            },
+            hurt_bounds: Aabb {
+                left: 5,
+                top: 5,
+                right: 15,
+                bottom: 15,
+            },
         }
     }
 
@@ -267,7 +288,14 @@ mod tests {
         assert_eq!(fighters[1].recoil, 4);
         assert!(!fighters[0].attack_active);
         assert!(!fighters[1].attack_active);
-        assert!(matches!(result, CombatResolution::Hit { damage: 20.0, combo_count: 1, .. }));
+        assert!(matches!(
+            result,
+            CombatResolution::Hit {
+                damage: 20.0,
+                combo_count: 1,
+                ..
+            }
+        ));
     }
 
     #[test]
@@ -279,7 +307,13 @@ mod tests {
         assert_eq!(fighters[1].health, 95.0);
         assert!(!fighters[0].attack_active);
         assert!(fighters[1].attack_active);
-        assert!(matches!(result, CombatResolution::Blocked { chip_damage: 5.0, .. }));
+        assert!(matches!(
+            result,
+            CombatResolution::Blocked {
+                chip_damage: 5.0,
+                ..
+            }
+        ));
     }
 
     #[test]
