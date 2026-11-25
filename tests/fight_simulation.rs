@@ -5,14 +5,15 @@ use std::time::Duration;
 use street_chaves::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext};
 use street_chaves::combat_runtime::{
     BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_CROUCHING,
-    ACTION_CROUCH_STRONG_KICK, ACTION_IDLE, ACTION_SPECIAL1, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL,
-    ACTION_WEAK_PUNCH, FORCE_WEAK, SIDE_LEFT, SIDE_RIGHT,
+    ACTION_CROUCH_STRONG_KICK, ACTION_IDLE, ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL4,
+    ACTION_SPECIAL_FINAL, ACTION_WEAK_PUNCH, FORCE_STRONG, FORCE_WEAK, SIDE_LEFT, SIDE_RIGHT,
 };
 use street_chaves::effect_runtime::EFFECT_SIDE_RIGHT;
 use street_chaves::fight_simulation::{FightSimulation, FightSimulationConfig};
 use street_chaves::input::{Button, Direction, InputEvent, InputFrame};
 use street_chaves::pascal_replay::PascalRandomSource;
 use street_chaves::runtime::{FixedStepRunner, SimulationTick};
+use street_chaves::{HitboxRecord, RawBounds};
 
 fn fighter(character_id: u8, action_id: u16, action_frame: u16) -> FighterState {
     FighterState {
@@ -420,4 +421,66 @@ fn c13_extra2_consumes_power_and_enters_final_special() {
     assert_eq!(fighter.power, 0);
     assert_eq!(fighter.sprite_frame, 37);
     assert_eq!(fight.state.screen_flash, 22);
+}
+
+#[test]
+fn melee_resolution_runs_common_damage_then_real_c01_acerto_script() {
+    let mut fight = simulation_for_matchup(1, 2, ACTION_SPECIAL2, 9);
+    fight.state.fighters[0].force_strength = FORCE_STRONG;
+    fight.state.fighters[0].attack_active = true;
+    fight.state.fighters[0].attack_box = Some(HitboxRecord {
+        selector: ACTION_SPECIAL2,
+        timer: 9,
+        bounds: RawBounds {
+            x1: 0,
+            y1: 80,
+            x2: 40,
+            y2: 120,
+        },
+        active: true,
+        strength: FORCE_STRONG,
+        damage: 20,
+        guard_damage: 5,
+    });
+
+    let resolutions = fight
+        .resolve_melee_contacts([180, 180], 1.0, false)
+        .unwrap();
+
+    assert_eq!(resolutions.len(), 1);
+    assert_eq!(fight.state.fighters[1].health, 80.0);
+    // C01.rot [Acerto] runs after the common hit reaction and overrides recoil to 20.
+    assert_eq!(fight.state.fighters[1].recoil, 20);
+    assert!(!fight.state.fighters[0].attack_active);
+    assert!(!fight.state.fighters[1].attack_active);
+}
+
+#[test]
+fn melee_hit_dispatches_each_pinned_fighter_acerto_section_without_fabricating_missing_ones() {
+    for character_id in 1..=15 {
+        let mut fight = simulation_for_matchup(character_id, 2, ACTION_SPECIAL2, 9);
+        fight.state.fighters[0].force_strength = FORCE_STRONG;
+        fight.state.fighters[0].attack_active = true;
+        fight.state.fighters[0].attack_box = Some(HitboxRecord {
+            selector: ACTION_SPECIAL2,
+            timer: 9,
+            bounds: RawBounds {
+                x1: 0,
+                y1: 80,
+                x2: 40,
+                y2: 120,
+            },
+            active: true,
+            strength: FORCE_STRONG,
+            damage: 10,
+            guard_damage: 2,
+        });
+
+        let result = fight.resolve_melee_contacts([180, 180], 1.0, false);
+        assert!(
+            result.is_ok(),
+            "C{character_id:02} [Acerto] dispatch failed: {result:?}"
+        );
+        assert_eq!(result.unwrap().len(), 1, "C{character_id:02}");
+    }
 }

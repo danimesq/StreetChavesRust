@@ -23,6 +23,9 @@ pub mod pascal_differential;
 /// Bounded Pascal-derived AI runtime: target selection, movement, close-range attacks and child RNG.
 pub mod combat_runtime;
 
+/// Source-ordered melee guard, chip damage, health, combo and hit reaction rules.
+pub mod combat_resolution;
+
 /// Fixed-capacity live effect instances and source-ordered update snapshots.
 pub mod effect_runtime;
 
