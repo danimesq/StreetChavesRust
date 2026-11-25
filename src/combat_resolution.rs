@@ -36,7 +36,9 @@ pub enum CombatResolution {
         defender_index: usize,
         damage: f64,
         combo_count: u8,
-        defender_action: u16,
+        defender_knocked_out: bool,
+        knockdown_after_reaction: bool,
+        defender_reaction: u16,
     },
 }
 
