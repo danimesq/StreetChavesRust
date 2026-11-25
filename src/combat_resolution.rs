@@ -95,7 +95,8 @@ pub fn resolve_melee_contact(
     if is_low_attack(attacker_action) && fighters[defender_index].action_id == ACTION_DEFENDING {
         fighters[defender_index].defending = false;
     }
-    if is_air_attack(attacker_action) && fighters[defender_index].action_id == ACTION_LOW_DEFENDING {
+    if is_air_attack(attacker_action) && fighters[defender_index].action_id == ACTION_LOW_DEFENDING
+    {
         fighters[defender_index].defending = false;
     }
 
@@ -194,8 +195,8 @@ pub fn resolve_melee_contact(
 mod tests {
     use super::*;
     use crate::combat_runtime::{BodyBox, FighterState};
-    use crate::Aabb;
     use crate::melee_collision::MeleeCollision;
+    use crate::Aabb;
 
     fn fighter() -> FighterState {
         FighterState {
