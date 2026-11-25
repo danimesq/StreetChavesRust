@@ -1479,7 +1479,11 @@ impl FightSimulation {
                                     if defender_reaction == 18 { 9 } else { 8 },
                                 )?;
                                 if knockdown_after_reaction {
-                                    self.execute_character_rot_action(defender_index, defender_character, 10)?;
+                                    self.execute_character_rot_action(
+                                        defender_index,
+                                        defender_character,
+                                        10,
+                                    )?;
                                 }
                                 self.state.fighters[defender_index].recoil = 4;
                                 self.state.fighters[attacker_index].attack_active = false;
