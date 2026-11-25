@@ -286,7 +286,7 @@ mod tests {
             (true, false, false, true),
         ] {
             let contact = detect_melee_contact(
-                    0,
+                0,
                 geometry(100.0, 240.0),
                 hit,
                 active,
