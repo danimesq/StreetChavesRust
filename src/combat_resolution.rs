@@ -106,11 +106,7 @@ pub fn resolve_melee_contact(
         if !context.entry_warning && !context.clock_stopped {
             fighters[defender_index].health -= chip_damage;
         }
-        fighters[attacker_index].attack_active = false;
         let knocked_out = fighters[defender_index].health <= 0.0;
-        if knocked_out {
-            fighters[defender_index].action_id = 19;
-        }
         return Ok(CombatResolution::Blocked {
             attacker_index,
             defender_index,
@@ -125,7 +121,15 @@ pub fn resolve_melee_contact(
 
     // Successful hit: the source resets the combo only when its timer is <= 35,
     // increments the Byte counter, and then writes the new combo window.
-    let (attacker_x, attacker_is_kick, combo_count) = {
+    // Pascal updates facing before combo counters and health.
+    let attacker_x = fighters[attacker_index].x;
+    fighters[defender_index].facing = if fighters[defender_index].x < attacker_x {
+        1
+    } else {
+        2
+    };
+
+    let (attacker_is_kick, combo_count) = {
         let attacker = &mut fighters[attacker_index];
         if attacker.hit_timer <= 35 {
             attacker.hit_count = 0;
@@ -139,27 +143,18 @@ pub fn resolve_melee_contact(
         } else {
             44
         };
-        (attacker.x, attacker.is_kick, attacker.hit_count)
+        (attacker.is_kick, attacker.hit_count)
     };
 
     let damage = f64::from(contact.damage) * context.damage_level;
     let defender_action;
     {
         let defender = &mut fighters[defender_index];
-        defender.facing = if defender.x < attacker_x { 1 } else { 2 };
         if !context.entry_warning && !context.clock_stopped {
             defender.health -= damage;
         }
-        defender.recoil = 4;
-
-        let knocked_out = defender.health <= 0.0;
-        defender_action = if knocked_out
-            || attacker_is_kick
-            || defender.vertical_velocity != 0
-            || context.ground_y > defender.y
-        {
-            19
-        } else if matches!(
+        let _knocked_out = defender.health <= 0.0;
+        defender_action = if matches!(
             attacker_action,
             crate::combat_runtime::ACTION_WEAK_KICK
                 | crate::combat_runtime::ACTION_STRONG_KICK
@@ -171,13 +166,9 @@ pub fn resolve_melee_contact(
         } else {
             17
         };
-        defender.action_id = defender_action;
-        defender.attack_active = false;
     }
 
-    // Pascal consumes both flags before ExecutarAcerto(Jog).
-    fighters[attacker_index].attack_active = false;
-
+    let defender = &fighters[defender_index];
     Ok(CombatResolution::Hit {
         attacker_index,
         defender_index,
@@ -187,7 +178,11 @@ pub fn resolve_melee_contact(
             damage
         },
         combo_count,
-        defender_action,
+        defender_knocked_out: defender.health <= 0.0,
+        knockdown_after_reaction: attacker_is_kick
+            || defender.vertical_velocity != 0
+            || context.ground_y > defender.y,
+        defender_reaction: defender_action,
     })
 }
 
@@ -285,10 +280,10 @@ mod tests {
         assert_eq!(fighters[1].health, 80.0);
         assert_eq!(fighters[0].hit_count, 1);
         assert_eq!(fighters[0].hit_timer, 44);
-        assert_eq!(fighters[1].action_id, 17);
-        assert_eq!(fighters[1].recoil, 4);
-        assert!(!fighters[0].attack_active);
-        assert!(!fighters[1].attack_active);
+        assert_eq!(fighters[1].action_id, 1);
+        assert_eq!(fighters[1].recoil, 0);
+        assert!(fighters[0].attack_active);
+        assert!(fighters[1].attack_active);
         assert!(matches!(
             result,
             CombatResolution::Hit {
@@ -306,7 +301,7 @@ mod tests {
         fighters[1].action_id = ACTION_DEFENDING;
         let result = resolve_melee_contact(&mut fighters, contact(0, 1), context()).unwrap();
         assert_eq!(fighters[1].health, 95.0);
-        assert!(!fighters[0].attack_active);
+        assert!(fighters[0].attack_active);
         assert!(fighters[1].attack_active);
         assert!(matches!(
             result,
