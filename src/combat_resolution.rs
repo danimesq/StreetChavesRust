@@ -157,7 +157,7 @@ pub fn resolve_melee_contact(
             || defender.vertical_velocity != 0
             || context.ground_y > defender.y
         {
-            ACTION_BOUNCING - 1
+            19
         } else if matches!(
             attacker_action,
             crate::combat_runtime::ACTION_WEAK_KICK
