@@ -1387,7 +1387,10 @@ impl FightSimulation {
     pub fn detect_melee_contacts(
         &self,
         sprite_heights: [i32; 2],
-    ) -> Result<Vec<crate::melee_collision::MeleeCollision>, crate::melee_collision::CollisionGeometryError> {
+    ) -> Result<
+        Vec<crate::melee_collision::MeleeCollision>,
+        crate::melee_collision::CollisionGeometryError,
+    > {
         crate::melee_collision::detect_fight_melee_contacts(
             [&self.state.fighters[0], &self.state.fighters[1]],
             sprite_heights,
