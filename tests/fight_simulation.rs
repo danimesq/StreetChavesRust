@@ -448,3 +448,29 @@ fn melee_resolution_runs_common_damage_then_real_c01_acerto_script() {
     assert!(!fight.state.fighters[0].attack_active);
     assert!(!fight.state.fighters[1].attack_active);
 }
+
+
+#[test]
+fn melee_hit_dispatches_each_pinned_fighter_acerto_section_without_fabricating_missing_ones() {
+    for character_id in 1..=15 {
+        let mut fight = simulation_for_matchup(character_id, 2, ACTION_SPECIAL2, 9);
+        fight.state.fighters[0].force_strength = FORCE_STRONG;
+        fight.state.fighters[0].attack_active = true;
+        fight.state.fighters[0].attack_box = Some(HitboxRecord {
+            selector: ACTION_SPECIAL2,
+            timer: 9,
+            bounds: RawBounds { x1: 0, y1: 80, x2: 40, y2: 120 },
+            active: true,
+            strength: FORCE_STRONG,
+            damage: 10,
+            guard_damage: 2,
+        });
+
+        let result = fight.resolve_melee_contacts([180, 180], 1.0, false);
+        assert!(
+            result.is_ok(),
+            "C{character_id:02} [Acerto] dispatch failed: {result:?}"
+        );
+        assert_eq!(result.unwrap().len(), 1, "C{character_id:02}");
+    }
+}
