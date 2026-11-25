@@ -10,6 +10,7 @@ use crate::combat_runtime::{
     ACTION_AIR_STRONG_PUNCH, ACTION_AIR_STRONG_KICK,
 };
 use crate::melee_collision::MeleeCollision;
+use crate::Aabb;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CombatResolutionContext {
@@ -125,61 +126,61 @@ pub fn resolve_melee_contact(
 
     // Successful hit: the source resets the combo only when its timer is <= 35,
     // increments the Byte counter, and then writes the new combo window.
-    let attacker = &mut fighters[attacker_index];
-    if attacker.hit_timer <= 35 {
-        attacker.hit_count = 0;
-    }
-    attacker.hit_count = attacker.hit_count.wrapping_add(1);
-    attacker.hit_timer = if matches!(attacker_action, ACTION_CROUCH_STRONG_KICK | ACTION_AIR_STRONG_KICK) {
-        50
-    } else {
-        44
+    let (attacker_x, attacker_is_kick, combo_count) = {
+        let attacker = &mut fighters[attacker_index];
+        if attacker.hit_timer <= 35 {
+            attacker.hit_count = 0;
+        }
+        attacker.hit_count = attacker.hit_count.wrapping_add(1);
+        attacker.hit_timer = if matches!(attacker_action, ACTION_CROUCH_STRONG_KICK | ACTION_AIR_STRONG_KICK) {
+            50
+        } else {
+            44
+        };
+        (attacker.x, attacker.is_kick, attacker.hit_count)
     };
 
     let damage = f64::from(contact.damage) * context.damage_level;
-    let defender = &mut fighters[defender_index];
-    if defender.x < attacker.x {
-        defender.facing = 1;
-    } else {
-        defender.facing = 2;
-    }
-    if !context.entry_warning && !context.clock_stopped {
-        defender.health -= damage;
-    }
-    defender.recoil = 4;
-
-    let knocked_out = defender.health <= 0.0;
-    let defender_action = if knocked_out
-        || attacker.is_kick
-        || defender.vertical_velocity != 0
-        || context.ground_y > defender.y
+    let defender_action;
     {
-        ACTION_BOUNCING - 1
-    } else if matches!(
-        attacker_action,
-        ACTION_CROUCH_WEAK_KICK
-            | ACTION_CROUCH_STRONG_KICK
-            | ACTION_AIR_WEAK_KICK
-            | ACTION_AIR_STRONG_KICK
-            | crate::combat_runtime::ACTION_WEAK_KICK
-            | crate::combat_runtime::ACTION_STRONG_KICK
-            | crate::combat_runtime::ACTION_CROUCH_WEAK_PUNCH
-    ) {
-        18
-    } else {
-        17
-    };
-    defender.action_id = defender_action;
+        let defender = &mut fighters[defender_index];
+        defender.facing = if defender.x < attacker_x { 1 } else { 2 };
+        if !context.entry_warning && !context.clock_stopped {
+            defender.health -= damage;
+        }
+        defender.recoil = 4;
+
+        let knocked_out = defender.health <= 0.0;
+        defender_action = if knocked_out
+            || attacker_is_kick
+            || defender.vertical_velocity != 0
+            || context.ground_y > defender.y
+        {
+            ACTION_BOUNCING - 1
+        } else if matches!(
+            attacker_action,
+            crate::combat_runtime::ACTION_WEAK_KICK
+                | crate::combat_runtime::ACTION_STRONG_KICK
+                | crate::combat_runtime::ACTION_CROUCH_WEAK_PUNCH
+                | ACTION_CROUCH_WEAK_KICK
+                | crate::combat_runtime::ACTION_CROUCH_STRONG_PUNCH
+        ) {
+            18
+        } else {
+            17
+        };
+        defender.action_id = defender_action;
+        defender.attack_active = false;
+    }
 
     // Pascal consumes both flags before ExecutarAcerto(Jog).
-    attacker.attack_active = false;
-    defender.attack_active = false;
+    fighters[attacker_index].attack_active = false;
 
     Ok(CombatResolution::Hit {
         attacker_index,
         defender_index,
         damage: if context.entry_warning || context.clock_stopped { 0.0 } else { damage },
-        combo_count: attacker.hit_count,
+        combo_count,
         defender_action,
     })
 }
@@ -188,7 +189,8 @@ pub fn resolve_melee_contact(
 mod tests {
     use super::*;
     use crate::combat_runtime::{FighterState, BodyBox};
-    use crate::melee_collision::{Aabb, MeleeCollision};
+    use crate::Aabb;
+    use crate::melee_collision::MeleeCollision;
 
     fn fighter() -> FighterState {
         FighterState {
