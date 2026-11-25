@@ -1420,7 +1420,6 @@ impl FightSimulation {
         for contact in contacts {
             let attacker_index = contact.attacker_index;
             let defender_index = contact.defender_index;
-            let attacker_action = self.state.fighters[attacker_index].action_id;
             let defender_character = self.state.fighters[defender_index].character_id;
             let result = resolve_melee_contact(
                 &mut self.state.fighters,
