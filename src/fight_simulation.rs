@@ -1,5 +1,6 @@
 //! First concrete, renderer-free fight orchestrator.
 use crate::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome};
+use crate::combat_resolution::{resolve_melee_contact, CombatResolution, CombatResolutionContext};
 use crate::combat_runtime::{
     C01FrameResult, CombatState, VictoryAnimationContext, ACTION_AIR_STRONG_KICK,
     ACTION_AIR_STRONG_PUNCH, ACTION_AIR_WEAK_KICK, ACTION_AIR_WEAK_PUNCH, ACTION_CROUCHING,
@@ -1397,6 +1398,121 @@ impl FightSimulation {
             self.state.clock_stopped,
             self.state.screen_flash != 0,
         )
+    }
+
+    /// Execute Pascal's ordered melee consequence pipeline for the currently stored boxes.
+    ///
+    /// Contacts are evaluated P1→P2 then P2→P1. The common guard/damage/combo
+    /// mutations run first, followed by the defender's common [Acao] reaction,
+    /// optional knockdown, and finally the attacker's character-specific [Acerto].
+    /// The damage multiplier and intro-warning gate are explicit source globals.
+    pub fn resolve_melee_contacts(
+        &mut self,
+        sprite_heights: [i32; 2],
+        damage_level: f64,
+        entry_warning: bool,
+    ) -> Result<Vec<CombatResolution>, String> {
+        let contacts = self
+            .detect_melee_contacts(sprite_heights)
+            .map_err(|error| error.to_string())?;
+        let mut resolutions = Vec::with_capacity(contacts.len());
+
+        for contact in contacts {
+            let attacker_index = contact.attacker_index;
+            let defender_index = contact.defender_index;
+            let attacker_action = self.state.fighters[attacker_index].action_id;
+            let defender_character = self.state.fighters[defender_index].character_id;
+            let result = resolve_melee_contact(
+                &mut self.state.fighters,
+                contact,
+                CombatResolutionContext {
+                    damage_level,
+                    entry_warning,
+                    clock_stopped: self.state.clock_stopped,
+                    ground_y: self.config.special.ground_y,
+                },
+            )
+            .map_err(|error| format!("melee resolution: {error:?}"))?;
+
+            match result {
+                CombatResolution::Blocked {
+                    defender_knocked_out,
+                    ..
+                } => {
+                    if defender_knocked_out {
+                        self.execute_character_rot_action(defender_index, defender_character, 10)?;
+                    }
+                }
+                CombatResolution::Hit {
+                    defender_action, ..
+                } => {
+                    // Pascal first chooses ApanharBaixo for the listed kicks/crouch
+                    // attacks, otherwise ApanharAlto. Knockdown is a second action.
+                    let low_reaction = matches!(
+                        attacker_action,
+                        ACTION_WEAK_KICK
+                            | ACTION_STRONG_KICK
+                            | ACTION_CROUCH_WEAK_PUNCH
+                            | ACTION_CROUCH_WEAK_KICK
+                            | ACTION_CROUCH_STRONG_PUNCH
+                    );
+                    self.execute_character_rot_action(
+                        defender_index,
+                        defender_character,
+                        if low_reaction { 9 } else { 8 },
+                    )?;
+                    if defender_action == 19 {
+                        self.execute_character_rot_action(defender_index, defender_character, 10)?;
+                    }
+                    self.execute_character_acerto(attacker_index)?;
+                }
+            }
+            resolutions.push(result);
+        }
+
+        Ok(resolutions)
+    }
+
+    /// Run the actual pinned character [Acerto] section against the live fighters.
+    /// Missing sections are valid source data and execute as no-ops.
+    fn execute_character_acerto(&mut self, fighter_index: usize) -> Result<(), String> {
+        let (filename, source) = match self.state.fighters[fighter_index].character_id {
+            1 => ("C01.rot", include_str!("../research/pascal-rot/C01.rot")),
+            2 => ("C02.rot", include_str!("../research/pascal-rot/C02.rot")),
+            3 => ("C03.rot", include_str!("../research/pascal-rot/C03.rot")),
+            4 => ("C04.rot", include_str!("../research/pascal-rot/C04.rot")),
+            5 => ("C05.rot", include_str!("../research/pascal-rot/C05.rot")),
+            6 => ("C06.rot", include_str!("../research/pascal-rot/C06.rot")),
+            7 => ("C07.rot", include_str!("../research/pascal-rot/C07.rot")),
+            8 => ("C08.rot", include_str!("../research/pascal-rot/C08.rot")),
+            9 => ("C09.rot", include_str!("../research/pascal-rot/C09.rot")),
+            10 => ("C10.rot", include_str!("../research/pascal-rot/C10.rot")),
+            11 => ("C11.rot", include_str!("../research/pascal-rot/C11.rot")),
+            12 => ("C12.rot", include_str!("../research/pascal-rot/C12.rot")),
+            13 => ("C13.rot", include_str!("../research/pascal-rot/C13.rot")),
+            14 => ("C14.rot", include_str!("../research/pascal-rot/C14.rot")),
+            15 => ("C15.rot", include_str!("../research/pascal-rot/C15.rot")),
+            other => return Err(format!("no [Acerto] script for character {other}")),
+        };
+        let character = RotDocument::from_str(filename, source).map_err(|e| e.to_string())?;
+        let common = RotDocument::from_str(
+            "Comum.rot",
+            include_str!("../research/pascal-rot/Comum.rot"),
+        )
+        .map_err(|e| e.to_string())?;
+        let special = self.config.special;
+        let jog = (fighter_index + 1) as u8;
+        let mut host = RotCombatHost {
+            state: &mut self.state,
+            rng: &mut self.rng,
+            player_index: fighter_index,
+            charge_gain: special.charge_gain,
+            charge_max: special.charge_max,
+            ground_y: special.ground_y,
+            common: &common,
+            recursion_depth: 0,
+        };
+        execute_rot_section(&character, "Acerto", jog, 0, &mut host)
     }
 
     fn advance_c01_frame(&mut self, fighter_index: usize, report: &mut FightTickReport) {
