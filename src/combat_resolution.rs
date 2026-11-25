@@ -366,6 +366,67 @@ mod tests {
     }
 
     #[test]
+    fn chip_damage_ko_continues_as_a_hit_without_applying_chip_twice() {
+        let mut fighters = [fighter(), fighter()];
+        fighters[1].defending = true;
+        fighters[1].action_id = ACTION_DEFENDING;
+        fighters[1].health = 5.0;
+
+        let blocked = resolve_melee_contact(&mut fighters, contact(0, 1), context()).unwrap();
+        assert!(matches!(
+            blocked,
+            CombatResolution::Blocked {
+                chip_damage: 5.0,
+                defender_knocked_out: true,
+                ..
+            }
+        ));
+        assert_eq!(fighters[1].health, 0.0);
+        assert_eq!(fighters[0].hit_count, 0);
+
+        // The real FightSimulation path runs common [Acao](cmDerrubar) here.
+        // Its first statement clears defending before L7_Acertos tests the guard again.
+        fighters[1].defending = false;
+        let hit = resolve_melee_contact_after_guard_break(
+            &mut fighters,
+            contact(0, 1),
+            context(),
+            5.0,
+        )
+        .unwrap();
+
+        assert!(matches!(
+            hit,
+            CombatResolution::Hit {
+                chip_damage: 5.0,
+                damage: 20.0,
+                combo_count: 1,
+                ..
+            }
+        ));
+        assert_eq!(fighters[1].health, -20.0);
+        assert_eq!(fighters[0].hit_count, 1);
+        assert_eq!(fighters[0].hit_timer, 44);
+    }
+
+    #[test]
+    fn chip_ko_continuation_rejects_a_guard_that_was_not_cleared() {
+        let mut fighters = [fighter(), fighter()];
+        fighters[1].defending = true;
+        fighters[1].action_id = ACTION_DEFENDING;
+
+        let result = resolve_melee_contact_after_guard_break(
+            &mut fighters,
+            contact(0, 1),
+            context(),
+            5.0,
+        );
+
+        assert_eq!(result, Err(CombatResolutionError::GuardNotBroken));
+        assert_eq!(fighters[1].health, 100.0);
+    }
+
+    #[test]
     fn damage_is_suppressed_during_entry_warning_or_stopped_clock() {
         for mut ctx in [context(), context()] {
             let mut fighters = [fighter(), fighter()];
