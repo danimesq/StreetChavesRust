@@ -387,13 +387,9 @@ mod tests {
         // The real FightSimulation path runs common [Acao](cmDerrubar) here.
         // Its first statement clears defending before L7_Acertos tests the guard again.
         fighters[1].defending = false;
-        let hit = resolve_melee_contact_after_guard_break(
-            &mut fighters,
-            contact(0, 1),
-            context(),
-            5.0,
-        )
-        .unwrap();
+        let hit =
+            resolve_melee_contact_after_guard_break(&mut fighters, contact(0, 1), context(), 5.0)
+                .unwrap();
 
         assert!(matches!(
             hit,
@@ -415,12 +411,8 @@ mod tests {
         fighters[1].defending = true;
         fighters[1].action_id = ACTION_DEFENDING;
 
-        let result = resolve_melee_contact_after_guard_break(
-            &mut fighters,
-            contact(0, 1),
-            context(),
-            5.0,
-        );
+        let result =
+            resolve_melee_contact_after_guard_break(&mut fighters, contact(0, 1), context(), 5.0);
 
         assert_eq!(result, Err(CombatResolutionError::GuardNotBroken));
         assert_eq!(fighters[1].health, 100.0);
