@@ -68,9 +68,9 @@ fn is_air_attack(action_id: u16) -> bool {
 /// Source order preserved:
 /// 1. Wrong-height guard is cancelled.
 /// 2. If guard remains, apply chip damage and consume the attack.
-/// 3. Otherwise update facing/combo/damage, choose standard reaction and recoil,
-///    then consume both active attacks.
-/// The character-specific [Acerto] script runs after this function returns.
+/// 3. Otherwise update facing/combo/damage and return the source-selected reaction
+///    and knockdown predicates. FightSimulation executes the ordered ROT actions,
+///    writes recoil, consumes both active flags, and finally runs [Acerto.
 pub fn resolve_melee_contact(
     fighters: &mut [FighterState; 2],
     contact: MeleeCollision,
@@ -153,7 +153,6 @@ pub fn resolve_melee_contact(
         if !context.entry_warning && !context.clock_stopped {
             defender.health -= damage;
         }
-        let _knocked_out = defender.health <= 0.0;
         defender_action = if matches!(
             attacker_action,
             crate::combat_runtime::ACTION_WEAK_KICK
