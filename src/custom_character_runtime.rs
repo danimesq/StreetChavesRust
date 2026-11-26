@@ -163,10 +163,10 @@ impl CustomCharacterDefinition {
 }
 
 fn parse_frame_boxes(value: &Value) -> Result<FighterFrameBoxes, String> {
-    let object = object(value, "fighter.frame_boxes")?;
+    let frame_table = object(value, "fighter.frame_boxes")?;
     let mut boxes = FighterFrameBoxes::default();
 
-    let centers = required(object, "center_x")?
+    let centers = required(frame_table, "center_x")?
         .as_array()
         .ok_or_else(|| "frame_boxes.center_x must be an array".to_owned())?;
     for row in centers {
@@ -178,7 +178,7 @@ fn parse_frame_boxes(value: &Value) -> Result<FighterFrameBoxes, String> {
         boxes.center_x.push((frame, offset));
     }
 
-    let hurtboxes = required(object, "hurtboxes")?
+    let hurtboxes = required(frame_table, "hurtboxes")?
         .as_array()
         .ok_or_else(|| "frame_boxes.hurtboxes must be an array".to_owned())?;
     for row in hurtboxes {
@@ -196,7 +196,7 @@ fn parse_frame_boxes(value: &Value) -> Result<FighterFrameBoxes, String> {
         });
     }
 
-    let attacks = required(object, "attacks")?
+    let attacks = required(frame_table, "attacks")?
         .as_array()
         .ok_or_else(|| "frame_boxes.attacks must be an array".to_owned())?;
     for row in attacks {
@@ -333,7 +333,7 @@ fn parse_move(value: &Value) -> Result<CustomMoveDefinition, String> {
     }
 
     let screen_shake = optional_object(item, "screen_shake")?
-        .map(|event| {
+        .map(|event| -> Result<(u16, u16), String> {
             Ok((
                 required_u16(event, "frame")?,
                 required_u16(event, "duration")?,
