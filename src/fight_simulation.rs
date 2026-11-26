@@ -2156,6 +2156,84 @@ mod rot_runtime_integration_tests {
     }
 
     #[test]
+    fn chapolin_package_registers_selects_and_runs_a_native_fight_timeline() {
+        use crate::custom_character::{CustomCharacterPackage, PackageFile};
+
+        let mut fight = simulation();
+        let package = CustomCharacterPackage::from_files([PackageFile {
+            path: "character.json".to_owned(),
+            bytes: include_bytes!("../examples/custom-characters/chapolin/character.json").to_vec(),
+        }])
+        .unwrap();
+
+        assert_eq!(fight.register_custom_character_package(package).unwrap(), 16);
+        assert_eq!(fight.select_custom_character(0, "chapolin").unwrap(), 16);
+        fight.queue_custom_character_move(0, "special_2", 2).unwrap();
+        fight.tick_with_inputs([InputFrame::default(), InputFrame::default()]);
+
+        let chapolin = &fight.state.fighters[0];
+        assert_eq!(chapolin.character_id, 16);
+        assert_eq!(chapolin.action_id, ACTION_SPECIAL2);
+        assert_eq!(chapolin.action_frame, 1);
+        assert_eq!(chapolin.sprite_frame, 40);
+        assert_eq!(chapolin.x, 106.0);
+        assert_eq!(fight.last_report().custom_character_frame_executions, vec![(0, 16)]);
+        assert!(fight.last_report().errors.is_empty());
+    }
+
+    #[test]
+    fn chapolin_special_one_emits_its_declared_effect_on_frame_ten() {
+        use crate::custom_character::{CustomCharacterPackage, PackageFile};
+
+        let mut fight = simulation();
+        let package = CustomCharacterPackage::from_files([PackageFile {
+            path: "character.json".to_owned(),
+            bytes: include_bytes!("../examples/custom-characters/chapolin/character.json").to_vec(),
+        }])
+        .unwrap();
+        fight.register_custom_character_package(package).unwrap();
+        fight.select_custom_character(0, "chapolin").unwrap();
+        fight.queue_custom_character_move(0, "special_1", 1).unwrap();
+
+        for _ in 0..11 {
+            fight.tick_with_inputs([InputFrame::default(), InputFrame::default()]);
+        }
+
+        assert!(fight.last_report().custom_character_events.iter().any(|event| {
+            matches!(
+                event,
+                CustomCharacterEvent::SpawnEffect {
+                    fighter_index: 0,
+                    effect_id: 37,
+                    variant: Some('A'),
+                    ..
+                }
+            )
+        }));
+    }
+
+    #[test]
+    fn chapolin_final_move_obeys_power_gate_and_invulnerability_timeline() {
+        use crate::custom_character::{CustomCharacterPackage, PackageFile};
+
+        let mut fight = simulation();
+        let package = CustomCharacterPackage::from_files([PackageFile {
+            path: "character.json".to_owned(),
+            bytes: include_bytes!("../examples/custom-characters/chapolin/character.json").to_vec(),
+        }])
+        .unwrap();
+        fight.register_custom_character_package(package).unwrap();
+        fight.select_custom_character(0, "chapolin").unwrap();
+
+        assert!(fight.queue_custom_character_move(0, "special_final", 1).is_err());
+        fight.state.fighters[0].power = 1;
+        fight.queue_custom_character_move(0, "special_final", 1).unwrap();
+        fight.tick_with_inputs([InputFrame::default(), InputFrame::default()]);
+        assert!(fight.state.fighters[0].invulnerable);
+        assert_eq!(fight.state.fighters[0].power, 0);
+    }
+
+    #[test]
     fn rot_host_recursively_executes_nested_acao_jogador_for_player_two() {
         let mut fight = simulation();
         let common = RotDocument::from_str(
