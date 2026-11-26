@@ -46,3 +46,15 @@ The current Rust resolver covers the common 44/50 combo windows, standard recoil
 Rust already has `angular_velocity` and `vertical_velocity` state fields, but merely having storage is not behavioral parity. The existing `recoil` field is not silently treated as a substitute for C17's `hitstun` or `rot_step`.
 
 Those differences are deliberately retained as explicit follow-up work rather than hidden behind tests that only validate a copied lookup table. The Pascal/ROT scripts remain the authority for the original game; C17 is a differential reference.
+
+## PR #33 implementation update
+
+The C17 differential overrides previously called out as gaps are now represented by the Rust hit resolver:
+
+- Combo windows: C04 special2/special3 = 46/47; C06 final special = 50; C15 special3 = 50.
+- Hitstun: C01/C02/C04/C06/C07/C09/C10/C12 per the table above, with C09's frame-15 gate.
+- Spin: signed `rotation_step` of 20 degrees per tick for C04/C05/C06/C09/C10/C11/C12 at the audited action/frame gates.
+- Launch: C04 and C05 final special = -30; C15 special3 = -26.
+- Every ordinary successful body hit initializes `hitstun` to 4 before any explicit override.
+
+The new `FighterState.hitstun` and `FighterState.rotation_step` fields remain distinct from `recoil` and `angular_velocity`. C17 `rot_step` is not silently mapped to Pascal `VelAngular`. Pascal/ROT remains normative; C17 is differential evidence only.
