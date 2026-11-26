@@ -118,4 +118,4 @@ The executable starts with a vector opening, title/Start screen and two-player c
 
 ## Arcade cabinet systems
 
-The native and browser game flows now include credits/fichas, the first F1 settings menu, F2 player-one keyboard remapping and a Common.rot CPU opponent when P2 does not join. The settings file is `StreetChavesRust.settings.json` for native builds; the browser stores the same preferences in localStorage. See [arcade credits, F1/F2 and CPU](docs/arcade-credits-settings-and-ai.md) for active settings and remaining fidelity gaps.
+The native and browser game flows now include credits/fichas, the first F1 settings menu, F2 player-one keyboard remapping and a source-driven CPU that executes Common plus all fifteen standard character AI scripts, projectile defense and the original F1 difficulty formulas. The campaign phase remains 1 until `CHS_ADVERSARIOS` is implemented. Native preferences are saved in `StreetChavesRust.settings.json`; browser preferences use localStorage. See [arcade credits, F1/F2 and CPU](docs/arcade-credits-settings-and-ai.md) and [CPU AI source parity](docs/cpu-ai-source-parity.md).
