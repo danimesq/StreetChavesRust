@@ -17,6 +17,8 @@ profile = "release"
 [web]
 title = "Street Chaves"
 canvas-id = "street-chaves"
+audio-button-id = "enable-audio"
+diagnostics-id = "diagnostics"
 bootstrap = "web/main.js"
 
 [output]
