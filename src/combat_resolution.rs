@@ -419,6 +419,48 @@ mod tests {
     }
 
     #[test]
+    fn combo_windows_match_common_pascal_rules_and_reset_at_thirty_five() {
+        for (action_id, expected_timer) in [
+            (crate::combat_runtime::ACTION_STRONG_PUNCH, 44),
+            (ACTION_CROUCH_STRONG_KICK, 50),
+            (ACTION_AIR_STRONG_KICK, 50),
+        ] {
+            let mut fighters = [fighter(), fighter()];
+            fighters[0].action_id = action_id;
+            fighters[0].hit_count = 3;
+            fighters[0].hit_timer = 36;
+
+            resolve_melee_contact(&mut fighters, contact(0, 1), context()).unwrap();
+
+            assert_eq!(fighters[0].hit_count, 4, "action {action_id}");
+            assert_eq!(fighters[0].hit_timer, expected_timer, "action {action_id}");
+        }
+
+        let mut fighters = [fighter(), fighter()];
+        fighters[0].hit_count = 3;
+        fighters[0].hit_timer = 35;
+        resolve_melee_contact(&mut fighters, contact(0, 1), context()).unwrap();
+        assert_eq!(fighters[0].hit_count, 1);
+        assert_eq!(fighters[0].hit_timer, 44);
+    }
+
+    #[test]
+    fn airborne_defender_is_marked_for_post_reaction_knockdown() {
+        let mut fighters = [fighter(), fighter()];
+        fighters[1].vertical_velocity = -12;
+
+        let result = resolve_melee_contact(&mut fighters, contact(0, 1), context()).unwrap();
+
+        assert!(matches!(
+            result,
+            CombatResolution::Hit {
+                knockdown_after_reaction: true,
+                ..
+            }
+        ));
+    }
+
+    #[test]
     fn damage_is_suppressed_during_entry_warning_or_stopped_clock() {
         for mut ctx in [context(), context()] {
             let mut fighters = [fighter(), fighter()];
