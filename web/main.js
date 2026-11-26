@@ -1,4 +1,4 @@
-import init, { StreetChavesWebRuntime } from "./pkg/street_chaves_rust.js";
+import init, { StreetChavesWebRuntime } from "./pkg/street_chaves.js";
 
 const diagnostics = document.querySelector("#diagnostics");
 const audioButton = document.querySelector("#enable-audio");

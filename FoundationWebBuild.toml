@@ -1,0 +1,848 @@
+schema-version = 1
+assets-root = "../OpenStreetChaves"
+
+[application]
+id = "street-chaves"
+name = "Street Chaves"
+
+[build]
+project-dir = "."
+manifest-path = "Cargo.toml"
+package = "street-chaves-rust"
+crate-name = "street_chaves"
+features = ["web-foundation"]
+target = "wasm32-unknown-unknown"
+profile = "release"
+
+[web]
+title = "Street Chaves"
+canvas-id = "street-chaves"
+audio-button-id = "enable-audio"
+diagnostics-id = "diagnostics"
+bootstrap = "web/main.js"
+
+[output]
+directory = "dist/street-chaves-web"
+archive = "dist/street-chaves-web.zip"
+
+[[assets]]
+id = "stage_01"
+source = "Cenarios/Cenario-01.bmp"
+path = "assets/images/stages/Cenario-01.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Cenarios/Cenario-01.bmp"
+
+[[assets]]
+id = "fighter_01"
+source = "Lutadores/C01.bmp"
+path = "assets/images/fighters/C01.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C01.bmp"
+
+[[assets]]
+id = "fighter_ini_01"
+source = "Dados/Lutadores/C01.ini"
+path = "assets/data/C01.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C01.ini"
+
+[[assets]]
+id = "fighter_02"
+source = "Lutadores/C02.bmp"
+path = "assets/images/fighters/C02.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C02.bmp"
+
+[[assets]]
+id = "fighter_ini_02"
+source = "Dados/Lutadores/C02.ini"
+path = "assets/data/C02.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C02.ini"
+
+[[assets]]
+id = "fighter_03"
+source = "Lutadores/C03.bmp"
+path = "assets/images/fighters/C03.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C03.bmp"
+
+[[assets]]
+id = "fighter_ini_03"
+source = "Dados/Lutadores/C03.ini"
+path = "assets/data/C03.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C03.ini"
+
+[[assets]]
+id = "fighter_04"
+source = "Lutadores/C04.bmp"
+path = "assets/images/fighters/C04.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C04.bmp"
+
+[[assets]]
+id = "fighter_ini_04"
+source = "Dados/Lutadores/C04.ini"
+path = "assets/data/C04.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C04.ini"
+
+[[assets]]
+id = "fighter_05"
+source = "Lutadores/C05.bmp"
+path = "assets/images/fighters/C05.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C05.bmp"
+
+[[assets]]
+id = "fighter_ini_05"
+source = "Dados/Lutadores/C05.ini"
+path = "assets/data/C05.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C05.ini"
+
+[[assets]]
+id = "fighter_06"
+source = "Lutadores/C06.bmp"
+path = "assets/images/fighters/C06.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C06.bmp"
+
+[[assets]]
+id = "fighter_ini_06"
+source = "Dados/Lutadores/C06.ini"
+path = "assets/data/C06.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C06.ini"
+
+[[assets]]
+id = "fighter_07"
+source = "Lutadores/C07.bmp"
+path = "assets/images/fighters/C07.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C07.bmp"
+
+[[assets]]
+id = "fighter_ini_07"
+source = "Dados/Lutadores/C07.ini"
+path = "assets/data/C07.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C07.ini"
+
+[[assets]]
+id = "fighter_08"
+source = "Lutadores/C08.bmp"
+path = "assets/images/fighters/C08.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C08.bmp"
+
+[[assets]]
+id = "fighter_ini_08"
+source = "Dados/Lutadores/C08.ini"
+path = "assets/data/C08.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C08.ini"
+
+[[assets]]
+id = "fighter_09"
+source = "Lutadores/C09.bmp"
+path = "assets/images/fighters/C09.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C09.bmp"
+
+[[assets]]
+id = "fighter_ini_09"
+source = "Dados/Lutadores/C09.ini"
+path = "assets/data/C09.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C09.ini"
+
+[[assets]]
+id = "fighter_10"
+source = "Lutadores/C10.bmp"
+path = "assets/images/fighters/C10.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C10.bmp"
+
+[[assets]]
+id = "fighter_ini_10"
+source = "Dados/Lutadores/C10.ini"
+path = "assets/data/C10.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C10.ini"
+
+[[assets]]
+id = "fighter_11"
+source = "Lutadores/C11.bmp"
+path = "assets/images/fighters/C11.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C11.bmp"
+
+[[assets]]
+id = "fighter_ini_11"
+source = "Dados/Lutadores/C11.ini"
+path = "assets/data/C11.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C11.ini"
+
+[[assets]]
+id = "fighter_12"
+source = "Lutadores/C12.bmp"
+path = "assets/images/fighters/C12.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C12.bmp"
+
+[[assets]]
+id = "fighter_ini_12"
+source = "Dados/Lutadores/C12.ini"
+path = "assets/data/C12.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C12.ini"
+
+[[assets]]
+id = "fighter_13"
+source = "Lutadores/C13.bmp"
+path = "assets/images/fighters/C13.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C13.bmp"
+
+[[assets]]
+id = "fighter_ini_13"
+source = "Dados/Lutadores/C13.ini"
+path = "assets/data/C13.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C13.ini"
+
+[[assets]]
+id = "fighter_14"
+source = "Lutadores/C14.bmp"
+path = "assets/images/fighters/C14.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C14.bmp"
+
+[[assets]]
+id = "fighter_ini_14"
+source = "Dados/Lutadores/C14.ini"
+path = "assets/data/C14.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C14.ini"
+
+[[assets]]
+id = "fighter_15"
+source = "Lutadores/C15.bmp"
+path = "assets/images/fighters/C15.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C15.bmp"
+
+[[assets]]
+id = "fighter_ini_15"
+source = "Dados/Lutadores/C15.ini"
+path = "assets/data/C15.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C15.ini"
+
+[[assets]]
+id = "game_settings"
+source = "Dados/Jogo.ini"
+path = "assets/data/Jogo.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Jogo.ini"
+
+[[assets]]
+id = "resource_settings"
+source = "Dados/Recursos.ini"
+path = "assets/data/Recursos.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Recursos.ini"
+
+[[assets]]
+id = "fight_music"
+source = "Musicas/Musica-01.wav"
+path = "assets/audio/music/Musica-01.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Musicas/Musica-01.wav"
+
+[[assets]]
+id = "effect_slot_001"
+source = "Sons/Som-01.wav"
+path = "assets/audio/effects/Som-01.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-01.wav"
+
+[[assets]]
+id = "effect_slot_002"
+source = "Sons/Som-02.wav"
+path = "assets/audio/effects/Som-02.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-02.wav"
+
+[[assets]]
+id = "effect_slot_003"
+source = "Sons/Som-03.wav"
+path = "assets/audio/effects/Som-03.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-03.wav"
+
+[[assets]]
+id = "effect_slot_004"
+source = "Sons/Som-04.wav"
+path = "assets/audio/effects/Som-04.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-04.wav"
+
+[[assets]]
+id = "effect_slot_005"
+source = "Sons/Som-05.wav"
+path = "assets/audio/effects/Som-05.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-05.wav"
+
+[[assets]]
+id = "effect_slot_006"
+source = "Sons/Som-06.wav"
+path = "assets/audio/effects/Som-06.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-06.wav"
+
+[[assets]]
+id = "effect_slot_007"
+source = "Sons/Som-07.wav"
+path = "assets/audio/effects/Som-07.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-07.wav"
+
+[[assets]]
+id = "effect_slot_008"
+source = "Sons/Som-08.wav"
+path = "assets/audio/effects/Som-08.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-08.wav"
+
+[[assets]]
+id = "effect_slot_009"
+source = "Sons/Som-09.wav"
+path = "assets/audio/effects/Som-09.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-09.wav"
+
+[[assets]]
+id = "effect_slot_010"
+source = "Sons/Som-10.wav"
+path = "assets/audio/effects/Som-10.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-10.wav"
+
+[[assets]]
+id = "effect_slot_011"
+source = "Sons/Som-11.wav"
+path = "assets/audio/effects/Som-11.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-11.wav"
+
+[[assets]]
+id = "effect_slot_012"
+source = "Sons/Som-12.wav"
+path = "assets/audio/effects/Som-12.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-12.wav"
+
+[[assets]]
+id = "effect_slot_013"
+source = "Sons/Som-13.wav"
+path = "assets/audio/effects/Som-13.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-13.wav"
+
+[[assets]]
+id = "effect_slot_014"
+source = "Sons/Som-14.wav"
+path = "assets/audio/effects/Som-14.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-14.wav"
+
+[[assets]]
+id = "effect_slot_015"
+source = "Sons/Som-15.wav"
+path = "assets/audio/effects/Som-15.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-15.wav"
+
+[[assets]]
+id = "effect_slot_016"
+source = "Sons/Som-16.wav"
+path = "assets/audio/effects/Som-16.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-16.wav"
+
+[[assets]]
+id = "effect_slot_017"
+source = "Sons/Som-17.wav"
+path = "assets/audio/effects/Som-17.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-17.wav"
+
+[[assets]]
+id = "effect_slot_018"
+source = "Sons/Som-18.wav"
+path = "assets/audio/effects/Som-18.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-18.wav"
+
+[[assets]]
+id = "effect_slot_019"
+source = "Sons/Som-19.wav"
+path = "assets/audio/effects/Som-19.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-19.wav"
+
+[[assets]]
+id = "effect_slot_020"
+source = "Sons/Som-20.wav"
+path = "assets/audio/effects/Som-20.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-20.wav"
+
+[[assets]]
+id = "effect_slot_021"
+source = "Sons/Som-21.wav"
+path = "assets/audio/effects/Som-21.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-21.wav"
+
+[[assets]]
+id = "effect_slot_022"
+source = "Sons/Som-22.wav"
+path = "assets/audio/effects/Som-22.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-22.wav"
+
+[[assets]]
+id = "effect_slot_023"
+source = "Sons/Som-23.wav"
+path = "assets/audio/effects/Som-23.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-23.wav"
+
+[[assets]]
+id = "effect_slot_024"
+source = "Sons/Som-24.wav"
+path = "assets/audio/effects/Som-24.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-24.wav"
+
+[[assets]]
+id = "effect_slot_025"
+source = "Sons/Som-25.wav"
+path = "assets/audio/effects/Som-25.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-25.wav"
+
+[[assets]]
+id = "effect_slot_026"
+source = "Sons/Som-26.wav"
+path = "assets/audio/effects/Som-26.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-26.wav"
+
+[[assets]]
+id = "effect_slot_027"
+source = "Sons/Som-27.wav"
+path = "assets/audio/effects/Som-27.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-27.wav"
+
+[[assets]]
+id = "effect_slot_028"
+source = "Sons/Som-28.wav"
+path = "assets/audio/effects/Som-28.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-28.wav"
+
+[[assets]]
+id = "effect_slot_029"
+source = "Sons/Som-29.wav"
+path = "assets/audio/effects/Som-29.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-29.wav"
+
+[[assets]]
+id = "effect_slot_030"
+source = "Sons/Som-30.wav"
+path = "assets/audio/effects/Som-30.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-30.wav"
+
+[[assets]]
+id = "effect_slot_031"
+source = "Sons/Som-31.wav"
+path = "assets/audio/effects/Som-31.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-31.wav"
+
+[[assets]]
+id = "effect_slot_032"
+source = "Sons/Som-32.wav"
+path = "assets/audio/effects/Som-32.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-32.wav"
+
+[[assets]]
+id = "effect_slot_033"
+source = "Sons/Som-33.wav"
+path = "assets/audio/effects/Som-33.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-33.wav"
+
+[[assets]]
+id = "effect_slot_034"
+source = "Sons/Som-34.wav"
+path = "assets/audio/effects/Som-34.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-34.wav"
+
+[[assets]]
+id = "effect_slot_035"
+source = "Sons/Som-35.wav"
+path = "assets/audio/effects/Som-35.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-35.wav"
+
+[[assets]]
+id = "effect_slot_036"
+source = "Sons/Som-36.wav"
+path = "assets/audio/effects/Som-36.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-36.wav"
+
+[[assets]]
+id = "effect_slot_037"
+source = "Sons/Som-37.wav"
+path = "assets/audio/effects/Som-37.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-37.wav"
+
+[[assets]]
+id = "effect_slot_038"
+source = "Sons/Som-38.wav"
+path = "assets/audio/effects/Som-38.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-38.wav"
+
+[[assets]]
+id = "effect_slot_039"
+source = "Sons/Som-39.wav"
+path = "assets/audio/effects/Som-39.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-39.wav"
+
+[[assets]]
+id = "effect_slot_040"
+source = "Sons/Som-40.wav"
+path = "assets/audio/effects/Som-40.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-40.wav"
+
+[[assets]]
+id = "effect_slot_041"
+source = "Sons/Som-41.wav"
+path = "assets/audio/effects/Som-41.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-41.wav"
+
+[[assets]]
+id = "effect_slot_042"
+source = "Sons/Som-42.wav"
+path = "assets/audio/effects/Som-42.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-42.wav"
+
+[[assets]]
+id = "effect_slot_043"
+source = "Sons/Som-43.wav"
+path = "assets/audio/effects/Som-43.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-43.wav"
+
+[[assets]]
+id = "effect_slot_044"
+source = "Sons/Som-44.wav"
+path = "assets/audio/effects/Som-44.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-44.wav"
+
+[[assets]]
+id = "effect_slot_045"
+source = "Sons/Som-45.wav"
+path = "assets/audio/effects/Som-45.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-45.wav"
+
+[[assets]]
+id = "effect_slot_046"
+source = "Sons/Som-46.wav"
+path = "assets/audio/effects/Som-46.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-46.wav"
+
+[[assets]]
+id = "effect_slot_047"
+source = "Sons/Som-47.wav"
+path = "assets/audio/effects/Som-47.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-47.wav"
+
+[[assets]]
+id = "effect_slot_048"
+source = "Sons/Som-48.wav"
+path = "assets/audio/effects/Som-48.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-48.wav"
+
+[[assets]]
+id = "effect_slot_049"
+source = "Sons/Som-49.wav"
+path = "assets/audio/effects/Som-49.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-49.wav"
+
+[[assets]]
+id = "effect_slot_050"
+source = "Sons/Som-50.wav"
+path = "assets/audio/effects/Som-50.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-50.wav"
+
+[[assets]]
+id = "effect_slot_051"
+source = "Sons/Som-51.wav"
+path = "assets/audio/effects/Som-51.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-51.wav"
+
+[[assets]]
+id = "effect_slot_052"
+source = "Sons/Som-52.wav"
+path = "assets/audio/effects/Som-52.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-52.wav"
+
+[[assets]]
+id = "effect_slot_053"
+source = "Sons/Som-53.wav"
+path = "assets/audio/effects/Som-53.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-53.wav"
+
+[[assets]]
+id = "effect_slot_054"
+source = "Sons/Som-54.wav"
+path = "assets/audio/effects/Som-54.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-54.wav"
+
+[[assets]]
+id = "effect_slot_055"
+source = "Sons/Som-55.wav"
+path = "assets/audio/effects/Som-55.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-55.wav"
+
+[[assets]]
+id = "effect_slot_056"
+source = "Sons/Som-56.wav"
+path = "assets/audio/effects/Som-56.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-56.wav"
+
+[[assets]]
+id = "effect_slot_057"
+source = "Sons/Som-57.wav"
+path = "assets/audio/effects/Som-57.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-57.wav"
+
+[[assets]]
+id = "effect_slot_058"
+source = "Sons/Som-58.wav"
+path = "assets/audio/effects/Som-58.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-58.wav"
+
+[[assets]]
+id = "effect_slot_059"
+source = "Sons/Som-59.wav"
+path = "assets/audio/effects/Som-59.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-59.wav"
+
+[[assets]]
+id = "effect_slot_060"
+source = "Sons/Som-60.wav"
+path = "assets/audio/effects/Som-60.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-60.wav"
+
+[[assets]]
+id = "effect_slot_061"
+source = "Sons/Som-61.wav"
+path = "assets/audio/effects/Som-61.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-61.wav"
+
+[[assets]]
+id = "effect_slot_062"
+source = "Sons/Som-62.wav"
+path = "assets/audio/effects/Som-62.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-62.wav"
+
+[[assets]]
+id = "effect_slot_063"
+source = "Sons/Som-63.wav"
+path = "assets/audio/effects/Som-63.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-63.wav"
+
+[[assets]]
+id = "effect_slot_064"
+source = "Sons/Som-64.wav"
+path = "assets/audio/effects/Som-64.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-64.wav"
+
+[[assets]]
+id = "effect_slot_065"
+source = "Sons/Som-65.wav"
+path = "assets/audio/effects/Som-65.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-65.wav"
+
+[[assets]]
+id = "effect_slot_066"
+source = "Sons/Som-66.wav"
+path = "assets/audio/effects/Som-66.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-66.wav"
+
+[[assets]]
+id = "effect_slot_067"
+source = "Sons/Som-67.wav"
+path = "assets/audio/effects/Som-67.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-67.wav"
+
+[[assets]]
+id = "effect_slot_068"
+source = "Sons/Som-68.wav"
+path = "assets/audio/effects/Som-68.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-68.wav"
+
+[[assets]]
+id = "effect_slot_069"
+source = "Sons/Som-69.wav"
+path = "assets/audio/effects/Som-69.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-69.wav"
+
+[[assets]]
+id = "effect_slot_070"
+source = "Sons/Som-70.wav"
+path = "assets/audio/effects/Som-70.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-70.wav"
+
+[[assets]]
+id = "effect_slot_071"
+source = "Sons/Som-71.wav"
+path = "assets/audio/effects/Som-71.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Sons/Som-71.wav"
+
+[[assets]]
+id = "menu_music"
+source = "Embutidos/Musica.wav"
+path = "assets/audio/menu/Musica.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Embutidos/Musica.wav"
+
+[[assets]]
+id = "upstream_license"
+source = "LICENSE"
+path = "licenses/OpenStreetChaves-GPL-3.0.txt"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/LICENSE"

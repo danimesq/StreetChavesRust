@@ -6,12 +6,18 @@ on:
       - "Cargo.toml"
       - "src/**"
       - "tests/**"
+      - "FoundationWebBuild.toml"
+      - "web/**"
+      - "docs/CHS-SCREEN-STATUS.md"
       - ".github/workflows/rust-contracts.yml"
   pull_request:
     paths:
       - "Cargo.toml"
       - "src/**"
       - "tests/**"
+      - "FoundationWebBuild.toml"
+      - "web/**"
+      - "docs/CHS-SCREEN-STATUS.md"
       - ".github/workflows/rust-contracts.yml"
 
 permissions:
@@ -32,9 +38,57 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Install WebAssembly target
         run: rustup target add wasm32-unknown-unknown
+      - name: Fetch original game resource sources
+        run: |
+          git clone --depth 1 --filter=blob:none --no-checkout https://github.com/danimesq/OpenStreetChaves.git ../OpenStreetChaves
+          git -C ../OpenStreetChaves sparse-checkout init --no-cone
+          git -C ../OpenStreetChaves sparse-checkout set /Cenarios/ /Lutadores/ /Dados/ /Sons/ /Musicas/ /Embutidos/Musica.wav /LICENSE
+          git -C ../OpenStreetChaves checkout
+      - name: Validate Foundation Web build manifest and source files
+        run: |
+          python3 - <<'PY'
+          import tomllib
+          from pathlib import Path
+
+          config = tomllib.loads(Path("FoundationWebBuild.toml").read_text())
+          assert config["schema-version"] == 1
+          source_root = Path(config["assets-root"]).resolve()
+          assets = config["assets"]
+          ids = [asset["id"] for asset in assets]
+          assert len(ids) == len(set(ids)), "duplicate resource IDs in FoundationWebBuild.toml"
+          missing = [
+              asset["source"]
+              for asset in assets
+              if not (source_root / asset["source"]).is_file()
+          ]
+          assert not missing, "missing OpenStreetChaves source assets: " + ", ".join(missing)
+          assert len(assets) == 107, f"expected 107 configured resources, found {len(assets)}"
+          print(f"Validated {len(assets)} source assets from {source_root}")
+          PY
       - name: Check Rust formatting
         run: cargo fmt --all -- --check
       - name: Run contract tests with the Foundation native host
         run: cargo test --all-targets --features native-foundation
       - name: Check WebAssembly Canvas 2D and WebAudio build
         run: cargo check --target wasm32-unknown-unknown --features web-foundation
+      - name: Check the Foundation source-to-Web publish pipeline
+        run: |
+          git clone --depth 1 --branch foundation-web-build-pipeline https://github.com/danimesq/RustMultiConsoleFoundation.git ../RustMultiConsoleFoundation
+          wasm_bindgen_version="$(cargo tree -p street-chaves-rust --target wasm32-unknown-unknown --prefix none -i wasm-bindgen | sed -n 's/^wasm-bindgen v//p' | head -n 1)"
+          test -n "$wasm_bindgen_version"
+          cargo install wasm-bindgen-cli --version "$wasm_bindgen_version" --locked
+          cargo run \
+            --manifest-path ../RustMultiConsoleFoundation/Cargo.toml \
+            -p foundation-packaging \
+            --bin foundation-web-build -- \
+            --config FoundationWebBuild.toml
+          test -f dist/street-chaves-web/index.html
+          test -f dist/street-chaves-web/main.js
+          test -f dist/street-chaves-web/web-export.json
+          test -f dist/street-chaves-web/web-build-provenance.json
+          test -f dist/street-chaves-web/pkg/street_chaves.js
+          test -f dist/street-chaves-web/pkg/street_chaves_bg.wasm
+          test -f dist/street-chaves-web/licenses/OpenStreetChaves-GPL-3.0.txt
+          test -f dist/street-chaves-web.zip
+          grep -q 'id="enable-audio"' dist/street-chaves-web/index.html
+          grep -q 'id="diagnostics"' dist/street-chaves-web/index.html

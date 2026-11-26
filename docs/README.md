@@ -11,6 +11,7 @@ This directory records the research and engineering decisions for an independent
 
 - [Rust Gaming Eclipse integration plan](rust-gaming-eclipse.md): StreetChaves as an independent consumer, Foundation integration gates, optional Bevy/Rapier evaluation, and the future ImpossibleEngine migration boundary.
 
+- [CHS screen and game-flow status](CHS-SCREEN-STATUS.md): exact `CHS_*` implementation status, remaining original systems and direct source/resource links.
 - [Native and browser presentation host roadmap](presentation-host-roadmap.md)
 - [Native SDL3 audio backend (PR #36)](audio-backend-pr36.md) — renderer-neutral snapshots, native SDL and WASM/Canvas host plan, audio queue, local asset paths.
 - [Rust architecture proposal](rust-architecture.md): a proposed separation of deterministic game logic from SDL3 presentation and platform services.\n- [Iroh multiplayer networking study](iroh-multiplayer-study-pr31.md): online/LAN connectivity, QUIC, relays, mDNS, topology choices, authority, tick synchronization, security, and a staged prototype plan.
@@ -18,6 +19,7 @@ This directory records the research and engineering decisions for an independent
 - [Rendering backends and WebAssembly/Canvas architecture](rendering-backends-wasm-canvas.md): one shared Rust engine with replaceable native SDL3 and browser Canvas 2D adapters, build boundaries, timing, resources, tests and staged implementation.
 - [Reusable WASM Canvas host compatibility contract](wasm-canvas-host-compatibility.md): the application-side requirements for interoperating with a generic host, including facade operations, version negotiation, lifecycle, viewport, resources, events and a minimum compatibility fixture.
 - [Web rendering backend study: native SDL3 and browser Canvas 2D](web-rendering-backend-study.md): documents the shared game core, Foundation browser host, publishing path and native/browser parity plan.
+- [WebAssembly host and Foundation builds](webassembly-host-and-assets.md): Street's native/browser runtime boundary, Foundation source build, resource manifest and OpenStreetChaves source links.
 
 - [Fixed 28 ms simulation clock](fixed-timestep-clock.md): shared integer-nanosecond tick accumulator, host-loop order, catch-up policy, and 60/144 Hz validation.
 - [Headless FightSimulation](headless-fight-simulation.md): the first concrete SimulationTick implementation, C01 command/frame integration, live effect advancement, report snapshots and remaining boundaries.

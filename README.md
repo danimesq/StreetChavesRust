@@ -100,19 +100,11 @@ The opt-in native-foundation feature consumes the shared SDL3 host from RustMult
 
 ## WebAssembly browser host
 
-The browser build uses the same Foundation-backed game presentation host as the native executable. Canvas 2D and WebAudio are provided by RustMultiConsoleFoundation; WebGL is deferred.
+The browser build uses the same Foundation-backed game presentation host as the native executable. Canvas 2D and WebAudio are provided by RustMultiConsoleFoundation; WebGL is deferred. **Foundation owns the source build and publishing:** it compiles StreetChavesRust for `wasm32-unknown-unknown`, generates the browser glue, creates the HTML shell, stages source assets and emits the directory plus ZIP package.
 
-Build with:
+The build configuration is [FoundationWebBuild.toml](FoundationWebBuild.toml). It reads the original resources from a sibling [OpenStreetChaves source checkout](https://github.com/danimesq/OpenStreetChaves), including fighter/stage graphics, INI data, sound-bank WAVs and music. The same config records direct source links for the build provenance.
 
-```sh
-rustup target add wasm32-unknown-unknown
-cargo install wasm-pack
-wasm-pack build --target web --features web-foundation --out-dir pkg
-```
-
-The standalone Foundation Web/WASM export harness and manifest example are in [web/](web/README.md). The manifest packages sprites, audio encodings and INI/data files beside the exported page. Native filesystem paths are never converted into browser URLs.
-
-See [WebAssembly host and exported assets](docs/webassembly-host-and-assets.md) for the full resource ID convention, browser host API, deployment instructions and current limitations.
+See [WebAssembly host and Foundation builds](docs/webassembly-host-and-assets.md) and [the web build guide](web/README.md) for checkout/build commands, resource IDs and current runtime limits.
 
 ## Native startup and fight executable
 
@@ -121,4 +113,4 @@ cargo run --features native-foundation --bin street-chaves-native
 cargo run --features native-foundation --bin street-chaves-native -- --game-root "/path/to/OpenStreetChaves" --stage 1 --p1 1 --p2 4
 ```
 
-The executable starts with a vector opening, title/Start screen and two-player character selection before entering the fight. With `--game-root`, it loads local stage/fighter BMPs, INI pivots and WAV banks. See [the native playable loop guide](docs/native-playable-loop-pr38.md). Original game art/audio are not redistributed.
+The executable starts with a vector opening, title/Start screen and two-player character selection before entering the fight. With `--game-root`, it loads local stage/fighter BMPs, INI pivots and WAV banks. See [the native playable loop guide](docs/native-playable-loop-pr38.md). Current screen/system implementation is tracked in [CHS screen status](docs/CHS-SCREEN-STATUS.md).
