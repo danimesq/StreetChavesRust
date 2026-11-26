@@ -3322,7 +3322,11 @@ mod rot_runtime_integration_tests {
                 vec![(0, character_id)],
                 "C{character_id:02} did not execute its pinned [Quadro]"
             );
-            assert_eq!(report.box_updates, vec![0], "C{character_id:02} boxes were not updated");
+            assert_eq!(
+                report.box_updates,
+                vec![0],
+                "C{character_id:02} boxes were not updated"
+            );
         }
     }
 
@@ -3358,8 +3362,7 @@ mod rot_runtime_integration_tests {
 
             assert!(report.errors.is_empty(), "C13: {:?}", report.errors);
             assert_eq!(
-                fight.state.fighters[1].invulnerable,
-                expected_invulnerable,
+                fight.state.fighters[1].invulnerable, expected_invulnerable,
                 "C13 with P.Acertos={hit_count}"
             );
         }
