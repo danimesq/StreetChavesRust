@@ -206,7 +206,10 @@ mod tests {
     fn physical_key_press_is_delivered_once_to_next_simulation_tick() {
         let mut sampler = InputSampler::default();
         sampler.record_physical_key_press(Some(PhysicalKey::Digit5));
-        assert_eq!(sampler.sample_tick().physical_key_pressed, Some(PhysicalKey::Digit5));
+        assert_eq!(
+            sampler.sample_tick().physical_key_pressed,
+            Some(PhysicalKey::Digit5)
+        );
         assert_eq!(sampler.sample_tick().physical_key_pressed, None);
     }
 

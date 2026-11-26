@@ -70,8 +70,20 @@ impl ArcadeSettings {
             7 => self.sound_test = (i16::from(self.sound_test) + direction).clamp(0, 71) as u8,
             8 => self.music_track = (i16::from(self.music_track) + direction).clamp(0, 32) as u8,
             9 => self.flash = if delta != 0 { !self.flash } else { self.flash },
-            10 => self.show_level = if delta != 0 { !self.show_level } else { self.show_level },
-            11 => self.show_credits = if delta != 0 { !self.show_credits } else { self.show_credits },
+            10 => {
+                self.show_level = if delta != 0 {
+                    !self.show_level
+                } else {
+                    self.show_level
+                }
+            }
+            11 => {
+                self.show_credits = if delta != 0 {
+                    !self.show_credits
+                } else {
+                    self.show_credits
+                }
+            }
             _ => {}
         }
     }
@@ -80,14 +92,33 @@ impl ArcadeSettings {
     pub fn value_label(self, option: usize) -> String {
         match option {
             0 => self.difficulty.to_string(),
-            1 => ["", "30 SEC", "60 SEC", "90 SEC", "NO LIMIT"][usize::from(self.round_time)].to_owned(),
-            2 => ["", "NORMAL", "P1 MAX", "P2 MAX", "BOTH MAX"][usize::from(self.power_mode)].to_owned(),
+            1 => ["", "30 SEC", "60 SEC", "90 SEC", "NO LIMIT"][usize::from(self.round_time)]
+                .to_owned(),
+            2 => ["", "NORMAL", "P1 MAX", "P2 MAX", "BOTH MAX"][usize::from(self.power_mode)]
+                .to_owned(),
             3 => format!("{:.1}x", self.damage_level),
             4 => enabled(self.blood),
             5 => self.rounds.to_string(),
-            6 => if self.language == 1 { "PORTUGUESE" } else { "SPANISH" }.to_owned(),
-            7 => if self.sound_test == 0 { "OFF".to_owned() } else { self.sound_test.to_string() },
-            8 => if self.music_track == 0 { "OFF".to_owned() } else { self.music_track.to_string() },
+            6 => if self.language == 1 {
+                "PORTUGUESE"
+            } else {
+                "SPANISH"
+            }
+            .to_owned(),
+            7 => {
+                if self.sound_test == 0 {
+                    "OFF".to_owned()
+                } else {
+                    self.sound_test.to_string()
+                }
+            }
+            8 => {
+                if self.music_track == 0 {
+                    "OFF".to_owned()
+                } else {
+                    self.music_track.to_string()
+                }
+            }
             9 => enabled(self.flash),
             10 => enabled(self.show_level),
             11 => enabled(self.show_credits),
@@ -138,7 +169,12 @@ impl Default for ArcadePreferences {
 impl ArcadePreferences {
     /// Encode preferences as stable JSON for native files and browser localStorage.
     pub fn to_json(self) -> String {
-        let keys: Vec<&str> = self.player_one_keys.keys.iter().map(|key| key.label()).collect();
+        let keys: Vec<&str> = self
+            .player_one_keys
+            .keys
+            .iter()
+            .map(|key| key.label())
+            .collect();
         serde_json::json!({
             "schema_version": 1,
             "settings": {
@@ -180,14 +216,27 @@ impl ArcadePreferences {
             .filter(|number| number.is_finite())
             .unwrap_or(settings.damage_level)
             .clamp(0.3, 2.0);
-        settings.blood = settings_value.get("blood").and_then(serde_json::Value::as_bool).unwrap_or(settings.blood);
+        settings.blood = settings_value
+            .get("blood")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(settings.blood);
         settings.rounds = bounded_u8(settings_value, "rounds", 1, 3, settings.rounds);
         settings.language = bounded_u8(settings_value, "language", 1, 2, settings.language);
         settings.sound_test = bounded_u8(settings_value, "sound_test", 0, 71, settings.sound_test);
-        settings.music_track = bounded_u8(settings_value, "music_track", 0, 32, settings.music_track);
-        settings.flash = settings_value.get("flash").and_then(serde_json::Value::as_bool).unwrap_or(settings.flash);
-        settings.show_level = settings_value.get("show_level").and_then(serde_json::Value::as_bool).unwrap_or(settings.show_level);
-        settings.show_credits = settings_value.get("show_credits").and_then(serde_json::Value::as_bool).unwrap_or(settings.show_credits);
+        settings.music_track =
+            bounded_u8(settings_value, "music_track", 0, 32, settings.music_track);
+        settings.flash = settings_value
+            .get("flash")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(settings.flash);
+        settings.show_level = settings_value
+            .get("show_level")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(settings.show_level);
+        settings.show_credits = settings_value
+            .get("show_credits")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(settings.show_credits);
 
         let keys = value.get("player_one_keys")?.as_array()?;
         if keys.len() != 8 {
@@ -202,17 +251,14 @@ impl ArcadePreferences {
         if !player_one_keys.has_unique_keys() {
             return None;
         }
-        Some(Self { settings, player_one_keys })
+        Some(Self {
+            settings,
+            player_one_keys,
+        })
     }
 }
 
-fn bounded_u8(
-    object: &serde_json::Value,
-    field: &str,
-    min: u8,
-    max: u8,
-    fallback: u8,
-) -> u8 {
+fn bounded_u8(object: &serde_json::Value, field: &str, min: u8, max: u8, fallback: u8) -> u8 {
     object
         .get(field)
         .and_then(serde_json::Value::as_u64)
@@ -224,21 +270,68 @@ fn bounded_u8(
 fn parse_physical_key(label: &str) -> Option<PhysicalKey> {
     use PhysicalKey::*;
     Some(match label {
-        "A" => A, "B" => B, "C" => C, "D" => D, "E" => E, "F" => F,
-        "G" => G, "H" => H, "I" => I, "J" => J, "K" => K, "L" => L,
-        "M" => M, "N" => N, "O" => O, "P" => P, "Q" => Q, "R" => R,
-        "S" => S, "T" => T, "U" => U, "V" => V, "W" => W, "X" => X,
-        "Y" => Y, "Z" => Z,
-        "0" => Digit0, "1" => Digit1, "2" => Digit2, "3" => Digit3,
-        "4" => Digit4, "5" => Digit5, "6" => Digit6, "7" => Digit7,
-        "8" => Digit8, "9" => Digit9,
-        "UP" => ArrowUp, "DOWN" => ArrowDown, "LEFT" => ArrowLeft, "RIGHT" => ArrowRight,
-        "NUM 0" => Numpad0, "NUM 1" => Numpad1, "NUM 2" => Numpad2,
-        "NUM 3" => Numpad3, "NUM 4" => Numpad4, "NUM 5" => Numpad5,
-        "NUM 6" => Numpad6, "NUM 7" => Numpad7, "NUM 8" => Numpad8, "NUM 9" => Numpad9,
-        "F1" => F1, "F2" => F2, "F3" => F3, "F4" => F4, "F5" => F5,
-        "F6" => F6, "F7" => F7, "F8" => F8, "F9" => F9, "F10" => F10,
-        "F11" => F11, "F12" => F12,
+        "A" => A,
+        "B" => B,
+        "C" => C,
+        "D" => D,
+        "E" => E,
+        "F" => F,
+        "G" => G,
+        "H" => H,
+        "I" => I,
+        "J" => J,
+        "K" => K,
+        "L" => L,
+        "M" => M,
+        "N" => N,
+        "O" => O,
+        "P" => P,
+        "Q" => Q,
+        "R" => R,
+        "S" => S,
+        "T" => T,
+        "U" => U,
+        "V" => V,
+        "W" => W,
+        "X" => X,
+        "Y" => Y,
+        "Z" => Z,
+        "0" => Digit0,
+        "1" => Digit1,
+        "2" => Digit2,
+        "3" => Digit3,
+        "4" => Digit4,
+        "5" => Digit5,
+        "6" => Digit6,
+        "7" => Digit7,
+        "8" => Digit8,
+        "9" => Digit9,
+        "UP" => ArrowUp,
+        "DOWN" => ArrowDown,
+        "LEFT" => ArrowLeft,
+        "RIGHT" => ArrowRight,
+        "NUM 0" => Numpad0,
+        "NUM 1" => Numpad1,
+        "NUM 2" => Numpad2,
+        "NUM 3" => Numpad3,
+        "NUM 4" => Numpad4,
+        "NUM 5" => Numpad5,
+        "NUM 6" => Numpad6,
+        "NUM 7" => Numpad7,
+        "NUM 8" => Numpad8,
+        "NUM 9" => Numpad9,
+        "F1" => F1,
+        "F2" => F2,
+        "F3" => F3,
+        "F4" => F4,
+        "F5" => F5,
+        "F6" => F6,
+        "F7" => F7,
+        "F8" => F8,
+        "F9" => F9,
+        "F10" => F10,
+        "F11" => F11,
+        "F12" => F12,
         _ => return None,
     })
 }
@@ -262,9 +355,13 @@ mod tests {
     #[test]
     fn f1_values_respect_original_bounds() {
         let mut settings = ArcadeSettings::default();
-        for _ in 0..20 { settings.adjust(0, 1); }
+        for _ in 0..20 {
+            settings.adjust(0, 1);
+        }
         assert_eq!(settings.difficulty, 8);
-        for _ in 0..30 { settings.adjust(3, 1); }
+        for _ in 0..30 {
+            settings.adjust(3, 1);
+        }
         assert_eq!(settings.damage_level, 2.0);
         settings.adjust(3, -1);
         assert_eq!(settings.damage_level, 1.9);
@@ -281,7 +378,9 @@ mod tests {
 
     #[test]
     fn duplicate_keys_reject_the_saved_map() {
-        let json = ArcadePreferences::default().to_json().replace("\"Z\"", "\"UP\"");
+        let json = ArcadePreferences::default()
+            .to_json()
+            .replace("\"Z\"", "\"UP\"");
         assert!(ArcadePreferences::from_json(&json).is_none());
     }
 }

@@ -59,11 +59,22 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         let (_batch, samples) = host.poll_input_ticks()?;
         for inputs in samples {
             match startup.tick(inputs) {
-                StartupEvent::StartFight { characters, cpu_opponent } => {
+                StartupEvent::StartFight {
+                    characters,
+                    cpu_opponent,
+                } => {
                     let settings = startup.settings();
-                    eprintln!("[select] P1={} P2={} CPU={}", characters[0], characters[1], cpu_opponent);
+                    eprintln!(
+                        "[select] P1={} P2={} CPU={}",
+                        characters[0], characters[1], cpu_opponent
+                    );
                     fight = build_fight(characters, options.seed);
-                    configure_fight(&mut fight, cpu_opponent, settings.difficulty, settings.power_mode);
+                    configure_fight(
+                        &mut fight,
+                        cpu_opponent,
+                        settings.difficulty,
+                        settings.power_mode,
+                    );
                     if let Some(root) = options.game_root.as_ref() {
                         for line in host.load_original_game(
                             root,
@@ -87,7 +98,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 StartupEvent::PreferencesChanged => {
                     let preferences = startup.preferences();
                     if let Err(error) = std::fs::write(&preferences_path, preferences.to_json()) {
-                        eprintln!("[settings] could not save {}: {error}", preferences_path.display());
+                        eprintln!(
+                            "[settings] could not save {}: {error}",
+                            preferences_path.display()
+                        );
                     }
                     host.set_player_one_key_map(preferences.player_one_keys);
                     host.set_damage_level(preferences.settings.damage_level);

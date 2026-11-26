@@ -3,9 +3,9 @@
 //! Foundation owns platform input, drawing, texture handles and audio output.
 //! This module owns Pascal resource interpretation and maps game snapshots to draw commands.
 
+use crate::arcade::ArcadeSettings;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::audio_foundation::{FoundationAudioOutput, PascalAudioLayout};
-use crate::arcade::ArcadeSettings;
 use crate::combat_runtime::SIDE_LEFT;
 use crate::fight_simulation::{FightPresentationFrame, FightSimulation, FighterPresentation};
 use crate::fixed_timestep::{FixedTimestepClock, TickBatch};
@@ -18,8 +18,8 @@ use foundation_runtime::web::{Canvas2dHost, LoadedWebAssets};
 #[cfg(target_arch = "wasm32")]
 use foundation_runtime::{AudioClipId, AudioRequest};
 use foundation_runtime::{
-    DrawCommand, FrameOutput, PadDirection, PlayerInputSnapshot, PlayerOneKeyMap,
-    Rect, RgbaImage, RuntimeConfig, RuntimeError, RuntimeHost, TextureId, TextureRegistrar,
+    DrawCommand, FrameOutput, PadDirection, PlayerInputSnapshot, PlayerOneKeyMap, Rect, RgbaImage,
+    RuntimeConfig, RuntimeError, RuntimeHost, TextureId, TextureRegistrar,
 };
 use std::collections::HashMap;
 #[cfg(not(target_arch = "wasm32"))]
@@ -651,7 +651,14 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                     rect: Rect::new(0, 0, self.logical_width, self.logical_height),
                     rgba: [11, 17, 30, 255],
                 });
-                draw_text(&mut commands, 118, 9, "F1 GAME CONFIG", [255, 224, 143, 255], 2);
+                draw_text(
+                    &mut commands,
+                    118,
+                    9,
+                    "F1 GAME CONFIG",
+                    [255, 224, 143, 255],
+                    2,
+                );
                 for option in 0..ArcadeSettings::OPTION_COUNT {
                     let y = 38 + option as i32 * 18;
                     if screen.menu_cursor == option {
@@ -665,7 +672,11 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                         20,
                         y,
                         ArcadeSettings::option_name(option),
-                        if screen.menu_cursor == option { [255, 231, 163, 255] } else { [213, 222, 232, 255] },
+                        if screen.menu_cursor == option {
+                            [255, 231, 163, 255]
+                        } else {
+                            [213, 222, 232, 255]
+                        },
                         1,
                     );
                     draw_text(
@@ -677,17 +688,37 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                         1,
                     );
                 }
-                draw_text(&mut commands, 18, 270, "UP/DOWN SELECT  LEFT/RIGHT CHANGE  F1 SAVE", [185, 214, 235, 255], 1);
+                draw_text(
+                    &mut commands,
+                    18,
+                    270,
+                    "UP/DOWN SELECT  LEFT/RIGHT CHANGE  F1 SAVE",
+                    [185, 214, 235, 255],
+                    1,
+                );
             }
             StartupPhase::KeyRemap => {
                 commands.push(DrawCommand::Rect {
                     rect: Rect::new(0, 0, self.logical_width, self.logical_height),
                     rgba: [13, 19, 33, 255],
                 });
-                draw_text(&mut commands, 112, 10, "F2 KEY REMAP", [255, 224, 143, 255], 2);
+                draw_text(
+                    &mut commands,
+                    112,
+                    10,
+                    "F2 KEY REMAP",
+                    [255, 224, 143, 255],
+                    2,
+                );
                 const ACTIONS: [&str; 8] = [
-                    "UP", "DOWN", "LEFT", "RIGHT",
-                    "WEAK PUNCH", "WEAK KICK", "STRONG PUNCH", "STRONG KICK",
+                    "UP",
+                    "DOWN",
+                    "LEFT",
+                    "RIGHT",
+                    "WEAK PUNCH",
+                    "WEAK KICK",
+                    "STRONG PUNCH",
+                    "STRONG KICK",
                 ];
                 for index in 0..8 {
                     let y = 43 + index as i32 * 25;
@@ -702,7 +733,11 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                         25,
                         y,
                         ACTIONS[index],
-                        if screen.remap_cursor == index { [255, 231, 163, 255] } else { [213, 222, 232, 255] },
+                        if screen.remap_cursor == index {
+                            [255, 231, 163, 255]
+                        } else {
+                            [213, 222, 232, 255]
+                        },
                         1,
                     );
                     draw_text(
@@ -715,9 +750,23 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                     );
                 }
                 if screen.remap_conflict {
-                    draw_text(&mut commands, 105, 250, "KEY ALREADY USED", [255, 120, 120, 255], 1);
+                    draw_text(
+                        &mut commands,
+                        105,
+                        250,
+                        "KEY ALREADY USED",
+                        [255, 120, 120, 255],
+                        1,
+                    );
                 } else {
-                    draw_text(&mut commands, 54, 250, "PRESS A NEW KEY FOR EACH ACTION", [185, 214, 235, 255], 1);
+                    draw_text(
+                        &mut commands,
+                        54,
+                        250,
+                        "PRESS A NEW KEY FOR EACH ACTION",
+                        [185, 214, 235, 255],
+                        1,
+                    );
                 }
                 draw_text(&mut commands, 132, 271, "F2 EXIT", [185, 214, 235, 255], 1);
             }
@@ -791,7 +840,14 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                     );
                 }
                 if screen.settings.show_credits {
-                    draw_text(&mut commands, 320, 9, &format!("CREDITS {}", screen.credits), [255, 231, 163, 255], 1);
+                    draw_text(
+                        &mut commands,
+                        320,
+                        9,
+                        &format!("CREDITS {}", screen.credits),
+                        [255, 231, 163, 255],
+                        1,
+                    );
                 }
             }
             StartupPhase::Title => {
@@ -833,10 +889,31 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                     1,
                 );
                 if screen.settings.show_credits {
-                    draw_text(&mut commands, 148, 264, &format!("CREDITS {}", screen.credits), [255, 231, 163, 255], 1);
+                    draw_text(
+                        &mut commands,
+                        148,
+                        264,
+                        &format!("CREDITS {}", screen.credits),
+                        [255, 231, 163, 255],
+                        1,
+                    );
                 }
-                draw_text(&mut commands, 112, 279, "INSERT COIN: 5", [195, 215, 232, 255], 1);
-                draw_text(&mut commands, 135, 291, "F1 CONFIG  F2 REMAP", [195, 215, 232, 255], 1);
+                draw_text(
+                    &mut commands,
+                    112,
+                    279,
+                    "INSERT COIN: 5",
+                    [195, 215, 232, 255],
+                    1,
+                );
+                draw_text(
+                    &mut commands,
+                    135,
+                    291,
+                    "F1 CONFIG  F2 REMAP",
+                    [195, 215, 232, 255],
+                    1,
+                );
             }
             StartupPhase::CharacterSelect => {
                 commands.push(DrawCommand::Rect {
@@ -919,7 +996,14 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                     }
                 }
                 if screen.settings.show_credits {
-                    draw_text(&mut commands, 320, 10, &format!("CREDITS {}", screen.credits), [255, 231, 163, 255], 1);
+                    draw_text(
+                        &mut commands,
+                        320,
+                        10,
+                        &format!("CREDITS {}", screen.credits),
+                        [255, 231, 163, 255],
+                        1,
+                    );
                 }
                 draw_text(
                     &mut commands,

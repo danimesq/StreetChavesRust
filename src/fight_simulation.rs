@@ -5,13 +5,12 @@ use crate::combat_resolution::{
     CombatResolutionContext,
 };
 use crate::combat_runtime::{
-    C01FrameResult, CombatState, VictoryAnimationContext, ACTION_AIR_STRONG_KICK,
+    AiTickInputs, C01FrameResult, CombatState, VictoryAnimationContext, ACTION_AIR_STRONG_KICK,
     ACTION_AIR_STRONG_PUNCH, ACTION_AIR_WEAK_KICK, ACTION_AIR_WEAK_PUNCH, ACTION_CROUCHING,
     ACTION_CROUCH_STRONG_KICK, ACTION_CROUCH_STRONG_PUNCH, ACTION_CROUCH_WEAK_KICK,
     ACTION_CROUCH_WEAK_PUNCH, ACTION_DEFENDING, ACTION_IDLE, ACTION_JUMPING, ACTION_LOW_DEFENDING,
     ACTION_POSE, ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4,
     ACTION_SPECIAL_FINAL, ACTION_STRONG_KICK, ACTION_STRONG_PUNCH, ACTION_VICTORY, ACTION_WALKING,
-    AiTickInputs,
     ACTION_WEAK_KICK, ACTION_WEAK_PUNCH, SIDE_LEFT,
 };
 use crate::command_recognition::{AttackButton, CommandRecognizer};
@@ -2185,7 +2184,9 @@ impl FightSimulation {
                     difficulty_factor: self.ai_difficulty_factor,
                 };
                 if let Err(error) = self.state.tick_common_ai(ai_input, &mut self.rng) {
-                    report.errors.push(format!("Common.rot [IA] player 2: {error}"));
+                    report
+                        .errors
+                        .push(format!("Common.rot [IA] player 2: {error}"));
                 }
             }
         }

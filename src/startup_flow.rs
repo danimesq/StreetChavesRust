@@ -72,10 +72,7 @@ impl StartupFlow {
     }
 
     /// Restore persisted settings and P1 keyboard bindings.
-    pub fn with_preferences(
-        default_characters: [u8; 2],
-        preferences: ArcadePreferences,
-    ) -> Self {
+    pub fn with_preferences(default_characters: [u8; 2], preferences: ArcadePreferences) -> Self {
         let selected = default_characters.map(|id| id.clamp(1, 15));
         Self {
             phase: StartupPhase::Opening,
@@ -245,7 +242,9 @@ impl StartupFlow {
                 self.insert_credit();
                 StartupEvent::None
             }
-            Some(PhysicalKey::Digit2 | PhysicalKey::Numpad2) if !self.p2_active && self.credits > 0 => {
+            Some(PhysicalKey::Digit2 | PhysicalKey::Numpad2)
+                if !self.p2_active && self.credits > 0 =>
+            {
                 self.credits -= 1;
                 self.p2_active = true;
                 self.confirmed[1] = false;
@@ -296,7 +295,9 @@ impl StartupFlow {
 
         match inputs[0].direction {
             Direction::Up => self.menu_cursor = self.menu_cursor.saturating_sub(1),
-            Direction::Down => self.menu_cursor = (self.menu_cursor + 1).min(ArcadeSettings::OPTION_COUNT - 1),
+            Direction::Down => {
+                self.menu_cursor = (self.menu_cursor + 1).min(ArcadeSettings::OPTION_COUNT - 1)
+            }
             Direction::Left => {
                 self.preferences.settings.adjust(self.menu_cursor, -1);
                 return StartupEvent::PreferencesChanged;
@@ -462,7 +463,10 @@ mod tests {
         let mut flow = start_one_player();
         flow.tick(press_button(0, 0));
         flow.tick(press_key(PhysicalKey::Digit5));
-        assert_eq!(flow.tick(press_key(PhysicalKey::Digit2)), StartupEvent::JoinPlayer { player: 2 });
+        assert_eq!(
+            flow.tick(press_key(PhysicalKey::Digit2)),
+            StartupEvent::JoinPlayer { player: 2 }
+        );
         assert_eq!(flow.credits(), 0);
     }
 
@@ -480,7 +484,10 @@ mod tests {
             flow.tick(down);
         }
         assert_eq!(flow.settings().difficulty, 5);
-        assert_eq!(flow.tick(press_key(PhysicalKey::F1)), StartupEvent::PreferencesChanged);
+        assert_eq!(
+            flow.tick(press_key(PhysicalKey::F1)),
+            StartupEvent::PreferencesChanged
+        );
         assert_eq!(flow.phase(), StartupPhase::Title);
     }
 
@@ -494,8 +501,13 @@ mod tests {
         flow.tick(press_key(PhysicalKey::I));
         assert_eq!(flow.preferences().player_one_keys.keys[0], PhysicalKey::I);
         for key in [
-            PhysicalKey::K, PhysicalKey::J, PhysicalKey::L,
-            PhysicalKey::U, PhysicalKey::O, PhysicalKey::P, PhysicalKey::M,
+            PhysicalKey::K,
+            PhysicalKey::J,
+            PhysicalKey::L,
+            PhysicalKey::U,
+            PhysicalKey::O,
+            PhysicalKey::P,
+            PhysicalKey::M,
         ] {
             flow.tick(press_key(key));
         }
