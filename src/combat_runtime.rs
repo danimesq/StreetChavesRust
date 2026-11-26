@@ -86,6 +86,10 @@ pub struct FighterState {
     pub attack_box: Option<crate::HitboxRecord>,
     pub is_kick: bool,
     pub recoil: u8,
+    /// C17 body-hit slide distance (`hitstun`); distinct from Pascal recoil.
+    pub hitstun: u8,
+    /// C17 victim rotation in degrees per tick (`rot_step`), signed by facing.
+    pub rotation_step: i16,
     pub vertical_velocity: i8,
     pub in_air: bool,
     pub x: f64,

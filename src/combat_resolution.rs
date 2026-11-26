@@ -7,8 +7,12 @@
 use crate::combat_runtime::{
     FighterState, ACTION_AIR_STRONG_KICK, ACTION_AIR_STRONG_PUNCH, ACTION_AIR_WEAK_KICK,
     ACTION_AIR_WEAK_PUNCH, ACTION_CROUCH_STRONG_KICK, ACTION_CROUCH_WEAK_KICK, ACTION_DEFENDING,
-    ACTION_LOW_DEFENDING,
+    ACTION_LOW_DEFENDING, ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL,
+    FORCE_STRONG,
 };
+
+#[cfg(test)]
+use crate::combat_runtime::FORCE_WEAK;
 use crate::melee_collision::MeleeCollision;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -66,6 +70,90 @@ fn is_air_attack(action_id: u16) -> bool {
             | ACTION_AIR_STRONG_PUNCH
             | ACTION_AIR_STRONG_KICK
     )
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+struct CharacterHitOverrides {
+    combo_window: Option<u8>,
+    hitstun: Option<u8>,
+    spinning: bool,
+    vertical_launch: Option<i8>,
+}
+
+/// C17's character-specific branch table from `melee_step`.
+/// Pascal/ROT remains authoritative for the original game; C17 is differential evidence.
+fn character_hit_overrides(
+    character_id: u8,
+    action_id: u16,
+    action_frame: u16,
+    force_strength: u8,
+) -> CharacterHitOverrides {
+    let strong = force_strength == FORCE_STRONG;
+    let mut result = CharacterHitOverrides::default();
+    match character_id {
+        1 if action_id == ACTION_SPECIAL2 && strong => result.hitstun = Some(20),
+        2 if action_id == ACTION_SPECIAL2 && strong => result.hitstun = Some(13),
+        4 => {
+            if action_id == ACTION_SPECIAL2 {
+                result.combo_window = Some(46);
+            }
+            if action_id == ACTION_SPECIAL3 {
+                result.combo_window = Some(47);
+            }
+            if action_id == ACTION_SPECIAL_FINAL {
+                result.hitstun = Some(20);
+                result.spinning = true;
+                result.vertical_launch = Some(-30);
+            }
+        }
+        5 if action_id == ACTION_SPECIAL_FINAL && action_frame >= 15 => {
+            result.spinning = true;
+            result.vertical_launch = Some(-30);
+        }
+        6 => {
+            if action_id == ACTION_SPECIAL_FINAL {
+                result.combo_window = Some(50);
+                if action_frame >= 22 {
+                    result.spinning = true;
+                }
+            }
+            if action_id == ACTION_SPECIAL3 && strong {
+                result.hitstun = Some(25);
+            }
+        }
+        7 if action_id == ACTION_SPECIAL3 && strong => result.hitstun = Some(18),
+        9 => {
+            if action_id == ACTION_SPECIAL_FINAL && action_frame >= 14 {
+                result.spinning = true;
+            }
+            if action_id == ACTION_SPECIAL_FINAL && action_frame >= 15 {
+                result.hitstun = Some(25);
+            }
+        }
+        10 => {
+            if action_id == ACTION_SPECIAL_FINAL && action_frame >= 15 {
+                result.spinning = true;
+            }
+            if action_id == ACTION_SPECIAL4 && strong {
+                result.hitstun = Some(13);
+            }
+        }
+        11 if action_id == ACTION_SPECIAL_FINAL && action_frame >= 20 => result.spinning = true,
+        12 => {
+            if action_id == ACTION_SPECIAL4 && action_frame >= 22 {
+                result.spinning = true;
+            }
+            if action_id == ACTION_SPECIAL2 && strong {
+                result.hitstun = Some(25);
+            }
+        }
+        15 if action_id == ACTION_SPECIAL3 => {
+            result.combo_window = Some(50);
+            result.vertical_launch = Some(-26);
+        }
+        _ => {}
+    }
+    result
 }
 
 /// Apply the common Pascal block/hit consequences to one detected contact.
@@ -178,6 +266,33 @@ fn resolve_melee_contact_inner(
         (attacker.is_kick, attacker.hit_count)
     };
 
+    let attacker_character = fighters[attacker_index].character_id;
+    let attacker_frame = fighters[attacker_index].action_frame;
+    let attacker_force = fighters[attacker_index].force_strength;
+    let overrides = character_hit_overrides(
+        attacker_character,
+        attacker_action,
+        attacker_frame,
+        attacker_force,
+    );
+    if let Some(window) = overrides.combo_window {
+        fighters[attacker_index].hit_timer = window;
+    }
+
+    // C17 initializes slide distance on each successful hit. Rotation and launch
+    // are only overwritten when the source branch actually assigns them.
+    let defender_facing = fighters[defender_index].facing;
+    {
+        let defender = &mut fighters[defender_index];
+        defender.hitstun = overrides.hitstun.unwrap_or(4);
+        if overrides.spinning {
+            defender.rotation_step = if defender_facing == 1 { -20 } else { 20 };
+        }
+        if let Some(vertical_launch) = overrides.vertical_launch {
+            defender.vertical_velocity = vertical_launch;
+        }
+    }
+
     let damage = f64::from(contact.damage) * context.damage_level;
     let defender_action;
     {
@@ -245,6 +360,8 @@ mod tests {
             attack_box: None,
             is_kick: false,
             recoil: 0,
+            hitstun: 0,
+            rotation_step: 0,
             vertical_velocity: 0,
             in_air: false,
             x: 100.0,
@@ -474,5 +591,107 @@ mod tests {
         ctx.clock_stopped = true;
         resolve_melee_contact(&mut fighters, contact(0, 1), ctx).unwrap();
         assert_eq!(fighters[1].health, 100.0);
+    }
+
+    fn resolve_character_hit(
+        character_id: u8,
+        action_id: u16,
+        action_frame: u16,
+        force_strength: u8,
+        defender_x: f64,
+    ) -> [FighterState; 2] {
+        let mut fighters = [fighter(), fighter()];
+        fighters[0].character_id = character_id;
+        fighters[0].action_id = action_id;
+        fighters[0].action_frame = action_frame;
+        fighters[0].force_strength = force_strength;
+        fighters[0].x = 100.0;
+        fighters[1].x = defender_x;
+        resolve_melee_contact(&mut fighters, contact(0, 1), context()).unwrap();
+        fighters
+    }
+
+    #[test]
+    fn c17_combo_windows_apply_per_character_special_overrides() {
+        for (character, action, expected) in [
+            (4, ACTION_SPECIAL2, 46),
+            (4, ACTION_SPECIAL3, 47),
+            (6, ACTION_SPECIAL_FINAL, 50),
+            (15, ACTION_SPECIAL3, 50),
+        ] {
+            let fighters = resolve_character_hit(character, action, 0, FORCE_STRONG, 120.0);
+            assert_eq!(
+                fighters[0].hit_timer, expected,
+                "C{character:02} action {action}"
+            );
+        }
+    }
+
+    #[test]
+    fn c17_hitstun_values_match_the_character_action_force_table() {
+        for (character, action, frame, force, expected) in [
+            (1, ACTION_SPECIAL2, 0, FORCE_STRONG, 20),
+            (2, ACTION_SPECIAL2, 0, FORCE_STRONG, 13),
+            (4, ACTION_SPECIAL_FINAL, 0, FORCE_WEAK, 20),
+            (6, ACTION_SPECIAL3, 0, FORCE_STRONG, 25),
+            (7, ACTION_SPECIAL3, 0, FORCE_STRONG, 18),
+            (9, ACTION_SPECIAL_FINAL, 15, FORCE_WEAK, 25),
+            (10, ACTION_SPECIAL4, 0, FORCE_STRONG, 13),
+            (12, ACTION_SPECIAL2, 0, FORCE_STRONG, 25),
+        ] {
+            let fighters = resolve_character_hit(character, action, frame, force, 120.0);
+            assert_eq!(
+                fighters[1].hitstun, expected,
+                "C{character:02} action {action}"
+            );
+        }
+        let ordinary = resolve_character_hit(3, ACTION_SPECIAL2, 0, FORCE_STRONG, 120.0);
+        assert_eq!(ordinary[1].hitstun, 4);
+    }
+
+    #[test]
+    fn c17_spinning_specials_set_signed_rotation_at_exact_frame_gates() {
+        for (character, action, frame) in [
+            (4, ACTION_SPECIAL_FINAL, 0),
+            (5, ACTION_SPECIAL_FINAL, 15),
+            (6, ACTION_SPECIAL_FINAL, 22),
+            (9, ACTION_SPECIAL_FINAL, 14),
+            (10, ACTION_SPECIAL_FINAL, 15),
+            (11, ACTION_SPECIAL_FINAL, 20),
+            (12, ACTION_SPECIAL4, 22),
+        ] {
+            let right = resolve_character_hit(character, action, frame, FORCE_WEAK, 120.0);
+            assert_eq!(right[1].rotation_step, 20, "C{character:02} right-facing");
+            let left = resolve_character_hit(character, action, frame, FORCE_WEAK, 80.0);
+            assert_eq!(left[1].rotation_step, -20, "C{character:02} left-facing");
+        }
+        for (character, action, frame) in [
+            (5, ACTION_SPECIAL_FINAL, 14),
+            (6, ACTION_SPECIAL_FINAL, 21),
+            (9, ACTION_SPECIAL_FINAL, 13),
+            (10, ACTION_SPECIAL_FINAL, 14),
+            (11, ACTION_SPECIAL_FINAL, 19),
+            (12, ACTION_SPECIAL4, 21),
+        ] {
+            let fighters = resolve_character_hit(character, action, frame, FORCE_WEAK, 120.0);
+            assert_eq!(
+                fighters[1].rotation_step, 0,
+                "C{character:02} before spin gate"
+            );
+        }
+    }
+
+    #[test]
+    fn c17_vertical_launches_are_character_and_move_specific() {
+        for (character, action, frame, expected) in [
+            (4, ACTION_SPECIAL_FINAL, 0, -30),
+            (5, ACTION_SPECIAL_FINAL, 15, -30),
+            (15, ACTION_SPECIAL3, 0, -26),
+        ] {
+            let fighters = resolve_character_hit(character, action, frame, FORCE_WEAK, 120.0);
+            assert_eq!(fighters[1].vertical_velocity, expected, "C{character:02}");
+        }
+        let before_gate = resolve_character_hit(5, ACTION_SPECIAL_FINAL, 14, FORCE_WEAK, 120.0);
+        assert_eq!(before_gate[1].vertical_velocity, 0);
     }
 }
