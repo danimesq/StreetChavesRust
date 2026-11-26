@@ -80,3 +80,5 @@ These repositories are independent projects, not a parent/child chain. For the R
 - [Pascal command recognition primitives](command-recognition.md): relative directions, held-direction counters, ordered INI-rule evaluation, button-edge commands and sequence transitions.
 
 - [Custom character packages](custom-character-packages.md): platform-neutral package validation and opt-in activation, native directory loading, and browser/WASM file handoff.
+
+- [Custom character packages](custom-character-packages.md): implemented native/WASM package ingestion, validation, activation API, browser file handoff, and current gameplay integration boundaries.
