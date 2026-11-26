@@ -12,17 +12,8 @@ use std::process;
 
 fn main() {
     if let Err(error) = run() {
-        eprintln!("street-chaves-web-export: {error}");
-        process::exit(1);
-    }
-}
-
-fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().skip(1).collect();
-    if args.len() != 7 || args[0] == "--help" || args[0] == "-h" {
         eprintln!(
-            "Usage:\n  cargo run --bin street-chaves-web-export -- \\\n            <manifest.json> <wasm-js> <wasm-module> <assets-root> \\\n            <index.html> <main.js> <output-dir>\n\n\
-             Example:\n  cargo run --bin street-chaves-web-export -- \\\n            web/web-export.example.json pkg/street_chaves_rust.js \\\n            pkg/street_chaves_rust_bg.wasm web web/index.html web/main.js \\\n            dist/street-chaves-web"
+            "Usage:\\n  cargo run --bin street-chaves-web-export -- \\\n             <manifest.json> <wasm-js> <wasm-module> <assets-root> \\\n             <index.html> <main.js> <output-dir>\\n\\nExample:\\n  cargo run --bin street-chaves-web-export -- \\\n             web/web-export.example.json pkg/street_chaves_rust.js \\\n             pkg/street_chaves_rust_bg.wasm web web/index.html web/main.js \\\n             dist/street-chaves-web"
         );
         if args.len() != 7 {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "expected seven arguments").into());
