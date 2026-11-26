@@ -1,4 +1,4 @@
-import init, { StreetChavesWebRuntime } from "../pkg/street_chaves_rust.js";
+import init, { StreetChavesWebRuntime } from "./pkg/street_chaves_rust.js";
 
 const diagnostics = document.querySelector("#diagnostics");
 const audioButton = document.querySelector("#enable-audio");
@@ -11,7 +11,7 @@ try {
   await init();
 
   const game = new StreetChavesWebRuntime("street-chaves");
-  await game.load_assets("./assets/street-chaves-manifest.json");
+  await game.load_assets("./web-export.json");
 
   audioButton.addEventListener("click", async () => {
     try {
