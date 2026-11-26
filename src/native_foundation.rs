@@ -1,6 +1,6 @@
-//! Native Street Chaves host using RustMultiConsoleFoundation.
+//! Shared Street Chaves presentation host using RustMultiConsoleFoundation.
 //!
-//! Foundation owns SDL3, the window, event polling, textures and PCM audio.
+//! Foundation owns platform input, drawing, texture handles and audio output.
 //! This module owns Pascal resource interpretation and maps game snapshots to draw commands.
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -349,6 +349,207 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         }
         self.diagnostics.extend(messages.iter().cloned());
         messages
+    }
+
+    /// Register images, INI metadata, and audio clips from the exported web package.
+    ///
+    /// Manifest IDs expected by the first web runtime:
+    /// - stage_XX: stage image (for example stage_01)
+    /// - fighter_XX: fighter sprite strip
+    /// - fighter_ini_XX: fighter metadata INI bytes
+    /// - game_settings: optional game settings INI bytes
+    /// - effect_slot_NNN: clip placed at the matching Pascal sound-bank slot
+    /// - fight_music: optional looping fight track
+    #[cfg(target_arch = "wasm32")]
+    pub fn load_web_resources(
+        &mut self,
+        assets: &LoadedWebAssets,
+        stage_number: u8,
+        character_ids: [u8; 2],
+        fight: &mut FightSimulation,
+    ) -> Vec<String> {
+        let mut messages = Vec::new();
+        self.sprite_frames.clear();
+        self.sprite_heights = [0; 2];
+        self.stage_texture = None;
+
+        let stage_key = format!("stage_{stage_number:02}");
+        if let Some(source) = assets.images.get(&stage_key) {
+            let mut image = source.clone();
+            apply_white_color_key(&mut image);
+            match self.host.register_texture(&image) {
+                Ok(texture) => {
+                    self.stage_texture = Some(texture);
+                    self.stage_size = (image.width, image.height);
+                    self.camera_max_x =
+                        image.width.saturating_sub(self.logical_width) as i32;
+                    messages.push(format!("loaded web stage {stage_number}"));
+                }
+                Err(error) => messages.push(format!("stage {stage_number}: {error}")),
+            }
+        } else {
+            messages.push(format!("web asset {stage_key} is missing; using training stage"));
+        }
+
+        if let Some(bytes) = assets.data.get("game_settings") {
+            if let Ok(text) = std::str::from_utf8(bytes) {
+                let ini = IniDocument::parse(text);
+                self.damage_level = ini
+                    .get("Jogo", "NivelDano")
+                    .and_then(|value| value.parse::<f64>().ok())
+                    .filter(|value| value.is_finite())
+                    .unwrap_or(0.9)
+                    .clamp(0.3, 2.0);
+            } else {
+                messages.push("game_settings is not UTF-8; using default damage level".to_owned());
+            }
+        }
+
+        for player in 0..2 {
+            let character_id = character_ids[player];
+            let sheet_key = format!("fighter_{character_id:02}");
+            let ini_key = format!("fighter_ini_{character_id:02}");
+            let Some(sheet) = assets.images.get(&sheet_key) else {
+                messages.push(format!(
+                    "web asset {sheet_key} is missing; P{} uses vector fallback",
+                    player + 1
+                ));
+                continue;
+            };
+
+            let fighter_ini = assets
+                .data
+                .get(&ini_key)
+                .and_then(|bytes| std::str::from_utf8(bytes).ok())
+                .map(IniDocument::parse)
+                .unwrap_or_default();
+            let sprite_height = fighter_ini
+                .get("Geral", "AlturaSprite")
+                .and_then(|value| value.parse::<i32>().ok())
+                .filter(|value| *value > 0)
+                .unwrap_or(160);
+            let walk_speed = fighter_ini
+                .get("Geral", "Velocidade")
+                .and_then(|value| value.parse::<f64>().ok())
+                .filter(|value| value.is_finite() && *value > 0.0)
+                .unwrap_or(8.0);
+            if !assets.data.contains_key(&ini_key) {
+                messages.push(format!(
+                    "web asset {ini_key} is missing; using default fighter pivots and movement"
+                ));
+            }
+
+            let centers = fighter_ini
+                .section("CentroX")
+                .into_iter()
+                .filter_map(|(key, value)| {
+                    Some((key.parse::<i32>().ok()?, value.parse::<i32>().ok()?))
+                })
+                .collect::<HashMap<_, _>>();
+            let frame_slices = match split_pascal_sprite_sheet(sheet) {
+                Ok(frames) if !frames.is_empty() => frames,
+                Ok(_) => {
+                    messages.push(format!("{sheet_key} contains no delimited frames"));
+                    continue;
+                }
+                Err(error) => {
+                    messages.push(format!("{sheet_key}: {error}"));
+                    continue;
+                }
+            };
+
+            let list_offset = if player == 0 { 0 } else { 50 };
+            for (index, (start_x, frame_width)) in frame_slices.iter().copied().enumerate() {
+                let frame_number = match i32::try_from(index + 1) {
+                    Ok(number) => number,
+                    Err(_) => {
+                        messages.push(format!("{sheet_key} has too many frames"));
+                        break;
+                    }
+                };
+                let mut pixels = match crop_rgba(sheet, start_x, frame_width) {
+                    Ok(image) => image,
+                    Err(error) => {
+                        messages.push(format!("{sheet_key} frame {frame_number}: {error}"));
+                        continue;
+                    }
+                };
+                apply_white_color_key(&mut pixels);
+                match self.host.register_texture(&pixels) {
+                    Ok(texture) => {
+                        self.sprite_frames.insert(
+                            (character_id, list_offset + frame_number),
+                            SpriteFrameMapping {
+                                texture,
+                                source: Rect::new(0, 0, pixels.width, pixels.height),
+                                width: pixels.width,
+                                height: pixels.height,
+                                center_x: centers.get(&frame_number).copied().unwrap_or(0),
+                                sprite_height,
+                            },
+                        );
+                    }
+                    Err(error) => messages.push(format!(
+                        "{sheet_key} frame {frame_number}: {error}"
+                    )),
+                }
+            }
+
+            self.sprite_heights[player] = sprite_height;
+            self.fighter_names[player] = fighter_display_name(character_id).to_owned();
+            let fighter = &mut fight.state.fighters[player];
+            fighter.speed = walk_speed;
+            if fighter.sprite_frame == 0 {
+                fighter.sprite_frame = list_offset + 1;
+            }
+            if player == 1 {
+                fighter.facing = SIDE_LEFT;
+            }
+            messages.push(format!(
+                "P{} loaded web C{:02}: {} frames, height {}, speed {:.1}",
+                player + 1,
+                character_id,
+                frame_slices.len(),
+                sprite_height,
+                walk_speed
+            ));
+        }
+
+        self.web_effect_clips.clear();
+        self.web_effect_bank_len = 0;
+        for slot in 0_u16..=255 {
+            let key = format!("effect_slot_{slot:03}");
+            if let Some(clip) = assets.audio_clips.get(&key).copied() {
+                self.web_effect_clips.insert(slot, clip);
+                self.web_effect_bank_len = usize::from(slot) + 1;
+            }
+        }
+        self.web_music = assets.audio_clips.get("fight_music").copied();
+        if self.web_music.is_some() {
+            messages.push("loaded web fight music".to_owned());
+        }
+
+        self.diagnostics.extend(messages.iter().cloned());
+        messages
+    }
+
+    /// Start the configured web fight track after the host AudioContext is resumed.
+    #[cfg(target_arch = "wasm32")]
+    pub fn play_web_music(&mut self) -> Result<bool, RuntimeError> {
+        let Some(clip) = self.web_music else {
+            return Ok(false);
+        };
+        self.host.audio(&AudioRequest::PlayClip { clip, looped: true })?;
+        Ok(true)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn stop_web_music(&mut self) -> Result<bool, RuntimeError> {
+        let Some(clip) = self.web_music else {
+            return Ok(false);
+        };
+        self.host.audio(&AudioRequest::StopClip { clip })?;
+        Ok(true)
     }
 
     /// Poll Foundation once and return the input sample for each due 28 ms tick.
@@ -1139,6 +1340,7 @@ fn crop_rgba(source: &RgbaImage, x: u32, width: u32) -> Result<RgbaImage, Runtim
     RgbaImage::new(width, source.height, pixels)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn rooted_path(root: &Path, name: &str) -> PathBuf {
     let path = Path::new(name);
     if path.is_absolute() {
@@ -1148,6 +1350,7 @@ fn rooted_path(root: &Path, name: &str) -> PathBuf {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn numbered_path(pattern: &str, number: usize) -> String {
     let Some(start) = pattern.find('#') else {
         return pattern.to_owned();
@@ -1163,6 +1366,7 @@ struct IniDocument {
 }
 
 impl IniDocument {
+    #[cfg(not(target_arch = "wasm32"))]
     fn read(path: &Path) -> Self {
         fs::read_to_string(path)
             .map(|contents| Self::parse(&contents))
