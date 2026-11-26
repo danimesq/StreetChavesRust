@@ -6,11 +6,13 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use foundation_runtime::RuntimeConfig;
-use street_chaves::combat_runtime::{BodyBox, FighterState, ACTION_IDLE, SIDE_LEFT, SIDE_RIGHT};
+use street_chaves::chaves_specials::ChavesSpecialContext;
+use street_chaves::combat_runtime::{
+    BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_IDLE, SIDE_LEFT, SIDE_RIGHT,
+};
 use street_chaves::fight_simulation::{FightSimulation, FightSimulationConfig};
 use street_chaves::native_foundation::NativeFightHost;
 use street_chaves::startup_flow::{StartupEvent, StartupFlow, StartupPhase};
-use street_chaves::{ChavesSpecialContext, CombatState, VictoryAnimationContext};
 
 #[derive(Debug)]
 struct Options {
