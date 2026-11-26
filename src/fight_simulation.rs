@@ -90,14 +90,14 @@ fn execute_rot_ai_section(
     let Some(program) = program else {
         return Ok(());
     };
-    let mut frame =
-        RotExecutionFrame::new(&program, jog, 0).map_err(|error| error.to_string())?;
+    let mut frame = RotExecutionFrame::new(&program, jog, 0).map_err(|error| error.to_string())?;
     frame.set_symbol("Dist", rot_int(i64::from(inputs.distance)));
     frame.set_symbol("DistProj", rot_int(i64::from(inputs.projectile_distance)));
     frame.set_symbol("OppY", rot_int(i64::from(inputs.opponent_y)));
     frame.set_symbol("Ameaca", rot_int(i64::from(inputs.threat)));
     frame.set_symbol("Fator", RotValue::Real(inputs.difficulty_factor));
-    frame.execute_with_host(&program, host)
+    frame
+        .execute_with_host(&program, host)
         .map_err(|error| error.to_string())
 }
 
@@ -718,9 +718,7 @@ impl FightSimulation {
                 if let Some((filename, text)) = embedded_character_rot_source(character_id) {
                     match RotDocument::from_str(filename, text) {
                         Ok(document) => cpu_character_rot[fighter_index] = Some(document),
-                        Err(error) => command_data_errors.push(format!(
-                            "{filename} [IA]: {error}"
-                        )),
+                        Err(error) => command_data_errors.push(format!("{filename} [IA]: {error}")),
                     }
                 }
             }
@@ -764,15 +762,13 @@ impl FightSimulation {
 
     /// Exact CpuNovo formula from Estado7_Golpes.inc.
     pub fn cpu_probability_factor(&self) -> f64 {
-        (8.0 - f64::from(self.cpu_difficulty_level)) * 0.6
-            + 1.3
+        (8.0 - f64::from(self.cpu_difficulty_level)) * 0.6 + 1.3
             - f64::from(self.cpu_campaign_phase) * 0.1
     }
 
     /// Exact defendergolpe formula from Estado7_Golpes.inc.
     pub fn cpu_defense_probability_factor(&self) -> f64 {
-        ((8.0 - f64::from(self.cpu_difficulty_level)) * 0.9
-            + 1.2
+        ((8.0 - f64::from(self.cpu_difficulty_level)) * 0.9 + 1.2
             - f64::from(self.cpu_campaign_phase) * 0.1)
             .max(0.0)
     }
@@ -801,8 +797,7 @@ impl FightSimulation {
         for (_, effect) in self.state.effects.instances_in_slot_order() {
             if effect.can_hit && effect.owner != jog && effect.effect_type != 0 {
                 threat = 1;
-                projectile_distance =
-                    (fighter_x - pascal_round_to_i64(effect.x)).abs() as i32;
+                projectile_distance = (fighter_x - pascal_round_to_i64(effect.x)).abs() as i32;
                 projectile_y = effect.y;
                 projectile_terminating |= effect.terminating;
             }
@@ -826,11 +821,7 @@ impl FightSimulation {
     /// Both scripts run through one live ROT host and one FPC RNG cursor. All
     /// nested AcaoJogador calls therefore preserve the Common/character/Common
     /// action chain and the source order of LongInt/Int64 Random overloads.
-    fn execute_cpu_ai(
-        &mut self,
-        fighter_index: usize,
-        inputs: AiTickInputs,
-    ) -> Result<(), String> {
+    fn execute_cpu_ai(&mut self, fighter_index: usize, inputs: AiTickInputs) -> Result<(), String> {
         let common = self
             .cpu_common_rot
             .as_ref()
@@ -879,11 +870,7 @@ impl FightSimulation {
     }
 
     /// Dispatch CPU AcaoJogador through Common [Acao], Cnn [Acao], Common [AcaoFim].
-    fn execute_cpu_action(
-        &mut self,
-        fighter_index: usize,
-        command_code: u8,
-    ) -> Result<(), String> {
+    fn execute_cpu_action(&mut self, fighter_index: usize, command_code: u8) -> Result<(), String> {
         let common = self
             .cpu_common_rot
             .as_ref()
@@ -2512,15 +2499,12 @@ impl FightSimulation {
         }
         self.update_command_sequences(effective_inputs, &mut report);
 
-        if self.cpu_opponent_enabled
-            && !self.state.clock_stopped
-            && self.state.screen_flash == 0
-        {
+        if self.cpu_opponent_enabled && !self.state.clock_stopped && self.state.screen_flash == 0 {
             let context = self.cpu_projectile_context(1);
             if let Err(error) = self.execute_cpu_ai(1, context.inputs) {
-                report.errors.push(format!(
-                    "Comum/C02-C15 [IA] CPU fighter 2: {error}"
-                ));
+                report
+                    .errors
+                    .push(format!("Comum/C02-C15 [IA] CPU fighter 2: {error}"));
             }
         }
 
@@ -2545,10 +2529,7 @@ impl FightSimulation {
 
         // Pascal defendergolpe runs after fighter animation updates, before
         // desenhaefeitos advances projectile positions and lifetimes.
-        if self.cpu_opponent_enabled
-            && !self.state.clock_stopped
-            && self.state.screen_flash == 0
-        {
+        if self.cpu_opponent_enabled && !self.state.clock_stopped && self.state.screen_flash == 0 {
             if let Err(error) = self.execute_cpu_defense(1) {
                 report.errors.push(format!(
                     "Estado7_Golpes.inc [defendergolpe] CPU fighter 2: {error}"
@@ -2683,24 +2664,32 @@ mod rot_runtime_integration_tests {
 
         // Both projectiles belong to P1. The last matching effect in the arena
         // determines DistProj and ProjY, as CpuNovo/defendergolpe do in Pascal.
-        fight.state.effects.spawn(
-            7,
-            Some('A'),
-            1,
-            EFFECT_SIDE_RIGHT,
-            220.0,
-            90.0,
-            &mut fight.rng,
-        ).unwrap();
-        fight.state.effects.spawn(
-            7,
-            Some('B'),
-            1,
-            EFFECT_SIDE_RIGHT,
-            250.0,
-            110.0,
-            &mut fight.rng,
-        ).unwrap();
+        fight
+            .state
+            .effects
+            .spawn(
+                7,
+                Some('A'),
+                1,
+                EFFECT_SIDE_RIGHT,
+                220.0,
+                90.0,
+                &mut fight.rng,
+            )
+            .unwrap();
+        fight
+            .state
+            .effects
+            .spawn(
+                7,
+                Some('B'),
+                1,
+                EFFECT_SIDE_RIGHT,
+                250.0,
+                110.0,
+                &mut fight.rng,
+            )
+            .unwrap();
 
         let context = fight.cpu_projectile_context(1);
         assert_eq!(context.inputs.distance, 200);
@@ -2714,15 +2703,19 @@ mod rot_runtime_integration_tests {
     fn cpu_projectile_context_ignores_its_own_projectiles() {
         let mut fight = simulation();
         fight.state.fighters[1].x = 300.0;
-        fight.state.effects.spawn(
-            7,
-            Some('A'),
-            2,
-            crate::combat_runtime::SIDE_LEFT,
-            250.0,
-            110.0,
-            &mut fight.rng,
-        ).unwrap();
+        fight
+            .state
+            .effects
+            .spawn(
+                7,
+                Some('A'),
+                2,
+                crate::combat_runtime::SIDE_LEFT,
+                250.0,
+                110.0,
+                &mut fight.rng,
+            )
+            .unwrap();
 
         let context = fight.cpu_projectile_context(1);
         assert_eq!(context.inputs.threat, 0);
@@ -2734,14 +2727,14 @@ mod rot_runtime_integration_tests {
         for character_id in 1..=15 {
             let mut fight = simulation();
             let (filename, source) = embedded_character_rot_source(character_id).unwrap();
-            fight.cpu_character_rot[1] =
-                Some(RotDocument::from_str(filename, source).unwrap());
+            fight.cpu_character_rot[1] = Some(RotDocument::from_str(filename, source).unwrap());
             fight.state.fighters[1].character_id = character_id;
             // Exercise the real guard and interpreter for every script. Follow-up
             // command tests cover AcaoJogador's per-character action routing.
             fight.state.fighters[1].defending = true;
             let inputs = fight.cpu_projectile_context(1).inputs;
-            fight.execute_cpu_ai(1, inputs)
+            fight
+                .execute_cpu_ai(1, inputs)
                 .unwrap_or_else(|error| panic!("{filename} [IA]: {error}"));
         }
     }
