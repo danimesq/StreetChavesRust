@@ -6,6 +6,9 @@ on:
       - "Cargo.toml"
       - "src/**"
       - "tests/**"
+      - "FoundationWebBuild.toml"
+      - "web/**"
+      - "docs/CHS-SCREEN-STATUS.md"
       - ".github/workflows/rust-contracts.yml"
   pull_request:
     paths:
@@ -32,6 +35,33 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Install WebAssembly target
         run: rustup target add wasm32-unknown-unknown
+      - name: Fetch original game resource sources
+        run: |
+          git clone --depth 1 --filter=blob:none --no-checkout https://github.com/danimesq/OpenStreetChaves.git ../OpenStreetChaves
+          git -C ../OpenStreetChaves sparse-checkout init --no-cone
+          git -C ../OpenStreetChaves sparse-checkout set /Cenarios/ /Lutadores/ /Dados/ /Sons/ /Musicas/ /Embutidos/Musica.wav /LICENSE
+          git -C ../OpenStreetChaves checkout
+      - name: Validate Foundation Web build manifest and source files
+        run: |
+          python3 - <<'PY'
+          import tomllib
+          from pathlib import Path
+
+          config = tomllib.loads(Path("FoundationWebBuild.toml").read_text())
+          assert config["schema-version"] == 1
+          source_root = Path(config["assets-root"]).resolve()
+          assets = config["assets"]
+          ids = [asset["id"] for asset in assets]
+          assert len(ids) == len(set(ids)), "duplicate resource IDs in FoundationWebBuild.toml"
+          missing = [
+              asset["source"]
+              for asset in assets
+              if not (source_root / asset["source"]).is_file()
+          ]
+          assert not missing, "missing OpenStreetChaves source assets: " + ", ".join(missing)
+          assert len(assets) == 107, f"expected 107 configured resources, found {len(assets)}"
+          print(f"Validated {len(assets)} source assets from {source_root}")
+          PY
       - name: Check Rust formatting
         run: cargo fmt --all -- --check
       - name: Run contract tests with the Foundation native host
