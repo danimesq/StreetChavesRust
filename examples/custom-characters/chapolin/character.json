@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "chapolin",
+  "display_name": "Chapolin Colorado",
+  "author": "StreetChaves custom character example",
+  "version": "1.0.0",
+  "fighter": {
+    "attributes": {
+      "sprite_height": 199,
+      "walk_speed": 9.0
+    },
+    "moves": [
+      { "id": "special_1", "name": "Corneta Paralisadora" },
+      { "id": "special_2", "name": "Marreta Biônica" },
+      { "id": "special_3", "name": "Chipote Voador" },
+      { "id": "special_4", "name": "Pílulas de Nanicolina" },
+      { "id": "special_5", "name": "Sigam-me os Bons!" }
+    ],
+    "animations": {}
+  },
+  "assets": {}
+}
