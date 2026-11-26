@@ -4,8 +4,8 @@
 //! read a directory from disk; browser/WASM hosts may supply files selected by
 //! the user. No filesystem, DOM, SDL, or JavaScript type enters this module.
 
-use std::collections::{BTreeMap, BTreeSet};
 use serde_json::Value;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub const MANIFEST_FILE: &str = "character.json";
 pub const CURRENT_SCHEMA_VERSION: u64 = 1;
@@ -39,16 +39,29 @@ pub struct CustomCharacterPackage {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PackageError {
     EmptyPackage,
-    TooManyFiles { actual: usize, maximum: usize },
-    PackageTooLarge { actual: usize, maximum: usize },
-    AssetTooLarge { path: String, actual: usize, maximum: usize },
+    TooManyFiles {
+        actual: usize,
+        maximum: usize,
+    },
+    PackageTooLarge {
+        actual: usize,
+        maximum: usize,
+    },
+    AssetTooLarge {
+        path: String,
+        actual: usize,
+        maximum: usize,
+    },
     UnsafePath(String),
     DuplicatePath(String),
     MissingManifest,
     InvalidManifest(String),
     UnsupportedSchema(u64),
     InvalidCharacterId(String),
-    MissingAsset { id: String, path: String },
+    MissingAsset {
+        id: String,
+        path: String,
+    },
     DuplicateCharacterId(String),
     CharacterNotFound(String),
 }
@@ -57,17 +70,31 @@ impl std::fmt::Display for PackageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::EmptyPackage => write!(f, "package contains no files"),
-            Self::TooManyFiles { actual, maximum } => write!(f, "package has {actual} files; maximum is {maximum}"),
-            Self::PackageTooLarge { actual, maximum } => write!(f, "package is {actual} bytes; maximum is {maximum}"),
-            Self::AssetTooLarge { path, actual, maximum } => write!(f, "asset {path:?} is {actual} bytes; maximum is {maximum}"),
+            Self::TooManyFiles { actual, maximum } => {
+                write!(f, "package has {actual} files; maximum is {maximum}")
+            }
+            Self::PackageTooLarge { actual, maximum } => {
+                write!(f, "package is {actual} bytes; maximum is {maximum}")
+            }
+            Self::AssetTooLarge {
+                path,
+                actual,
+                maximum,
+            } => write!(f, "asset {path:?} is {actual} bytes; maximum is {maximum}"),
             Self::UnsafePath(path) => write!(f, "unsafe package path: {path:?}"),
             Self::DuplicatePath(path) => write!(f, "duplicate package path: {path:?}"),
             Self::MissingManifest => write!(f, "package is missing {MANIFEST_FILE}"),
             Self::InvalidManifest(reason) => write!(f, "invalid character manifest: {reason}"),
-            Self::UnsupportedSchema(version) => write!(f, "unsupported character schema version: {version}"),
+            Self::UnsupportedSchema(version) => {
+                write!(f, "unsupported character schema version: {version}")
+            }
             Self::InvalidCharacterId(id) => write!(f, "invalid character id: {id:?}"),
-            Self::MissingAsset { id, path } => write!(f, "asset {id:?} references missing file {path:?}"),
-            Self::DuplicateCharacterId(id) => write!(f, "character package {id:?} is already installed"),
+            Self::MissingAsset { id, path } => {
+                write!(f, "asset {id:?} references missing file {path:?}")
+            }
+            Self::DuplicateCharacterId(id) => {
+                write!(f, "character package {id:?} is already installed")
+            }
             Self::CharacterNotFound(id) => write!(f, "character package {id:?} is not installed"),
         }
     }
@@ -84,32 +111,52 @@ impl CustomCharacterPackage {
         for file in files {
             count += 1;
             if count > MAX_PACKAGE_FILES {
-                return Err(PackageError::TooManyFiles { actual: count, maximum: MAX_PACKAGE_FILES });
+                return Err(PackageError::TooManyFiles {
+                    actual: count,
+                    maximum: MAX_PACKAGE_FILES,
+                });
             }
             validate_relative_path(&file.path)?;
             if file.path != MANIFEST_FILE && file.bytes.len() > MAX_ASSET_BYTES {
-                return Err(PackageError::AssetTooLarge { path: file.path, actual: file.bytes.len(), maximum: MAX_ASSET_BYTES });
+                return Err(PackageError::AssetTooLarge {
+                    path: file.path,
+                    actual: file.bytes.len(),
+                    maximum: MAX_ASSET_BYTES,
+                });
             }
             total_bytes = total_bytes.saturating_add(file.bytes.len());
             if total_bytes > MAX_PACKAGE_BYTES {
-                return Err(PackageError::PackageTooLarge { actual: total_bytes, maximum: MAX_PACKAGE_BYTES });
+                return Err(PackageError::PackageTooLarge {
+                    actual: total_bytes,
+                    maximum: MAX_PACKAGE_BYTES,
+                });
             }
             let path = file.path;
             if indexed.insert(path.clone(), file.bytes).is_some() {
                 return Err(PackageError::DuplicatePath(path));
             }
         }
-        if indexed.is_empty() { return Err(PackageError::EmptyPackage); }
-        let manifest_bytes = indexed.get(MANIFEST_FILE).ok_or(PackageError::MissingManifest)?;
+        if indexed.is_empty() {
+            return Err(PackageError::EmptyPackage);
+        }
+        let manifest_bytes = indexed
+            .get(MANIFEST_FILE)
+            .ok_or(PackageError::MissingManifest)?;
         let manifest_json: Value = serde_json::from_slice(manifest_bytes)
             .map_err(|error| PackageError::InvalidManifest(error.to_string()))?;
         let manifest = parse_manifest(&manifest_json)?;
         for (id, path) in &manifest.assets {
             if !indexed.contains_key(path) {
-                return Err(PackageError::MissingAsset { id: id.clone(), path: path.clone() });
+                return Err(PackageError::MissingAsset {
+                    id: id.clone(),
+                    path: path.clone(),
+                });
             }
         }
-        Ok(Self { manifest, files: indexed })
+        Ok(Self {
+            manifest,
+            files: indexed,
+        })
     }
 
     /// Asset bytes are decoded by the native or browser presentation host.
@@ -132,13 +179,17 @@ pub struct CustomCharacterRegistry {
 impl CustomCharacterRegistry {
     pub fn install(&mut self, package: CustomCharacterPackage) -> Result<(), PackageError> {
         let id = package.manifest.id.clone();
-        if self.packages.contains_key(&id) { return Err(PackageError::DuplicateCharacterId(id)); }
+        if self.packages.contains_key(&id) {
+            return Err(PackageError::DuplicateCharacterId(id));
+        }
         self.packages.insert(id, package);
         Ok(())
     }
 
     pub fn enable(&mut self, id: &str) -> Result<(), PackageError> {
-        if !self.packages.contains_key(id) { return Err(PackageError::CharacterNotFound(id.to_owned())); }
+        if !self.packages.contains_key(id) {
+            return Err(PackageError::CharacterNotFound(id.to_owned()));
+        }
         self.enabled.insert(id.to_owned());
         Ok(())
     }
@@ -149,36 +200,72 @@ impl CustomCharacterRegistry {
         Ok(())
     }
 
-    pub fn is_enabled(&self, id: &str) -> bool { self.enabled.contains(id) }
-    pub fn get(&self, id: &str) -> Option<&CustomCharacterPackage> { self.packages.get(id) }
+    pub fn is_enabled(&self, id: &str) -> bool {
+        self.enabled.contains(id)
+    }
+    pub fn get(&self, id: &str) -> Option<&CustomCharacterPackage> {
+        self.packages.get(id)
+    }
     pub fn enabled(&self) -> impl Iterator<Item = &CustomCharacterPackage> {
         self.enabled.iter().filter_map(|id| self.packages.get(id))
     }
 }
 
 fn parse_manifest(value: &Value) -> Result<CharacterManifest, PackageError> {
-    let object = value.as_object().ok_or_else(|| PackageError::InvalidManifest("root must be a JSON object".to_owned()))?;
-    let schema_version = object.get("schema_version").and_then(Value::as_u64)
-        .ok_or_else(|| PackageError::InvalidManifest("schema_version must be an unsigned integer".to_owned()))?;
-    if schema_version != CURRENT_SCHEMA_VERSION { return Err(PackageError::UnsupportedSchema(schema_version)); }
+    let object = value
+        .as_object()
+        .ok_or_else(|| PackageError::InvalidManifest("root must be a JSON object".to_owned()))?;
+    let schema_version = object
+        .get("schema_version")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| {
+            PackageError::InvalidManifest("schema_version must be an unsigned integer".to_owned())
+        })?;
+    if schema_version != CURRENT_SCHEMA_VERSION {
+        return Err(PackageError::UnsupportedSchema(schema_version));
+    }
     let string_field = |name: &str| -> Result<String, PackageError> {
-        object.get(name).and_then(Value::as_str).map(str::to_owned)
+        object
+            .get(name)
+            .and_then(Value::as_str)
+            .map(str::to_owned)
             .ok_or_else(|| PackageError::InvalidManifest(format!("{name} must be a string")))
     };
     let id = string_field("id")?;
-    if id.is_empty() || id.len() > 64 || !id.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'_') {
+    if id.is_empty()
+        || id.len() > 64
+        || !id
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'_')
+    {
         return Err(PackageError::InvalidCharacterId(id));
     }
-    let fighter = object.get("fighter").filter(|v| v.is_object()).cloned()
+    let fighter = object
+        .get("fighter")
+        .filter(|v| v.is_object())
+        .cloned()
         .ok_or_else(|| PackageError::InvalidManifest("fighter must be a JSON object".to_owned()))?;
-    let asset_values = object.get("assets").and_then(Value::as_object)
-        .ok_or_else(|| PackageError::InvalidManifest("assets must be an object of asset-id to path mappings".to_owned()))?;
+    let asset_values = object
+        .get("assets")
+        .and_then(Value::as_object)
+        .ok_or_else(|| {
+            PackageError::InvalidManifest(
+                "assets must be an object of asset-id to path mappings".to_owned(),
+            )
+        })?;
     let mut assets = BTreeMap::new();
     for (asset_id, path_value) in asset_values {
         if asset_id.is_empty() || asset_id.len() > 64 {
-            return Err(PackageError::InvalidManifest(format!("invalid asset id {asset_id:?}")));
+            return Err(PackageError::InvalidManifest(format!(
+                "invalid asset id {asset_id:?}"
+            )));
         }
-        let path = path_value.as_str().ok_or_else(|| PackageError::InvalidManifest(format!("asset {asset_id:?} path must be a string")))?.to_owned();
+        let path = path_value
+            .as_str()
+            .ok_or_else(|| {
+                PackageError::InvalidManifest(format!("asset {asset_id:?} path must be a string"))
+            })?
+            .to_owned();
         validate_relative_path(&path)?;
         assets.insert(asset_id.clone(), path);
     }
@@ -187,16 +274,25 @@ fn parse_manifest(value: &Value) -> Result<CharacterManifest, PackageError> {
         id,
         display_name: string_field("display_name")?,
         version: string_field("version")?,
-        author: object.get("author").and_then(Value::as_str).map(str::to_owned),
+        author: object
+            .get("author")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
         fighter,
         assets,
     })
 }
 
 fn validate_relative_path(path: &str) -> Result<(), PackageError> {
-    if path.is_empty() || path.starts_with('/') || path.contains('\\') || path.contains(':')
-        || path.split('/').any(|part| part.is_empty() || part == "." || part == "..")
-        || path.chars().any(char::is_control) {
+    if path.is_empty()
+        || path.starts_with('/')
+        || path.contains('\\')
+        || path.contains(':')
+        || path
+            .split('/')
+            .any(|part| part.is_empty() || part == "." || part == "..")
+        || path.chars().any(char::is_control)
+    {
         return Err(PackageError::UnsafePath(path.to_owned()));
     }
     Ok(())
@@ -204,23 +300,42 @@ fn validate_relative_path(path: &str) -> Result<(), PackageError> {
 
 /// Native directory adapter. WASM hosts pass selected file bytes to from_files.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn load_directory(root: impl AsRef<std::path::Path>) -> Result<CustomCharacterPackage, PackageError> {
+pub fn load_directory(
+    root: impl AsRef<std::path::Path>,
+) -> Result<CustomCharacterPackage, PackageError> {
     use std::fs;
     use std::path::Path;
-    fn visit(root: &Path, current: &Path, files: &mut Vec<PackageFile>) -> Result<(), PackageError> {
-        let entries = fs::read_dir(current).map_err(|e| PackageError::InvalidManifest(e.to_string()))?;
+    fn visit(
+        root: &Path,
+        current: &Path,
+        files: &mut Vec<PackageFile>,
+    ) -> Result<(), PackageError> {
+        let entries =
+            fs::read_dir(current).map_err(|e| PackageError::InvalidManifest(e.to_string()))?;
         for entry in entries {
             let entry = entry.map_err(|e| PackageError::InvalidManifest(e.to_string()))?;
             let path = entry.path();
-            let metadata = fs::symlink_metadata(&path).map_err(|e| PackageError::InvalidManifest(e.to_string()))?;
-            if metadata.file_type().is_symlink() { return Err(PackageError::UnsafePath(path.display().to_string())); }
-            if metadata.is_dir() { visit(root, &path, files)?; }
-            else if metadata.is_file() {
-                let relative = path.strip_prefix(root).map_err(|_| PackageError::UnsafePath(path.display().to_string()))?;
-                let relative = relative.to_str().ok_or_else(|| PackageError::UnsafePath(path.display().to_string()))?
+            let metadata = fs::symlink_metadata(&path)
+                .map_err(|e| PackageError::InvalidManifest(e.to_string()))?;
+            if metadata.file_type().is_symlink() {
+                return Err(PackageError::UnsafePath(path.display().to_string()));
+            }
+            if metadata.is_dir() {
+                visit(root, &path, files)?;
+            } else if metadata.is_file() {
+                let relative = path
+                    .strip_prefix(root)
+                    .map_err(|_| PackageError::UnsafePath(path.display().to_string()))?;
+                let relative = relative
+                    .to_str()
+                    .ok_or_else(|| PackageError::UnsafePath(path.display().to_string()))?
                     .replace(std::path::MAIN_SEPARATOR, "/");
-                let bytes = fs::read(&path).map_err(|e| PackageError::InvalidManifest(e.to_string()))?;
-                files.push(PackageFile { path: relative, bytes });
+                let bytes =
+                    fs::read(&path).map_err(|e| PackageError::InvalidManifest(e.to_string()))?;
+                files.push(PackageFile {
+                    path: relative,
+                    bytes,
+                });
             }
         }
         Ok(())
@@ -249,7 +364,7 @@ mod tests {
     fn validates_and_activates_package_from_host_supplied_files() {
         let package = CustomCharacterPackage::from_files(files()).unwrap();
         assert_eq!(package.manifest.id, "chapolin");
-        assert_eq!(package.asset_bytes("fighter_strip"), Some(&[1,2,3][..]));
+        assert_eq!(package.asset_bytes("fighter_strip"), Some(&[1, 2, 3][..]));
         let mut registry = CustomCharacterRegistry::default();
         registry.install(package).unwrap();
         assert!(!registry.is_enabled("chapolin"));
@@ -262,25 +377,40 @@ mod tests {
     fn rejects_path_traversal() {
         let mut input = files();
         input[1].path = "../outside.png".to_owned();
-        assert_eq!(CustomCharacterPackage::from_files(input).unwrap_err(), PackageError::UnsafePath("../outside.png".to_owned()));
+        assert_eq!(
+            CustomCharacterPackage::from_files(input).unwrap_err(),
+            PackageError::UnsafePath("../outside.png".to_owned())
+        );
     }
     #[test]
     fn rejects_missing_assets() {
-        let mut input = files(); input.pop();
-        assert!(matches!(CustomCharacterPackage::from_files(input), Err(PackageError::MissingAsset { .. })));
+        let mut input = files();
+        input.pop();
+        assert!(matches!(
+            CustomCharacterPackage::from_files(input),
+            Err(PackageError::MissingAsset { .. })
+        ));
     }
     #[test]
     fn rejects_duplicate_ids() {
         let package = CustomCharacterPackage::from_files(files()).unwrap();
         let mut registry = CustomCharacterRegistry::default();
         registry.install(package.clone()).unwrap();
-        assert_eq!(registry.install(package).unwrap_err(), PackageError::DuplicateCharacterId("chapolin".to_owned()));
+        assert_eq!(
+            registry.install(package).unwrap_err(),
+            PackageError::DuplicateCharacterId("chapolin".to_owned())
+        );
     }
     #[test]
     fn rejects_unknown_schema() {
         let mut input = files();
-        let text = String::from_utf8(input[0].bytes.clone()).unwrap().replace("\"schema_version\":1", "\"schema_version\":2");
+        let text = String::from_utf8(input[0].bytes.clone())
+            .unwrap()
+            .replace("\"schema_version\":1", "\"schema_version\":2");
         input[0].bytes = text.into_bytes();
-        assert_eq!(CustomCharacterPackage::from_files(input).unwrap_err(), PackageError::UnsupportedSchema(2));
+        assert_eq!(
+            CustomCharacterPackage::from_files(input).unwrap_err(),
+            PackageError::UnsupportedSchema(2)
+        );
     }
 }
