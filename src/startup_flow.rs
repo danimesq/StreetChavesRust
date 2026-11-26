@@ -87,9 +87,8 @@ impl StartupFlow {
         match self.phase {
             StartupPhase::Opening => {
                 if p1_confirm || p2_confirm || self.ticks >= Self::INTRO_TICKS {
-                    self.p2_active = self.p2_active
-                        || p2_confirm
-                        || inputs[1].direction != Direction::Neutral;
+                    self.p2_active =
+                        self.p2_active || p2_confirm || inputs[1].direction != Direction::Neutral;
                     self.phase = StartupPhase::Title;
                     self.ticks = 0;
                 }
@@ -99,9 +98,8 @@ impl StartupFlow {
                     self.phase = StartupPhase::CharacterSelect;
                     self.ticks = 0;
                     self.confirmed = [false; 2];
-                    self.p2_active = self.p2_active
-                        || p2_confirm
-                        || inputs[1].direction != Direction::Neutral;
+                    self.p2_active =
+                        self.p2_active || p2_confirm || inputs[1].direction != Direction::Neutral;
                 }
             }
             StartupPhase::CharacterSelect => {
@@ -209,9 +207,7 @@ mod tests {
         flow.tick(press_start());
         assert_eq!(
             flow.tick(press_start()),
-            StartupEvent::StartFight {
-                characters: [1, 4]
-            }
+            StartupEvent::StartFight { characters: [1, 4] }
         );
     }
 
@@ -243,12 +239,9 @@ mod tests {
         ];
         assert_eq!(
             flow.tick(both_confirm),
-            StartupEvent::StartFight {
-                characters: [1, 3]
-            }
+            StartupEvent::StartFight { characters: [1, 3] }
         );
     }
-
 
     #[test]
     fn player_two_can_join_from_the_title_screen() {

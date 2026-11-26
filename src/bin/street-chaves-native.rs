@@ -51,11 +51,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         for inputs in samples {
             match startup.tick(inputs) {
                 StartupEvent::StartFight { characters } => {
-                    eprintln!(
-                        "[select] P1={} P2={}",
-                        characters[0],
-                        characters[1]
-                    );
+                    eprintln!("[select] P1={} P2={}", characters[0], characters[1]);
                     fight = build_fight(characters, options.seed);
                     if let Some(root) = options.game_root.as_ref() {
                         for line in host.load_original_game(

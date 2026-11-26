@@ -11,8 +11,8 @@ use crate::input::{Button, Direction, InputEvent, InputFrame, InputSampler};
 use crate::startup_flow::{StartupPhase, StartupScreen};
 use foundation_runtime::native_sdl::Sdl3Host;
 use foundation_runtime::{
-    DrawCommand, FrameOutput, PadDirection, PlayerInputSnapshot, Rect, RgbaImage,
-    RuntimeConfig, RuntimeError, RuntimeHost, TextureId,
+    DrawCommand, FrameOutput, PadDirection, PlayerInputSnapshot, Rect, RgbaImage, RuntimeConfig,
+    RuntimeError, RuntimeHost, TextureId,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -62,7 +62,9 @@ pub struct NativeFightHost {
 impl NativeFightHost {
     pub fn new(config: RuntimeConfig) -> Result<Self, RuntimeError> {
         if config.width == 0 || config.height == 0 {
-            return Err(RuntimeError::InvalidConfig("logical dimensions must be non-zero"));
+            return Err(RuntimeError::InvalidConfig(
+                "logical dimensions must be non-zero",
+            ));
         }
         let host = Sdl3Host::new(config.clone())?;
         let now = host.now();
@@ -141,7 +143,9 @@ impl NativeFightHost {
             return Err(RuntimeError::InvalidConfig("player slot must be 0 or 1"));
         }
         if !(1..=15).contains(&character_id) {
-            return Err(RuntimeError::InvalidConfig("original fighter ID must be in 1..=15"));
+            return Err(RuntimeError::InvalidConfig(
+                "original fighter ID must be in 1..=15",
+            ));
         }
 
         let root = game_root.as_ref();
@@ -151,18 +155,22 @@ impl NativeFightHost {
             .get("Geral", "AlturaSprite")
             .and_then(|v| v.parse::<i32>().ok())
             .filter(|v| *v > 0)
-            .ok_or_else(|| RuntimeError::Host(format!(
-                "{} has no valid [Geral] AlturaSprite",
-                ini_path.display()
-            )))?;
+            .ok_or_else(|| {
+                RuntimeError::Host(format!(
+                    "{} has no valid [Geral] AlturaSprite",
+                    ini_path.display()
+                ))
+            })?;
         let walk_speed = fighter_ini
             .get("Geral", "Velocidade")
             .and_then(|v| v.parse::<f64>().ok())
             .filter(|v| v.is_finite() && *v > 0.0)
-            .ok_or_else(|| RuntimeError::Host(format!(
-                "{} has no valid [Geral] Velocidade",
-                ini_path.display()
-            )))?;
+            .ok_or_else(|| {
+                RuntimeError::Host(format!(
+                    "{} has no valid [Geral] Velocidade",
+                    ini_path.display()
+                ))
+            })?;
 
         let resources = IniDocument::read(&root.join("Dados/Recursos.ini"));
         let pattern = resources
@@ -173,9 +181,7 @@ impl NativeFightHost {
         let centers = fighter_ini
             .section("CentroX")
             .into_iter()
-            .filter_map(|(key, value)| {
-                Some((key.parse::<i32>().ok()?, value.parse::<i32>().ok()?))
-            })
+            .filter_map(|(key, value)| Some((key.parse::<i32>().ok()?, value.parse::<i32>().ok()?)))
             .collect::<HashMap<_, _>>();
         let frame_slices = split_pascal_sprite_sheet(&sheet)?;
         if frame_slices.is_empty() {
@@ -293,9 +299,7 @@ impl NativeFightHost {
     }
 
     /// Poll Foundation once and return the input sample for each due 28 ms tick.
-    pub fn poll_input_ticks(
-        &mut self,
-    ) -> Result<(TickBatch, Vec<[InputFrame; 2]>), RuntimeError> {
+    pub fn poll_input_ticks(&mut self) -> Result<(TickBatch, Vec<[InputFrame; 2]>), RuntimeError> {
         let snapshot = self.host.poll_input()?;
         self.quit_requested = snapshot.quit_requested;
         for player in 0..2 {
@@ -337,7 +341,9 @@ impl NativeFightHost {
 
     pub fn render_startup(&mut self, screen: &StartupScreen) -> Result<(), RuntimeError> {
         let mut commands = Vec::with_capacity(500);
-        commands.push(DrawCommand::Clear { rgba: [12, 17, 32, 255] });
+        commands.push(DrawCommand::Clear {
+            rgba: [12, 17, 32, 255],
+        });
         match screen.phase {
             StartupPhase::Opening => {
                 append_training_stage(
@@ -357,7 +363,11 @@ impl NativeFightHost {
                     let active = beat == index;
                     commands.push(DrawCommand::Rect {
                         rect: Rect::new(x, 75, 110, 74),
-                        rgba: if active { [62, 94, 119, 255] } else { [35, 54, 78, 255] },
+                        rgba: if active {
+                            [62, 94, 119, 255]
+                        } else {
+                            [35, 54, 78, 255]
+                        },
                     });
                     commands.push(DrawCommand::Rect {
                         rect: Rect::new(x + 8, 83, 94, 45),
@@ -378,10 +388,31 @@ impl NativeFightHost {
                         );
                     }
                 }
-                draw_text(&mut commands, 77, 204, "STREET CHAVES", [255, 221, 130, 255], 3);
-                draw_text(&mut commands, 124, 243, "O LUTADOR DA VILA", [241, 239, 231, 255], 1);
+                draw_text(
+                    &mut commands,
+                    77,
+                    204,
+                    "STREET CHAVES",
+                    [255, 221, 130, 255],
+                    3,
+                );
+                draw_text(
+                    &mut commands,
+                    124,
+                    243,
+                    "O LUTADOR DA VILA",
+                    [241, 239, 231, 255],
+                    1,
+                );
                 if (screen.ticks / 14) % 2 == 0 {
-                    draw_text(&mut commands, 126, 274, "PRESS Z OR R TO SKIP", [255, 255, 255, 255], 1);
+                    draw_text(
+                        &mut commands,
+                        126,
+                        274,
+                        "PRESS Z OR R TO SKIP",
+                        [255, 255, 255, 255],
+                        1,
+                    );
                 }
             }
             StartupPhase::Title => {
@@ -396,24 +427,56 @@ impl NativeFightHost {
                 });
                 draw_text(&mut commands, 65, 82, "STREET", [255, 224, 138, 255], 4);
                 draw_text(&mut commands, 73, 127, "CHAVES", [255, 247, 221, 255], 4);
-                draw_text(&mut commands, 105, 174, "O LUTADOR DA VILA", [194, 222, 238, 255], 1);
+                draw_text(
+                    &mut commands,
+                    105,
+                    174,
+                    "O LUTADOR DA VILA",
+                    [194, 222, 238, 255],
+                    1,
+                );
                 if (screen.ticks / 16) % 2 == 0 {
-                    draw_text(&mut commands, 93, 212, "PRESS Z TO START", [255, 255, 255, 255], 2);
+                    draw_text(
+                        &mut commands,
+                        93,
+                        212,
+                        "PRESS Z TO START",
+                        [255, 255, 255, 255],
+                        2,
+                    );
                 }
-                draw_text(&mut commands, 112, 239, "P2: PRESS R TO JOIN", [190, 224, 247, 255], 1);
+                draw_text(
+                    &mut commands,
+                    112,
+                    239,
+                    "P2: PRESS R TO JOIN",
+                    [190, 224, 247, 255],
+                    1,
+                );
             }
             StartupPhase::CharacterSelect => {
                 commands.push(DrawCommand::Rect {
                     rect: Rect::new(0, 0, self.logical_width, self.logical_height),
                     rgba: [18, 29, 51, 255],
                 });
-                draw_text(&mut commands, 76, 10, "SELECT FIGHTER", [255, 226, 145, 255], 2);
+                draw_text(
+                    &mut commands,
+                    76,
+                    10,
+                    "SELECT FIGHTER",
+                    [255, 226, 145, 255],
+                    2,
+                );
                 draw_text(
                     &mut commands,
                     14,
                     32,
                     &format!("P1 {}", fighter_display_name(screen.selected[0])),
-                    if screen.confirmed[0] { [117, 239, 162, 255] } else { [255, 233, 171, 255] },
+                    if screen.confirmed[0] {
+                        [117, 239, 162, 255]
+                    } else {
+                        [255, 233, 171, 255]
+                    },
                     1,
                 );
                 let p2_label = if screen.confirmed[1] {
@@ -426,9 +489,21 @@ impl NativeFightHost {
                 draw_text(&mut commands, 236, 32, &p2_label, [168, 221, 249, 255], 1);
 
                 const NAMES: [&str; 15] = [
-                    "CHAVES", "MADRUGA", "CHIQUINHA", "QUICO", "FLORINDA",
-                    "GIRAFAL", "BARRIGA", "BRUXA", "PATY", "NHONHO",
-                    "GODINES", "FURTADO", "JAIMINHO", "NEVES", "GLORIA",
+                    "CHAVES",
+                    "MADRUGA",
+                    "CHIQUINHA",
+                    "QUICO",
+                    "FLORINDA",
+                    "GIRAFAL",
+                    "BARRIGA",
+                    "BRUXA",
+                    "PATY",
+                    "NHONHO",
+                    "GODINES",
+                    "FURTADO",
+                    "JAIMINHO",
+                    "NEVES",
+                    "GLORIA",
                 ];
                 for index in 0..15 {
                     let col = index % 5;
@@ -444,7 +519,14 @@ impl NativeFightHost {
                         rect: Rect::new(x + 6, y + 7, 17, 31),
                         rgba: fighter_palette(id).0,
                     });
-                    draw_text(&mut commands, x + 27, y + 20, NAMES[index], [245, 244, 236, 255], 1);
+                    draw_text(
+                        &mut commands,
+                        x + 27,
+                        y + 20,
+                        NAMES[index],
+                        [245, 244, 236, 255],
+                        1,
+                    );
                     if screen.selected[0] == id {
                         outline_rect(&mut commands, x, y, 73, 47, [255, 219, 107, 255]);
                     }
@@ -452,8 +534,22 @@ impl NativeFightHost {
                         outline_rect(&mut commands, x + 2, y + 2, 69, 43, [100, 210, 255, 255]);
                     }
                 }
-                draw_text(&mut commands, 14, 229, "P1 ARROWS + Z", [255, 225, 140, 255], 1);
-                draw_text(&mut commands, 230, 229, "P2 WASD + R", [161, 222, 251, 255], 1);
+                draw_text(
+                    &mut commands,
+                    14,
+                    229,
+                    "P1 ARROWS + Z",
+                    [255, 225, 140, 255],
+                    1,
+                );
+                draw_text(
+                    &mut commands,
+                    230,
+                    229,
+                    "P2 WASD + R",
+                    [161, 222, 251, 255],
+                    1,
+                );
                 draw_text(
                     &mut commands,
                     73,
@@ -490,7 +586,9 @@ impl NativeFightHost {
         scene: &[DrawCommand],
     ) -> Result<(), RuntimeError> {
         let mut commands = Vec::with_capacity(scene.len() + 800);
-        commands.push(DrawCommand::Clear { rgba: [12, 18, 30, 255] });
+        commands.push(DrawCommand::Clear {
+            rgba: [12, 18, 30, 255],
+        });
         if let Some(texture) = self.stage_texture {
             commands.push(DrawCommand::Texture {
                 texture,
@@ -513,12 +611,7 @@ impl NativeFightHost {
         }
         commands.extend_from_slice(scene);
         for fighter in &frame.fighters {
-            append_fighter(
-                &mut commands,
-                fighter,
-                frame.camera_x,
-                &self.sprite_frames,
-            );
+            append_fighter(&mut commands, fighter, frame.camera_x, &self.sprite_frames);
         }
         append_hud(
             &mut commands,
@@ -541,7 +634,9 @@ impl NativeFightHost {
 }
 
 fn apply_player_snapshot(sampler: &mut InputSampler, snapshot: PlayerInputSnapshot) {
-    sampler.apply_event(InputEvent::DirectionChanged(map_direction(snapshot.direction)));
+    sampler.apply_event(InputEvent::DirectionChanged(map_direction(
+        snapshot.direction,
+    )));
     for slot in 0..32 {
         let bit = 1_u32 << slot;
         if snapshot.pressed_buttons & bit != 0 {
@@ -598,16 +693,29 @@ fn append_fighter(
     }
 }
 
-fn append_vector_fighter(commands: &mut Vec<DrawCommand>, fighter: &FighterPresentation, x: i32, feet: i32) {
+fn append_vector_fighter(
+    commands: &mut Vec<DrawCommand>,
+    fighter: &FighterPresentation,
+    x: i32,
+    feet: i32,
+) {
     let (shirt, shorts, hat) = fighter_palette(fighter.character_id);
     let phase = (fighter.action_frame % 8) as i32;
     let walking = fighter.action_id == 2;
     let punching = matches!(fighter.action_id, 3 | 5 | 8 | 10 | 13 | 15);
     let kicking = matches!(fighter.action_id, 4 | 6 | 9 | 11 | 14 | 16);
     let crouching = matches!(fighter.action_id, 7 | 8 | 9 | 10 | 11 | 21 | 22);
-    let airborne = fighter.in_air || fighter.action_id == 12 || (13..=16).contains(&fighter.action_id);
+    let airborne =
+        fighter.in_air || fighter.action_id == 12 || (13..=16).contains(&fighter.action_id);
     let bob = if walking { phase % 4 / 2 } else { 0 };
-    let body_y = feet - if airborne { 43 } else if crouching { 27 } else { 39 } + bob;
+    let body_y =
+        feet - if airborne {
+            43
+        } else if crouching {
+            27
+        } else {
+            39
+        } + bob;
     let face = if fighter.facing == SIDE_LEFT { -1 } else { 1 };
 
     commands.push(DrawCommand::Rect {
@@ -637,11 +745,24 @@ fn append_vector_fighter(commands: &mut Vec<DrawCommand>, fighter: &FighterPrese
     if kicking {
         let extension = if fighter.action_frame % 4 < 2 { 9 } else { 15 };
         commands.push(DrawCommand::Rect {
-            rect: Rect::new(x + face * 4 - if face < 0 { extension } else { 0 }, feet - 13, extension as u32, 5),
+            rect: Rect::new(
+                x + face * 4 - if face < 0 { extension } else { 0 },
+                feet - 13,
+                extension as u32,
+                5,
+            ),
             rgba: [32, 35, 44, 255],
         });
     } else {
-        let stride = if walking { if phase < 4 { 3 } else { -3 } } else { 0 };
+        let stride = if walking {
+            if phase < 4 {
+                3
+            } else {
+                -3
+            }
+        } else {
+            0
+        };
         commands.push(DrawCommand::Rect {
             rect: Rect::new(x - 6 - stride, feet - 11, 5, 11),
             rgba: [34, 38, 49, 255],
@@ -651,7 +772,13 @@ fn append_vector_fighter(commands: &mut Vec<DrawCommand>, fighter: &FighterPrese
             rgba: [34, 38, 49, 255],
         });
     }
-    let arm_length = if punching { 15 } else if fighter.defending { 8 } else { 5 };
+    let arm_length = if punching {
+        15
+    } else if fighter.defending {
+        8
+    } else {
+        5
+    };
     commands.push(DrawCommand::Rect {
         rect: Rect::new(
             x + face * 7 - if face < 0 { arm_length } else { 0 },
@@ -665,12 +792,20 @@ fn append_vector_fighter(commands: &mut Vec<DrawCommand>, fighter: &FighterPrese
 
 fn fighter_palette(id: u8) -> ([u8; 4], [u8; 4], [u8; 4]) {
     match id {
-        1 => ([76, 166, 104, 255], [194, 52, 48, 255], [218, 190, 128, 255]),
+        1 => (
+            [76, 166, 104, 255],
+            [194, 52, 48, 255],
+            [218, 190, 128, 255],
+        ),
         2 => ([112, 122, 146, 255], [74, 82, 104, 255], [92, 78, 54, 255]),
         3 => ([236, 126, 154, 255], [76, 86, 118, 255], [91, 52, 76, 255]),
         4 => ([210, 66, 56, 255], [46, 90, 170, 255], [242, 226, 184, 255]),
         7 => ([154, 86, 172, 255], [64, 64, 86, 255], [190, 150, 210, 255]),
-        _ => ([76, 128, 188, 255], [54, 72, 104, 255], [180, 192, 214, 255]),
+        _ => (
+            [76, 128, 188, 255],
+            [54, 72, 104, 255],
+            [180, 192, 214, 255],
+        ),
     }
 }
 
@@ -739,7 +874,11 @@ fn append_hud(
         let health = fighter.health.clamp(0.0, LIFE_MAX);
         commands.push(DrawCommand::Rect {
             rect: Rect::new(left, 18, (bar_width as f64 * health / LIFE_MAX) as u32, 9),
-            rgba: if health > 40.0 { [73, 194, 115, 255] } else { [219, 74, 64, 255] },
+            rgba: if health > 40.0 {
+                [73, 194, 115, 255]
+            } else {
+                [219, 74, 64, 255]
+            },
         });
         commands.push(DrawCommand::Rect {
             rect: Rect::new(left, 31, 86, 4),
@@ -750,10 +889,31 @@ fn append_hud(
             rect: Rect::new(left, 31, (86.0 * charge / CHARGE_MAX) as u32, 4),
             rgba: [70, 164, 232, 255],
         });
-        draw_text(commands, left + 94, 29, &format!("P{}", fighter.power), [182, 211, 241, 255], 1);
+        draw_text(
+            commands,
+            left + 94,
+            29,
+            &format!("P{}", fighter.power),
+            [182, 211, 241, 255],
+            1,
+        );
     }
-    draw_text(commands, width as i32 / 2 - 28, 7, "STREET CHAVES", [255, 222, 130, 255], 1);
-    draw_text(commands, width as i32 / 2 - 18, 23, &format!("TICK {}", frame.tick_index), [213, 219, 229, 255], 1);
+    draw_text(
+        commands,
+        width as i32 / 2 - 28,
+        7,
+        "STREET CHAVES",
+        [255, 222, 130, 255],
+        1,
+    );
+    draw_text(
+        commands,
+        width as i32 / 2 - 18,
+        23,
+        &format!("TICK {}", frame.tick_index),
+        [213, 219, 229, 255],
+        1,
+    );
     commands.push(DrawCommand::Rect {
         rect: Rect::new(0, height.saturating_sub(16), width, 16),
         rgba: [10, 13, 21, 222],
@@ -769,13 +929,32 @@ fn append_hud(
 }
 
 fn outline_rect(commands: &mut Vec<DrawCommand>, x: i32, y: i32, w: u32, h: u32, rgba: [u8; 4]) {
-    commands.push(DrawCommand::Rect { rect: Rect::new(x, y, w, 2), rgba });
-    commands.push(DrawCommand::Rect { rect: Rect::new(x, y + h as i32 - 2, w, 2), rgba });
-    commands.push(DrawCommand::Rect { rect: Rect::new(x, y, 2, h), rgba });
-    commands.push(DrawCommand::Rect { rect: Rect::new(x + w as i32 - 2, y, 2, h), rgba });
+    commands.push(DrawCommand::Rect {
+        rect: Rect::new(x, y, w, 2),
+        rgba,
+    });
+    commands.push(DrawCommand::Rect {
+        rect: Rect::new(x, y + h as i32 - 2, w, 2),
+        rgba,
+    });
+    commands.push(DrawCommand::Rect {
+        rect: Rect::new(x, y, 2, h),
+        rgba,
+    });
+    commands.push(DrawCommand::Rect {
+        rect: Rect::new(x + w as i32 - 2, y, 2, h),
+        rgba,
+    });
 }
 
-fn draw_text(commands: &mut Vec<DrawCommand>, x: i32, y: i32, text: &str, rgba: [u8; 4], scale: u32) {
+fn draw_text(
+    commands: &mut Vec<DrawCommand>,
+    x: i32,
+    y: i32,
+    text: &str,
+    rgba: [u8; 4],
+    scale: u32,
+) {
     let mut cursor = x;
     for ch in text.chars() {
         for (row, bits) in glyph(ch.to_ascii_uppercase()).iter().enumerate() {
@@ -799,26 +978,46 @@ fn draw_text(commands: &mut Vec<DrawCommand>, x: i32, y: i32, text: &str, rgba: 
 
 fn glyph(ch: char) -> [u8; 7] {
     match ch {
-        'A' => [14, 17, 17, 31, 17, 17, 17], 'B' => [30, 17, 17, 30, 17, 17, 30],
-        'C' => [14, 17, 16, 16, 16, 17, 14], 'D' => [30, 17, 17, 17, 17, 17, 30],
-        'E' => [31, 16, 16, 30, 16, 16, 31], 'F' => [31, 16, 16, 30, 16, 16, 16],
-        'G' => [14, 17, 16, 23, 17, 17, 15], 'H' => [17, 17, 17, 31, 17, 17, 17],
-        'I' => [14, 4, 4, 4, 4, 4, 14], 'J' => [7, 2, 2, 2, 18, 18, 12],
-        'K' => [17, 18, 20, 24, 20, 18, 17], 'L' => [16, 16, 16, 16, 16, 16, 31],
-        'M' => [17, 27, 21, 21, 17, 17, 17], 'N' => [17, 25, 25, 21, 19, 19, 17],
-        'O' => [14, 17, 17, 17, 17, 17, 14], 'P' => [30, 17, 17, 30, 16, 16, 16],
-        'Q' => [14, 17, 17, 17, 21, 18, 13], 'R' => [30, 17, 17, 30, 20, 18, 17],
-        'S' => [15, 16, 16, 14, 1, 1, 30], 'T' => [31, 4, 4, 4, 4, 4, 4],
-        'U' => [17, 17, 17, 17, 17, 17, 14], 'V' => [17, 17, 17, 17, 17, 10, 4],
-        'W' => [17, 17, 17, 21, 21, 21, 10], 'X' => [17, 17, 10, 4, 10, 17, 17],
-        'Y' => [17, 17, 10, 4, 4, 4, 4], 'Z' => [31, 1, 2, 4, 8, 16, 31],
-        '0' => [14, 17, 19, 21, 25, 17, 14], '1' => [4, 12, 4, 4, 4, 4, 14],
-        '2' => [14, 17, 1, 2, 4, 8, 31], '3' => [30, 1, 1, 14, 1, 1, 30],
-        '4' => [2, 6, 10, 18, 31, 2, 2], '5' => [31, 16, 16, 30, 1, 1, 30],
-        '6' => [14, 16, 16, 30, 17, 17, 14], '7' => [31, 1, 2, 4, 8, 8, 8],
-        '8' => [14, 17, 17, 14, 17, 17, 14], '9' => [14, 17, 17, 15, 1, 1, 14],
-        ':' => [0, 4, 4, 0, 4, 4, 0], '-' => [0, 0, 0, 31, 0, 0, 0],
-        ' ' => [0; 7], _ => [31, 17, 5, 4, 4, 0, 4],
+        'A' => [14, 17, 17, 31, 17, 17, 17],
+        'B' => [30, 17, 17, 30, 17, 17, 30],
+        'C' => [14, 17, 16, 16, 16, 17, 14],
+        'D' => [30, 17, 17, 17, 17, 17, 30],
+        'E' => [31, 16, 16, 30, 16, 16, 31],
+        'F' => [31, 16, 16, 30, 16, 16, 16],
+        'G' => [14, 17, 16, 23, 17, 17, 15],
+        'H' => [17, 17, 17, 31, 17, 17, 17],
+        'I' => [14, 4, 4, 4, 4, 4, 14],
+        'J' => [7, 2, 2, 2, 18, 18, 12],
+        'K' => [17, 18, 20, 24, 20, 18, 17],
+        'L' => [16, 16, 16, 16, 16, 16, 31],
+        'M' => [17, 27, 21, 21, 17, 17, 17],
+        'N' => [17, 25, 25, 21, 19, 19, 17],
+        'O' => [14, 17, 17, 17, 17, 17, 14],
+        'P' => [30, 17, 17, 30, 16, 16, 16],
+        'Q' => [14, 17, 17, 17, 21, 18, 13],
+        'R' => [30, 17, 17, 30, 20, 18, 17],
+        'S' => [15, 16, 16, 14, 1, 1, 30],
+        'T' => [31, 4, 4, 4, 4, 4, 4],
+        'U' => [17, 17, 17, 17, 17, 17, 14],
+        'V' => [17, 17, 17, 17, 17, 10, 4],
+        'W' => [17, 17, 17, 21, 21, 21, 10],
+        'X' => [17, 17, 10, 4, 10, 17, 17],
+        'Y' => [17, 17, 10, 4, 4, 4, 4],
+        'Z' => [31, 1, 2, 4, 8, 16, 31],
+        '0' => [14, 17, 19, 21, 25, 17, 14],
+        '1' => [4, 12, 4, 4, 4, 4, 14],
+        '2' => [14, 17, 1, 2, 4, 8, 31],
+        '3' => [30, 1, 1, 14, 1, 1, 30],
+        '4' => [2, 6, 10, 18, 31, 2, 2],
+        '5' => [31, 16, 16, 30, 1, 1, 30],
+        '6' => [14, 16, 16, 30, 17, 17, 14],
+        '7' => [31, 1, 2, 4, 8, 8, 8],
+        '8' => [14, 17, 17, 14, 17, 17, 14],
+        '9' => [14, 17, 17, 15, 1, 1, 14],
+        ':' => [0, 4, 4, 0, 4, 4, 0],
+        '-' => [0, 0, 0, 31, 0, 0, 0],
+        ' ' => [0; 7],
+        _ => [31, 17, 5, 4, 4, 0, 4],
     }
 }
 
@@ -874,11 +1073,17 @@ fn crop_rgba(source: &RgbaImage, x: u32, width: u32) -> Result<RgbaImage, Runtim
 
 fn rooted_path(root: &Path, name: &str) -> PathBuf {
     let path = Path::new(name);
-    if path.is_absolute() { path.to_path_buf() } else { root.join(path) }
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        root.join(path)
+    }
 }
 
 fn numbered_path(pattern: &str, number: usize) -> String {
-    let Some(start) = pattern.find('#') else { return pattern.to_owned() };
+    let Some(start) = pattern.find('#') else {
+        return pattern.to_owned();
+    };
     let width = pattern[start..].chars().take_while(|c| *c == '#').count();
     let end = start + width;
     format!("{}{:0width$}{}", &pattern[..start], number, &pattern[end..])
@@ -901,7 +1106,9 @@ impl IniDocument {
         let mut section = String::new();
         for raw in contents.lines() {
             let line = raw.trim();
-            if line.is_empty() || line.starts_with(';') { continue; }
+            if line.is_empty() || line.starts_with(';') {
+                continue;
+            }
             if line.starts_with('[') && line.ends_with(']') {
                 section = line[1..line.len() - 1].trim().to_ascii_lowercase();
             } else if let Some((key, value)) = line.split_once('=') {
@@ -922,7 +1129,8 @@ impl IniDocument {
 
     fn section(&self, section: &str) -> Vec<(&str, &str)> {
         let section = section.to_ascii_lowercase();
-        self.values.iter()
+        self.values
+            .iter()
             .filter(|((name, _), _)| name == &section)
             .map(|((_, key), value)| (key.as_str(), value.as_str()))
             .collect()
@@ -931,10 +1139,22 @@ impl IniDocument {
 
 fn fighter_display_name(id: u8) -> &'static str {
     match id {
-        1 => "CHAVES", 2 => "SEU MADRUGA", 3 => "CHIQUINHA", 4 => "QUICO",
-        5 => "DONA FLORINDA", 6 => "PROF GIRAFAL", 7 => "SR BARRIGA", 8 => "BRUXA",
-        9 => "PATY", 10 => "NHONHO", 11 => "GODINES", 12 => "SR FURTADO",
-        13 => "JAIMINHO", 14 => "DONA NEVES", 15 => "GLORIA", _ => "CUSTOM",
+        1 => "CHAVES",
+        2 => "SEU MADRUGA",
+        3 => "CHIQUINHA",
+        4 => "QUICO",
+        5 => "DONA FLORINDA",
+        6 => "PROF GIRAFAL",
+        7 => "SR BARRIGA",
+        8 => "BRUXA",
+        9 => "PATY",
+        10 => "NHONHO",
+        11 => "GODINES",
+        12 => "SR FURTADO",
+        13 => "JAIMINHO",
+        14 => "DONA NEVES",
+        15 => "GLORIA",
+        _ => "CUSTOM",
     }
 }
 
@@ -944,8 +1164,14 @@ mod tests {
 
     #[test]
     fn resource_patterns_keep_pascal_hash_width() {
-        assert_eq!(numbered_path("Cenarios/Cenario-##.bmp", 1), "Cenarios/Cenario-01.bmp");
-        assert_eq!(numbered_path("Efeitos/Efeito-###.bmp", 7), "Efeitos/Efeito-007.bmp");
+        assert_eq!(
+            numbered_path("Cenarios/Cenario-##.bmp", 1),
+            "Cenarios/Cenario-01.bmp"
+        );
+        assert_eq!(
+            numbered_path("Efeitos/Efeito-###.bmp", 7),
+            "Efeitos/Efeito-007.bmp"
+        );
     }
 
     #[test]
@@ -965,16 +1191,15 @@ mod tests {
             }
         }
         let image = RgbaImage::new(width as u32, height as u32, pixels).unwrap();
-        assert_eq!(split_pascal_sprite_sheet(&image).unwrap(), vec![(0, 2), (3, 2), (6, 1)]);
+        assert_eq!(
+            split_pascal_sprite_sheet(&image).unwrap(),
+            vec![(0, 2), (3, 2), (6, 1)]
+        );
     }
 
     #[test]
     fn color_key_only_makes_pure_white_transparent() {
-        let mut image = RgbaImage::new(
-            2,
-            1,
-            vec![255, 255, 255, 255, 10, 20, 30, 255],
-        ).unwrap();
+        let mut image = RgbaImage::new(2, 1, vec![255, 255, 255, 255, 10, 20, 30, 255]).unwrap();
         apply_white_color_key(&mut image);
         assert_eq!(&image.pixels[0..4], &[255, 255, 255, 0]);
         assert_eq!(&image.pixels[4..8], &[10, 20, 30, 255]);
