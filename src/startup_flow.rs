@@ -87,6 +87,9 @@ impl StartupFlow {
         match self.phase {
             StartupPhase::Opening => {
                 if p1_confirm || p2_confirm || self.ticks >= Self::INTRO_TICKS {
+                    self.p2_active = self.p2_active
+                        || p2_confirm
+                        || inputs[1].direction != Direction::Neutral;
                     self.phase = StartupPhase::Title;
                     self.ticks = 0;
                 }
