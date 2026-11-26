@@ -4,7 +4,7 @@
 //! This module owns Pascal resource interpretation and maps game snapshots to draw commands.
 
 use crate::audio_foundation::{FoundationAudioOutput, PascalAudioLayout};
-use crate::combat_runtime::{SIDE_LEFT, SIDE_RIGHT};
+use crate::combat_runtime::SIDE_LEFT;
 use crate::fight_simulation::{FightPresentationFrame, FightSimulation, FighterPresentation};
 use crate::fixed_timestep::{FixedTimestepClock, TickBatch};
 use crate::input::{Button, Direction, InputEvent, InputFrame, InputSampler};
@@ -915,7 +915,7 @@ fn append_hud(
         1,
     );
     commands.push(DrawCommand::Rect {
-        rect: Rect::new(0, height.saturating_sub(16), width, 16),
+        rect: Rect::new(0, height.saturating_sub(16) as i32, width, 16),
         rgba: [10, 13, 21, 222],
     });
     draw_text(
