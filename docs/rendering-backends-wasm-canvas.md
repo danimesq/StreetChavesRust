@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document proposes an architecture for separating the StreetChavesRust game engine from its presentation backends. It describes a future implementation, not existing functionality: the repository currently has foundational Rust contracts, but no playable runtime, SDL3 frontend, or Canvas frontend.
+This document records the shared presentation architecture now used by the native SDL3 host and the browser WASM host. The repository has a Foundation-backed native host and an initial WASM + Canvas 2D + WebAudio host. The browser harness can run the startup flow and fight presentation when supplied with an exported asset manifest. It is an initial browser runtime slice, not a claim of complete original-game or visual/audio parity.
 
 The target is one Rust game implementation with multiple host/rendering adapters:
 
@@ -116,7 +116,7 @@ The browser adapter hosts the same Rust engine compiled to WebAssembly. It owns:
 - Mapping the shared draw list to Canvas 2D operations.
 - Browser-specific error reporting and lifecycle handling.
 
-A Rust implementation can use `wasm-bindgen` and `web-sys` for the browser boundary and Canvas 2D API. Those dependencies belong only to the Web adapter. The engine and shared presentation contract should not import them.
+The implemented browser adapter uses `wasm-bindgen` and `web-sys` for the browser boundary and Canvas 2D API. Those dependencies belong only to the Foundation Web adapter. The engine and shared presentation contract do not import them.
 
 Canvas 2D is the recommended first web backend. It is sufficient for a 2D fighting game and avoids making WebGL/WebGPU a prerequisite. A later GPU renderer can implement the same presentation contract if profiling demonstrates a real need.
 
@@ -210,7 +210,7 @@ A future CI matrix should at least cover:
 - A browser smoke/integration test that loads the WASM module, initializes a canvas, advances a deterministic short fight fixture and verifies that drawing is issued.
 - A native headless test proving the engine can run without initializing SDL or opening a window.
 
-The exact packaging tool (`wasm-pack`, `trunk`, or a custom build) is intentionally undecided. Choose it after the browser entry point, asset delivery and deployment requirements are known.
+The current browser entry point is built with `wasm-pack --target web`. The exported HTML harness and Construct-style manifest example live in `web/`; other packaging/deployment integrations can be added without changing the game-facing Foundation contracts.
 
 ## Testing and parity strategy
 
@@ -246,7 +246,7 @@ A renderer change must not invalidate gameplay tests. A browser rendering discre
 
 **Exit gate:** the native adapter renders snapshots while the engine remains independently testable.
 
-### Stage C — WASM and Canvas proof of concept
+### Stage C — WASM and Canvas proof of concept (implemented initial slice)
 
 - Add the `wasm32-unknown-unknown` target and a browser-only adapter.
 - Export a narrow initialization/input/update interface from Rust.
@@ -256,7 +256,7 @@ A renderer change must not invalidate gameplay tests. A browser rendering discre
 
 **Exit gate:** the browser displays a diagnostic scene from the shared Rust presentation contract, with no duplicate gameplay implementation and no SDL dependency in the WASM build.
 
-### Stage D — Fight rendering and browser hardening
+### Stage D — Fight rendering and browser hardening (in progress)
 
 - Connect fighter, stage, HUD and effect resources to the shared draw contract.
 - Implement browser input and lifecycle handling.
@@ -272,7 +272,7 @@ A renderer change must not invalidate gameplay tests. A browser rendering discre
 - Whether the Web target initially supports keyboard only or also browser Gamepad API.
 - How fonts and text are rasterized consistently enough across SDL and browsers.
 - How asset bundles are delivered without redistributing unlicensed original assets.
-- Whether browser audio is in the first Web milestone or a later independent adapter.
+- Whether to replace browser-native WebAudio final mixing with an AudioWorklet-backed PCM mixer for tighter sample-level parity.
 - Whether a later GPU backend is justified by profiling; Canvas 2D remains the baseline.
 
 These decisions must be made from implementation evidence. Do not add WebGL/WebGPU, a JavaScript gameplay engine, or a large cross-platform framework merely to make the first browser proof of concept work.
@@ -284,7 +284,7 @@ These decisions must be made from implementation evidence. Do not add WebGL/WebG
 - Importing SDL types into shared code.
 - Letting render cadence control simulation cadence.
 - Using Canvas APIs inside the game core.
-- Requiring WebGL/WebGPU for the first browser build.
+- Requiring WebGL/WebGPU for the first browser build. Canvas 2D is the implemented initial browser renderer; WebGL remains deferred.
 - Claiming full game parity or a playable Web version before the corresponding systems and assets exist.
 
 
@@ -306,3 +306,10 @@ The direct `wasm32-unknown-unknown` + `wasm-bindgen`/web bindings route is diffe
 Do not choose between these routes from assumptions. The [Web rendering backend study](web-rendering-backend-study.md) defines the two feasibility spikes and a shared-scene benchmark plan. It also records Construct 2/3 integration constraints, including the C3 worker/DOM boundary and SDL/Emscripten's main-thread rendering requirement.
 
 No SDL3/Emscripten Rust build or browser performance result is claimed by this documentation.
+
+
+## Current implementation note
+
+The Foundation-backed host types are implemented in `src/native_foundation.rs` as `FightPresentationHost<H>`, with the public aliases `NativeFightHost` and `WebFightHost`. The browser entry point is `src/web_host.rs`; the Foundation adapter is enabled with `web-foundation`. The exported HTML harness and asset manifest example are documented in [WebAssembly browser host and exported assets](webassembly-host-and-assets.md).
+
+The manifest packages images, alternate browser audio encodings, and game data beside the HTML page. The browser host decodes supported audio using WebAudio `decodeAudioData()`, with per-voice gain, looping, stopping, restart-on-replay, and a 48-voice ceiling. It does not claim bit-exact native PCM mixing.
