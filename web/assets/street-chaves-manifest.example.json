@@ -35,12 +35,14 @@
       "id": "effect_slot_001",
       "path": "audio/Som-02.ogg",
       "fallbacks": ["audio/Som-02.m4a", "audio/Som-02.wav"],
+      "volume_percent": 100,
       "kind": "audio"
     },
     {
       "id": "fight_music",
       "path": "audio/Musica-01.ogg",
       "fallbacks": ["audio/Musica-01.m4a", "audio/Musica-01.mp3"],
+      "volume_percent": 100,
       "kind": "audio"
     }
   ]
