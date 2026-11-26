@@ -8,7 +8,7 @@ The API does not advance simulation, timers, RNG, nor mutate fighter state. The 
 
 ## Audio host slice
 
-The first native output slice is tracked in audio-backend-pr36.md. It ports the Pascal mixer contract to a platform-neutral Rust PCM mixer and a native SDL3 callback adapter. The host loads WAVs from a local OpenStreetChaves installation and consumes SomPendente once after each simulation tick. It does not place SDL types in the combat core and does not add SDL to the WASM target.
+The first native audio slice is documented in audio-backend-pr36.md. The Foundation consumer integration is documented in foundation-native-host-pr37.md: Foundation owns the SDL3 window, textures, WAV decoding/device/mixer; StreetChavesRust retains Pascal resource-bank indexing, the two-player input bridge and the 28 ms fixed-step simulation. SomPendente is consumed once after a simulation tick. The opt-in dependency is excluded from wasm32.
 
 ### Native SDL host
 

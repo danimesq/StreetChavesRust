@@ -10,9 +10,13 @@ use std::fmt;
 /// Pascal-shaped 48-voice PCM mixer, independent of platform audio APIs.
 pub mod audio;
 
-/// Native SDL3 audio device and OpenStreetChaves resource-bank adapter.
-#[cfg(not(target_arch = "wasm32"))]
-pub mod audio_sdl;
+/// Pascal resource-bank mapping delegated to Foundation's audio host.
+#[cfg(all(feature = "native-foundation", not(target_arch = "wasm32")))]
+pub mod audio_foundation;
+
+/// Native two-player fixed-step bridge and renderer consumer for Foundation SDL3.
+#[cfg(all(feature = "native-foundation", not(target_arch = "wasm32")))]
+pub mod native_foundation;
 
 /// Source-preserving lexer and parser for the pinned Pascal ROT dialect.
 pub mod rot_runtime;
