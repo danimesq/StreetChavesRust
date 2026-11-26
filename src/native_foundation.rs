@@ -14,9 +14,11 @@ use crate::startup_flow::{StartupPhase, StartupScreen};
 use foundation_runtime::native_sdl::Sdl3Host;
 #[cfg(target_arch = "wasm32")]
 use foundation_runtime::web::{Canvas2dHost, LoadedWebAssets};
+#[cfg(target_arch = "wasm32")]
+use foundation_runtime::{AudioClipId, AudioRequest};
 use foundation_runtime::{
-    AudioClipId, AudioRequest, DrawCommand, FrameOutput, PadDirection, PlayerInputSnapshot, Rect,
-    RgbaImage, RuntimeConfig, RuntimeError, RuntimeHost, TextureId, TextureRegistrar,
+    DrawCommand, FrameOutput, PadDirection, PlayerInputSnapshot, Rect, RgbaImage, RuntimeConfig,
+    RuntimeError, RuntimeHost, TextureId, TextureRegistrar,
 };
 use std::collections::HashMap;
 #[cfg(not(target_arch = "wasm32"))]
@@ -89,74 +91,8 @@ impl FightPresentationHost<Sdl3Host> {
     }
 }
 
-impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
-    /// Construct the shared game host around any Foundation runtime adapter.
-    pub fn with_host(host: H, config: RuntimeConfig) -> Result<Self, RuntimeError> {
-        if config.width == 0 || config.height == 0 {
-            return Err(RuntimeError::InvalidConfig(
-                "logical dimensions must be non-zero",
-            ));
-        }
-        let now = host.now();
-        Ok(Self {
-            host,
-            clock: FixedTimestepClock::new(),
-            input: std::array::from_fn(|_| InputSampler::default()),
-            last_host_time: now,
-            quit_requested: false,
-            logical_width: config.width,
-            logical_height: config.height,
-            sprite_frames: HashMap::new(),
-            sprite_heights: [0; 2],
-            fighter_names: ["PLAYER 1".to_owned(), "PLAYER 2".to_owned()],
-            stage_texture: None,
-            stage_size: (config.width.saturating_mul(2), config.height),
-            camera_max_x: config.width as i32,
-            damage_level: 0.9,
-            diagnostics: Vec::new(),
-            #[cfg(not(target_arch = "wasm32"))]
-            audio: FoundationAudioOutput::new(),
-            #[cfg(not(target_arch = "wasm32"))]
-            audio_layout: None,
-            #[cfg(target_arch = "wasm32")]
-            web_effect_clips: HashMap::new(),
-            #[cfg(target_arch = "wasm32")]
-            web_effect_bank_len: 0,
-            #[cfg(target_arch = "wasm32")]
-            web_music: None,
-        })
-    }
-
-    pub fn host(&self) -> &H {
-        &self.host
-    }
-
-    pub fn host_mut(&mut self) -> &mut H {
-        &mut self.host
-    }
-
-    /// Rebase the fixed-step clock after a browser visibility/background pause.
-    ///
-    /// A hidden tab must not turn minutes of suspended wall time into thousands of
-    /// catch-up simulation ticks. Fractional accumulated time is intentionally reset.
-    pub fn reset_after_suspend(&mut self) {
-        self.clock = FixedTimestepClock::new();
-        self.last_host_time = self.host.now();
-        self.host.reset_input_after_pause();
-    }
-
-    pub fn should_quit(&self) -> bool {
-        self.quit_requested
-    }
-
-    pub fn diagnostics(&self) -> &[String] {
-        &self.diagnostics
-    }
-
-    pub fn take_diagnostics(&mut self) -> Vec<String> {
-        std::mem::take(&mut self.diagnostics)
-    }
-
+#[cfg(not(target_arch = "wasm32"))]
+impl FightPresentationHost<Sdl3Host> {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn load_bmp_texture(&mut self, path: impl AsRef<Path>) -> Result<TextureId, RuntimeError> {
         let image = Sdl3Host::load_bmp(path)?;
@@ -359,6 +295,75 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         }
         self.diagnostics.extend(messages.iter().cloned());
         messages
+    }
+}
+
+impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
+    /// Construct the shared game host around any Foundation runtime adapter.
+    pub fn with_host(host: H, config: RuntimeConfig) -> Result<Self, RuntimeError> {
+        if config.width == 0 || config.height == 0 {
+            return Err(RuntimeError::InvalidConfig(
+                "logical dimensions must be non-zero",
+            ));
+        }
+        let now = host.now();
+        Ok(Self {
+            host,
+            clock: FixedTimestepClock::new(),
+            input: std::array::from_fn(|_| InputSampler::default()),
+            last_host_time: now,
+            quit_requested: false,
+            logical_width: config.width,
+            logical_height: config.height,
+            sprite_frames: HashMap::new(),
+            sprite_heights: [0; 2],
+            fighter_names: ["PLAYER 1".to_owned(), "PLAYER 2".to_owned()],
+            stage_texture: None,
+            stage_size: (config.width.saturating_mul(2), config.height),
+            camera_max_x: config.width as i32,
+            damage_level: 0.9,
+            diagnostics: Vec::new(),
+            #[cfg(not(target_arch = "wasm32"))]
+            audio: FoundationAudioOutput::new(),
+            #[cfg(not(target_arch = "wasm32"))]
+            audio_layout: None,
+            #[cfg(target_arch = "wasm32")]
+            web_effect_clips: HashMap::new(),
+            #[cfg(target_arch = "wasm32")]
+            web_effect_bank_len: 0,
+            #[cfg(target_arch = "wasm32")]
+            web_music: None,
+        })
+    }
+
+    pub fn host(&self) -> &H {
+        &self.host
+    }
+
+    pub fn host_mut(&mut self) -> &mut H {
+        &mut self.host
+    }
+
+    /// Rebase the fixed-step clock after a browser visibility/background pause.
+    ///
+    /// A hidden tab must not turn minutes of suspended wall time into thousands of
+    /// catch-up simulation ticks. Fractional accumulated time is intentionally reset.
+    pub fn reset_after_suspend(&mut self) {
+        self.clock = FixedTimestepClock::new();
+        self.last_host_time = self.host.now();
+        self.host.reset_input_after_pause();
+    }
+
+    pub fn should_quit(&self) -> bool {
+        self.quit_requested
+    }
+
+    pub fn diagnostics(&self) -> &[String] {
+        &self.diagnostics
+    }
+
+    pub fn take_diagnostics(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.diagnostics)
     }
 
     /// Register images, INI metadata, and audio clips from the exported web package.
