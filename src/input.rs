@@ -5,6 +5,8 @@
 //! physical events to logical directions/buttons before submitting them here.
 //! Command recognition remains a separate, source-audited simulation concern.
 
+use foundation_runtime::PhysicalKey;
+
 /// Logical direction emitted by a platform adapter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Direction {
@@ -45,6 +47,8 @@ pub struct InputFrame {
     pub released_buttons: u32,
     /// Saturating per-slot hold counters. A zero value means not held.
     pub hold_ticks: [u16; 32],
+    /// Latest non-repeat physical key press, consumed by arcade menus and F2 remapping.
+    pub physical_key_pressed: Option<PhysicalKey>,
 }
 
 impl InputFrame {
@@ -78,6 +82,7 @@ pub struct InputSampler {
     hold_ticks: [u16; 32],
     pending_pressed: u32,
     pending_released: u32,
+    pending_physical_key: Option<PhysicalKey>,
 }
 
 impl InputSampler {
@@ -103,6 +108,14 @@ impl InputSampler {
         }
     }
 
+    /// Record a physical key edge from Foundation's host adapter.
+    /// It is delivered in exactly one simulation sample, independent of render FPS.
+    pub fn record_physical_key_press(&mut self, key: Option<PhysicalKey>) {
+        if key.is_some() {
+            self.pending_physical_key = key;
+        }
+    }
+
     /// Produce the state consumed by one simulation tick.
     pub fn sample_tick(&mut self) -> InputFrame {
         for slot in 0..32 {
@@ -118,6 +131,7 @@ impl InputSampler {
             pressed_buttons: self.pending_pressed,
             released_buttons: self.pending_released,
             hold_ticks: self.hold_ticks,
+            physical_key_pressed: self.pending_physical_key.take(),
         };
         self.pending_pressed = 0;
         self.pending_released = 0;
@@ -131,6 +145,7 @@ impl InputSampler {
         self.hold_ticks = [0; 32];
         self.pending_pressed = 0;
         self.pending_released = 0;
+        self.pending_physical_key = None;
     }
 }
 
@@ -185,6 +200,17 @@ mod tests {
         assert_eq!(frame.pressed_buttons, 0);
         assert_eq!(frame.released_buttons, 0);
         assert_eq!(frame.held_for(button), 0);
+    }
+
+    #[test]
+    fn physical_key_press_is_delivered_once_to_next_simulation_tick() {
+        let mut sampler = InputSampler::default();
+        sampler.record_physical_key_press(Some(PhysicalKey::Digit5));
+        assert_eq!(
+            sampler.sample_tick().physical_key_pressed,
+            Some(PhysicalKey::Digit5)
+        );
+        assert_eq!(sampler.sample_tick().physical_key_pressed, None);
     }
 
     #[test]

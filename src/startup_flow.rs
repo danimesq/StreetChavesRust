@@ -1,64 +1,112 @@
-//! Platform-neutral boot, title and local fighter-selection flow.
+//! Platform-neutral arcade opening, coin, configuration and fighter-selection flow.
 
+use crate::arcade::{ArcadePreferences, ArcadeSettings};
 use crate::input::{Button, Direction, InputFrame};
+use foundation_runtime::{PhysicalKey, PlayerOneKeyMap};
 
-/// Initial native application phase.
+/// Initial and in-game menu phases.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StartupPhase {
-    /// Short original-game-inspired opening animation before the title screen.
     Opening,
-    /// Start prompt.
     Title,
-    /// Two independent local fighter cursors and confirmation states.
+    Config,
+    KeyRemap,
     CharacterSelect,
-    /// The main fight loop owns the application from this point on.
     Fighting,
 }
 
 /// Immutable screen state for the renderer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct StartupScreen {
     pub phase: StartupPhase,
     pub ticks: u64,
     pub selected: [u8; 2],
     pub confirmed: [bool; 2],
     pub p2_active: bool,
+    pub credits: u8,
+    pub settings: ArcadeSettings,
+    pub menu_cursor: usize,
+    pub player_one_keys: PlayerOneKeyMap,
+    pub remap_cursor: usize,
+    pub remap_conflict: bool,
 }
 
-/// An event emitted by the state machine when startup is complete.
+/// Event emitted when startup or a live arcade cabinet action changes ownership.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StartupEvent {
     None,
-    StartFight { characters: [u8; 2] },
+    PreferencesChanged,
+    StartFight {
+        characters: [u8; 2],
+        cpu_opponent: bool,
+    },
+    JoinPlayer {
+        player: u8,
+    },
 }
 
-/// Stateful startup flow. It does not own rendering, timing, SDL or game simulation.
+/// Stateful cabinet flow. Credits and menus are game state, not renderer state.
 #[derive(Debug, Clone)]
 pub struct StartupFlow {
     phase: StartupPhase,
     ticks: u64,
     selected: [u8; 2],
     confirmed: [bool; 2],
+    p1_active: bool,
     p2_active: bool,
+    credits: u8,
+    preferences: ArcadePreferences,
+    menu_cursor: usize,
+    remap_cursor: usize,
+    remap_conflict: bool,
 }
 
 impl StartupFlow {
     pub const INTRO_TICKS: u64 = 210;
+    pub const MAX_CREDITS: u8 = 99;
+    const MENU_REPEAT_TICKS: u64 = 5;
 
     /// Use command-line character IDs as the initial fighter cursors.
     pub fn new(default_characters: [u8; 2]) -> Self {
+        Self::with_preferences(default_characters, ArcadePreferences::default())
+    }
+
+    /// Restore persisted settings and P1 keyboard bindings.
+    pub fn with_preferences(default_characters: [u8; 2], preferences: ArcadePreferences) -> Self {
         let selected = default_characters.map(|id| id.clamp(1, 15));
         Self {
             phase: StartupPhase::Opening,
             ticks: 0,
             selected,
             confirmed: [false; 2],
+            p1_active: false,
             p2_active: false,
+            credits: 0,
+            preferences,
+            menu_cursor: 0,
+            remap_cursor: 0,
+            remap_conflict: false,
         }
     }
 
     pub fn phase(&self) -> StartupPhase {
         self.phase
+    }
+
+    pub fn credits(&self) -> u8 {
+        self.credits
+    }
+
+    pub fn settings(&self) -> ArcadeSettings {
+        self.preferences.settings
+    }
+
+    pub fn preferences(&self) -> ArcadePreferences {
+        self.preferences
+    }
+
+    pub fn set_preferences(&mut self, preferences: ArcadePreferences) {
+        self.preferences = preferences;
     }
 
     pub fn screen(&self) -> StartupScreen {
@@ -68,50 +116,95 @@ impl StartupFlow {
             selected: self.selected,
             confirmed: self.confirmed,
             p2_active: self.p2_active,
+            credits: self.credits,
+            settings: self.preferences.settings,
+            menu_cursor: self.menu_cursor,
+            player_one_keys: self.preferences.player_one_keys,
+            remap_cursor: self.remap_cursor,
+            remap_conflict: self.remap_conflict,
         }
     }
 
-    /// Advance the startup flow by one authoritative input tick.
+    /// Advance the cabinet state by one authoritative input tick.
     ///
-    /// P1 uses arrows + Z. P2 joins by using WASD/R. If P2 does not join,
-    /// the selected second fighter remains a stationary training opponent.
+    /// Digit 5 inserts a credit (maximum 99); Digit 1 and Digit 2 spend a credit
+    /// to enter P1/P2. The absent second player becomes the CPU when a fight starts.
     pub fn tick(&mut self, inputs: [InputFrame; 2]) -> StartupEvent {
+        self.ticks = self.ticks.saturating_add(1);
+        let physical_key = inputs[0]
+            .physical_key_pressed
+            .or(inputs[1].physical_key_pressed);
+
         if self.phase == StartupPhase::Fighting {
-            return StartupEvent::None;
+            return self.tick_fighting(physical_key);
         }
 
-        self.ticks = self.ticks.saturating_add(1);
-        let p1_confirm = inputs[0].was_pressed(Button(0));
-        let p2_confirm = inputs[1].was_pressed(Button(0));
+        if matches!(self.phase, StartupPhase::Opening | StartupPhase::Title) {
+            if physical_key == Some(PhysicalKey::F1) {
+                self.phase = StartupPhase::Config;
+                self.menu_cursor = 0;
+                self.ticks = 0;
+                return StartupEvent::None;
+            }
+            if physical_key == Some(PhysicalKey::F2) {
+                self.phase = StartupPhase::KeyRemap;
+                self.remap_cursor = 0;
+                self.remap_conflict = false;
+                self.ticks = 0;
+                return StartupEvent::None;
+            }
+        }
 
         match self.phase {
-            StartupPhase::Opening => {
-                if p1_confirm || p2_confirm || self.ticks >= Self::INTRO_TICKS {
-                    self.p2_active =
-                        self.p2_active || p2_confirm || inputs[1].direction != Direction::Neutral;
-                    self.phase = StartupPhase::Title;
-                    self.ticks = 0;
-                }
-            }
-            StartupPhase::Title => {
-                if p1_confirm || p2_confirm {
-                    self.phase = StartupPhase::CharacterSelect;
-                    self.ticks = 0;
-                    self.confirmed = [false; 2];
-                    self.p2_active =
-                        self.p2_active || p2_confirm || inputs[1].direction != Direction::Neutral;
-                }
-            }
-            StartupPhase::CharacterSelect => {
-                if inputs[1].direction != Direction::Neutral
-                    || inputs[1].held_buttons != 0
-                    || inputs[1].pressed_buttons != 0
+            StartupPhase::Opening | StartupPhase::Title => {
+                if physical_key == Some(PhysicalKey::Digit5)
+                    || physical_key == Some(PhysicalKey::Numpad5)
                 {
-                    self.p2_active = true;
+                    self.insert_credit();
+                    return StartupEvent::None;
+                }
+
+                if physical_key == Some(PhysicalKey::Digit1)
+                    || physical_key == Some(PhysicalKey::Numpad1)
+                {
+                    self.enter_player_one();
+                    return StartupEvent::None;
+                }
+
+                if physical_key == Some(PhysicalKey::Digit2)
+                    || physical_key == Some(PhysicalKey::Numpad2)
+                {
+                    self.enter_player_two();
+                    return StartupEvent::None;
+                }
+
+                if self.phase == StartupPhase::Opening {
+                    if inputs[0].was_pressed(Button(0))
+                        || inputs[1].was_pressed(Button(0))
+                        || self.ticks >= Self::INTRO_TICKS
+                    {
+                        self.phase = StartupPhase::Title;
+                        self.ticks = 0;
+                    }
+                }
+            }
+            StartupPhase::Config => return self.tick_config(inputs, physical_key),
+            StartupPhase::KeyRemap => return self.tick_key_remap(physical_key),
+            StartupPhase::CharacterSelect => {
+                if physical_key == Some(PhysicalKey::Digit5)
+                    || physical_key == Some(PhysicalKey::Numpad5)
+                {
+                    self.insert_credit();
+                    return StartupEvent::None;
+                }
+                if physical_key == Some(PhysicalKey::Digit2)
+                    || physical_key == Some(PhysicalKey::Numpad2)
+                {
+                    self.enter_player_two();
                 }
 
                 // Direction is level-triggered by the host. Repeat at a measured menu cadence.
-                if self.ticks % 5 == 0 {
+                if self.ticks % Self::MENU_REPEAT_TICKS == 0 {
                     if !self.confirmed[0] {
                         move_selection(&mut self.selected[0], inputs[0].direction);
                     }
@@ -120,10 +213,10 @@ impl StartupFlow {
                     }
                 }
 
-                if p1_confirm {
+                if inputs[0].was_pressed(Button(0)) {
                     self.confirmed[0] = true;
                 }
-                if p2_confirm {
+                if self.p2_active && inputs[1].was_pressed(Button(0)) {
                     self.confirmed[1] = true;
                 }
                 if self.confirmed[0] && !self.p2_active {
@@ -134,12 +227,118 @@ impl StartupFlow {
                     self.phase = StartupPhase::Fighting;
                     return StartupEvent::StartFight {
                         characters: self.selected,
+                        cpu_opponent: !self.p2_active,
                     };
                 }
             }
             StartupPhase::Fighting => {}
         }
         StartupEvent::None
+    }
+
+    fn tick_fighting(&mut self, key: Option<PhysicalKey>) -> StartupEvent {
+        match key {
+            Some(PhysicalKey::Digit5 | PhysicalKey::Numpad5) => {
+                self.insert_credit();
+                StartupEvent::None
+            }
+            Some(PhysicalKey::Digit2 | PhysicalKey::Numpad2)
+                if !self.p2_active && self.credits > 0 =>
+            {
+                self.credits -= 1;
+                self.p2_active = true;
+                self.confirmed[1] = false;
+                StartupEvent::JoinPlayer { player: 2 }
+            }
+            _ => StartupEvent::None,
+        }
+    }
+
+    fn insert_credit(&mut self) {
+        self.credits = self.credits.saturating_add(1).min(Self::MAX_CREDITS);
+    }
+
+    fn enter_player_one(&mut self) {
+        if self.p1_active || self.credits == 0 {
+            return;
+        }
+        self.credits -= 1;
+        self.p1_active = true;
+        self.confirmed = [false; 2];
+        self.phase = StartupPhase::CharacterSelect;
+        self.ticks = 0;
+    }
+
+    fn enter_player_two(&mut self) {
+        if self.p2_active || self.credits == 0 {
+            return;
+        }
+        self.credits -= 1;
+        self.p2_active = true;
+        self.confirmed[1] = false;
+    }
+
+    fn tick_config(
+        &mut self,
+        inputs: [InputFrame; 2],
+        physical_key: Option<PhysicalKey>,
+    ) -> StartupEvent {
+        if physical_key == Some(PhysicalKey::F1) {
+            self.phase = StartupPhase::Title;
+            self.ticks = 0;
+            return StartupEvent::PreferencesChanged;
+        }
+
+        if self.ticks % Self::MENU_REPEAT_TICKS != 0 {
+            return StartupEvent::None;
+        }
+
+        match inputs[0].direction {
+            Direction::Up => self.menu_cursor = self.menu_cursor.saturating_sub(1),
+            Direction::Down => {
+                self.menu_cursor = (self.menu_cursor + 1).min(ArcadeSettings::OPTION_COUNT - 1)
+            }
+            Direction::Left => {
+                self.preferences.settings.adjust(self.menu_cursor, -1);
+                return StartupEvent::PreferencesChanged;
+            }
+            Direction::Right => {
+                self.preferences.settings.adjust(self.menu_cursor, 1);
+                return StartupEvent::PreferencesChanged;
+            }
+            _ => {}
+        }
+        StartupEvent::None
+    }
+
+    fn tick_key_remap(&mut self, physical_key: Option<PhysicalKey>) -> StartupEvent {
+        let Some(key) = physical_key else {
+            return StartupEvent::None;
+        };
+        if key == PhysicalKey::F2 {
+            self.phase = StartupPhase::Title;
+            self.ticks = 0;
+            return StartupEvent::PreferencesChanged;
+        }
+        if self.remap_cursor >= 8 {
+            self.phase = StartupPhase::Title;
+            return StartupEvent::PreferencesChanged;
+        }
+
+        let mut candidate = self.preferences.player_one_keys;
+        candidate.keys[self.remap_cursor] = key;
+        self.remap_conflict = !candidate.has_unique_keys();
+        if self.remap_conflict {
+            return StartupEvent::None;
+        }
+
+        self.preferences.player_one_keys = candidate;
+        self.remap_cursor += 1;
+        if self.remap_cursor >= 8 {
+            self.phase = StartupPhase::Title;
+            self.ticks = 0;
+        }
+        StartupEvent::PreferencesChanged
     }
 }
 
@@ -172,93 +371,148 @@ fn move_selection(selected: &mut u8, direction: Direction) {
 mod tests {
     use super::*;
 
-    fn press_start() -> [InputFrame; 2] {
-        [
-            InputFrame {
-                pressed_buttons: 1,
-                ..Default::default()
-            },
-            InputFrame::default(),
-        ]
+    fn press_button(player: usize, button: u8) -> [InputFrame; 2] {
+        let mut inputs = [InputFrame::default(); 2];
+        inputs[player].pressed_buttons = 1 << button;
+        inputs
+    }
+
+    fn press_key(key: PhysicalKey) -> [InputFrame; 2] {
+        let mut inputs = [InputFrame::default(); 2];
+        inputs[0].physical_key_pressed = Some(key);
+        inputs
+    }
+
+    fn start_one_player() -> StartupFlow {
+        let mut flow = StartupFlow::default();
+        flow.tick(press_key(PhysicalKey::Digit5));
+        flow.tick(press_key(PhysicalKey::Digit1));
+        flow
     }
 
     #[test]
     fn intro_advances_to_title_on_its_own_clock() {
         let mut flow = StartupFlow::default();
         for _ in 0..StartupFlow::INTRO_TICKS {
-            assert_eq!(flow.tick([InputFrame::default(); 2]), StartupEvent::None);
+            flow.tick([InputFrame::default(); 2]);
         }
         assert_eq!(flow.phase(), StartupPhase::Title);
     }
 
     #[test]
-    fn intro_can_be_skipped_and_title_requires_a_second_start_press() {
+    fn inserting_a_coin_and_pressing_one_spends_exactly_one_credit() {
         let mut flow = StartupFlow::default();
-        flow.tick(press_start());
-        assert_eq!(flow.phase(), StartupPhase::Title);
-        assert_eq!(flow.tick(press_start()), StartupEvent::None);
+        flow.tick(press_key(PhysicalKey::Digit5));
+        assert_eq!(flow.credits(), 1);
+        flow.tick(press_key(PhysicalKey::Digit1));
+        assert_eq!(flow.credits(), 0);
         assert_eq!(flow.phase(), StartupPhase::CharacterSelect);
     }
 
     #[test]
-    fn one_player_confirmation_starts_with_the_default_second_fighter() {
+    fn start_without_a_credit_does_not_start_the_fight() {
         let mut flow = StartupFlow::default();
-        flow.tick(press_start());
-        flow.tick(press_start());
-        assert_eq!(
-            flow.tick(press_start()),
-            StartupEvent::StartFight { characters: [1, 4] }
-        );
+        flow.tick(press_key(PhysicalKey::Digit1));
+        assert_eq!(flow.credits(), 0);
+        assert_eq!(flow.phase(), StartupPhase::Opening);
     }
 
     #[test]
-    fn second_player_must_confirm_after_joining() {
+    fn credits_are_capped_at_ninety_nine() {
         let mut flow = StartupFlow::default();
-        flow.tick(press_start());
-        flow.tick(press_start());
-        let p2_move = [
-            InputFrame::default(),
-            InputFrame {
-                direction: Direction::Left,
-                ..Default::default()
-            },
-        ];
-        for _ in 0..5 {
-            flow.tick(p2_move);
+        for _ in 0..120 {
+            flow.tick(press_key(PhysicalKey::Digit5));
         }
-        assert_eq!(flow.tick(press_start()), StartupEvent::None);
-        let both_confirm = [
-            InputFrame {
-                pressed_buttons: 1,
-                ..Default::default()
-            },
-            InputFrame {
-                pressed_buttons: 1,
-                ..Default::default()
-            },
-        ];
+        assert_eq!(flow.credits(), StartupFlow::MAX_CREDITS);
+    }
+
+    #[test]
+    fn one_player_confirmation_starts_with_a_cpu_opponent() {
+        let mut flow = start_one_player();
+        let event = flow.tick(press_button(0, 0));
         assert_eq!(
-            flow.tick(both_confirm),
-            StartupEvent::StartFight { characters: [1, 3] }
+            event,
+            StartupEvent::StartFight {
+                characters: [1, 4],
+                cpu_opponent: true,
+            }
         );
     }
 
     #[test]
-    fn player_two_can_join_from_the_title_screen() {
+    fn player_two_spends_a_credit_and_disables_the_cpu() {
         let mut flow = StartupFlow::default();
-        let both_start = [
-            InputFrame {
-                pressed_buttons: 1,
-                ..Default::default()
-            },
-            InputFrame {
-                pressed_buttons: 1,
-                ..Default::default()
-            },
-        ];
-        flow.tick(both_start);
-        flow.tick(press_start());
-        assert!(flow.screen().p2_active);
+        flow.tick(press_key(PhysicalKey::Digit5));
+        flow.tick(press_key(PhysicalKey::Digit5));
+        flow.tick(press_key(PhysicalKey::Digit1));
+        flow.tick(press_key(PhysicalKey::Digit2));
+        assert_eq!(flow.credits(), 0);
+        flow.tick(press_button(0, 0));
+        let event = flow.tick(press_button(1, 0));
+        assert_eq!(
+            event,
+            StartupEvent::StartFight {
+                characters: [1, 4],
+                cpu_opponent: false,
+            }
+        );
+    }
+
+    #[test]
+    fn player_two_can_join_a_live_fight_using_a_credit() {
+        let mut flow = start_one_player();
+        flow.tick(press_button(0, 0));
+        flow.tick(press_key(PhysicalKey::Digit5));
+        assert_eq!(
+            flow.tick(press_key(PhysicalKey::Digit2)),
+            StartupEvent::JoinPlayer { player: 2 }
+        );
+        assert_eq!(flow.credits(), 0);
+    }
+
+    #[test]
+    fn f1_changes_a_setting_and_f1_saves_and_returns() {
+        let mut flow = StartupFlow::default();
+        flow.tick(press_key(PhysicalKey::F1));
+        assert_eq!(flow.phase(), StartupPhase::Config);
+        let down = {
+            let mut inputs = [InputFrame::default(); 2];
+            inputs[0].direction = Direction::Right;
+            inputs
+        };
+        for _ in 0..5 {
+            flow.tick(down);
+        }
+        assert_eq!(flow.settings().difficulty, 5);
+        assert_eq!(
+            flow.tick(press_key(PhysicalKey::F1)),
+            StartupEvent::PreferencesChanged
+        );
+        assert_eq!(flow.phase(), StartupPhase::Title);
+    }
+
+    #[test]
+    fn f2_captures_eight_unique_keys_and_rejects_collisions() {
+        let mut flow = StartupFlow::default();
+        flow.tick(press_key(PhysicalKey::F2));
+        assert_eq!(flow.phase(), StartupPhase::KeyRemap);
+        flow.tick(press_key(PhysicalKey::Z));
+        assert!(flow.screen().remap_conflict);
+        flow.tick(press_key(PhysicalKey::I));
+        assert_eq!(flow.preferences().player_one_keys.keys[0], PhysicalKey::I);
+        for key in [
+            PhysicalKey::K,
+            PhysicalKey::J,
+            PhysicalKey::L,
+            PhysicalKey::U,
+            PhysicalKey::O,
+            PhysicalKey::P,
+            PhysicalKey::M,
+        ] {
+            flow.tick(press_key(key));
+        }
+        assert_eq!(flow.phase(), StartupPhase::Title);
+        assert!(flow.preferences().player_one_keys.has_unique_keys());
     }
 
     #[test]

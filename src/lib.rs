@@ -18,7 +18,10 @@ pub mod audio_foundation;
 #[cfg(all(feature = "native-foundation", not(target_arch = "wasm32")))]
 pub mod native_foundation;
 
-/// Platform-neutral opening, title and fighter-selection state machine.
+/// Arcade credits, F1 settings and persisted P1 physical-key preferences.
+pub mod arcade;
+
+/// Platform-neutral opening, title, cabinet menus and fighter-selection state machine.
 pub mod startup_flow;
 
 /// Source-preserving lexer and parser for the pinned Pascal ROT dialect.

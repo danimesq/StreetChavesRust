@@ -114,3 +114,8 @@ cargo run --features native-foundation --bin street-chaves-native -- --game-root
 ```
 
 The executable starts with a vector opening, title/Start screen and two-player character selection before entering the fight. With `--game-root`, it loads local stage/fighter BMPs, INI pivots and WAV banks. See [the native playable loop guide](docs/native-playable-loop-pr38.md). Current screen/system implementation is tracked in [CHS screen status](docs/CHS-SCREEN-STATUS.md).
+
+
+## Arcade cabinet systems
+
+The native and browser game flows now include credits/fichas, the first F1 settings menu, F2 player-one keyboard remapping and a Common.rot CPU opponent when P2 does not join. The settings file is `StreetChavesRust.settings.json` for native builds; the browser stores the same preferences in localStorage. See [arcade credits, F1/F2 and CPU](docs/arcade-credits-settings-and-ai.md) for active settings and remaining fidelity gaps.
