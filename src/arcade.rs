@@ -263,7 +263,7 @@ fn bounded_u8(object: &serde_json::Value, field: &str, min: u8, max: u8, fallbac
         .get(field)
         .and_then(serde_json::Value::as_u64)
         .and_then(|value| u8::try_from(value).ok())
-        .filter(|value| (*min..=*max).contains(value))
+        .filter(|value| (min..=max).contains(value))
         .unwrap_or(fallback)
 }
 
