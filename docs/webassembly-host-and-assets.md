@@ -24,9 +24,9 @@ This generates the JavaScript glue and WASM module in `pkg/`. The native build c
 cargo run --features native-foundation --bin street-chaves-native
 ```
 
-## Exported HTML5 asset layout
+## Construct 3-style exported HTML5 asset layout
 
-The web build follows the familiar Construct-style export model: HTML, JavaScript, WASM, a JSON manifest, and the referenced media/data files are served together. The browser never receives native filesystem paths.
+The web package adopts the documented Construct 3 Web export conventions for resource files: an `images/` tree for image resources, `media/Sounds/` and `media/Music/` for audio, and preserved subfolders under project files (here `Files/`). The export also contains the HTML entry point, JavaScript/WASM runtime files and the Foundation sidecar manifest. This is a Construct-compatible resource layout, not a claim that StreetChaves emits Construct's own generated runtime bundle. The browser never receives native filesystem paths. Folder names and case are preserved; the legacy Flat export mode is not used.
 
 Suggested layout:
 
@@ -66,44 +66,44 @@ Copy only game assets that the distributor is legally entitled to use. The repos
   "assets": [
     {
       "id": "stage_01",
-      "path": "stages/stage-01.bmp",
+      "path": "images/stages/stage-01.bmp",
       "kind": "image"
     },
     {
       "id": "fighter_01",
-      "path": "fighters/C01.bmp",
+      "path": "images/fighters/C01.bmp",
       "kind": "image"
     },
     {
       "id": "fighter_ini_01",
-      "path": "data/C01.ini",
+      "path": "Files/data/C01.ini",
       "kind": "data"
     },
     {
       "id": "fighter_04",
-      "path": "fighters/C04.bmp",
+      "path": "images/fighters/C04.bmp",
       "kind": "image"
     },
     {
       "id": "fighter_ini_04",
-      "path": "data/C04.ini",
+      "path": "Files/data/C04.ini",
       "kind": "data"
     },
     {
       "id": "game_settings",
-      "path": "data/Jogo.ini",
+      "path": "Files/data/Jogo.ini",
       "kind": "data"
     },
     {
       "id": "effect_slot_001",
-      "path": "audio/Som-02.ogg",
-      "fallbacks": ["audio/Som-02.m4a"],
+      "path": "media/Sounds/Som-02.ogg",
+      "fallbacks": ["media/Sounds/Som-02.m4a"],
       "kind": "audio"
     },
     {
       "id": "fight_music",
-      "path": "audio/Musica-01.ogg",
-      "fallbacks": ["audio/Musica-01.m4a"],
+      "path": "media/Music/Musica-01.ogg",
+      "fallbacks": ["media/Music/Musica-01.m4a"],
       "kind": "audio"
     }
   ]
