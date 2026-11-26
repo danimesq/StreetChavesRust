@@ -1,7 +1,7 @@
 //! First concrete, renderer-free fight orchestrator.
 use crate::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome};
 use crate::custom_character::{CustomCharacterPackage, CustomCharacterRegistry};
-use crate::custom_character_runtime::{CustomCharacterDefinition, CustomMoveDefinition};
+use crate::custom_character_runtime::CustomCharacterDefinition;
 use std::collections::BTreeMap;
 use crate::combat_resolution::{
     resolve_melee_contact, resolve_melee_contact_after_guard_break, CombatResolution,
@@ -784,6 +784,15 @@ impl FightSimulation {
         fighter.attack_box = None;
         fighter.is_kick = movement.is_kick;
         Ok(())
+    }
+
+    /// Read the validated definition needed by a native or Web/WASM renderer.
+    /// Includes source-derived centre offsets, collision tables and logical move names.
+    pub fn custom_character_definition(
+        &self,
+        runtime_id: u8,
+    ) -> Option<&CustomCharacterDefinition> {
+        self.custom_character_definitions.get(&runtime_id)
     }
 
     /// Retrieve a package asset by the fighter's runtime ID and logical asset ID.
