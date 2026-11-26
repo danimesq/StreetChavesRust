@@ -56,13 +56,13 @@ impl StreetChavesWebRuntime {
         })
     }
 
-    /// Fetch the Construct-style web asset manifest and register its resources
-    /// with Foundation. Asset paths are resolved relative to the manifest URL.
+    /// Load the shared Foundation Web export manifest and register its resources.
+    /// Asset paths are resolved relative to the manifest URL.
     pub async fn load_assets(&mut self, manifest_url: &str) -> Result<u32, JsValue> {
         let assets = self
             .host
             .host_mut()
-            .load_asset_manifest(manifest_url)
+            .load_web_export(manifest_url)
             .await
             .map_err(js_error)?;
         let count = assets.textures.len() + assets.audio_clips.len() + assets.data.len();

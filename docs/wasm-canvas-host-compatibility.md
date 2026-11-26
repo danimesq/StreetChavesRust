@@ -1,134 +1,104 @@
-# Reusable WASM Canvas host compatibility contract
+# Foundation WebAssembly host contract
 
-## Status
+## Purpose
 
-This document defines the compatibility target for making StreetChavesRust a reference consumer of the generic ConstructWASMCanvas host. It is a design contract, not an implemented ABI or a claim of browser/Construct compatibility.
+StreetChavesRust is a consumer of RustMultiConsoleFoundation's shared runtime and Web/WASM publishing library. The browser package is built from StreetChavesRust's own Rust sources, generated JavaScript/WASM glue, selected game assets and a small HTML entry page.
 
-The goal is to let a WASM application written in Rust or another language run inside a dedicated browser Canvas managed by a generic host. Construct 2/3 is one host integration; a standalone HTML page or another web host should be able to implement the same contract.
+There is no external editor plugin in this architecture. Foundation is a Rust library used by the game build and runtime:
 
-## Boundary and ownership
+1. The game compiles its WASM module and JavaScript glue.
+2. The build supplies the generated files, the assets it wants to publish and their package-relative destination paths.
+3. `WebExportBuilder` validates and stages those files into a deployable package directory.
+4. Foundation writes `web-export.json` at the package root.
+5. The browser host loads that manifest and fetches/registers resources by stable game-facing IDs.
 
-Keep three layers separate:
+## Package layout
 
-1. **Game/application core:** simulation, application state, deterministic logic and renderer-neutral presentation data. No Construct SDK, DOM, Canvas, SDL or JavaScript object types.
-2. **WASM browser adapter:** application-specific glue that connects the core to browser capabilities and the host contract. It may use a language-specific WASM toolchain.
-3. **Generic host/plugin:** loads the application bundle, owns the DOM Canvas element and its placement, provides resource registration and lifecycle services, and forwards commands/events.
+```text
+web/
+  index.html
+  main.js
+  web-export.json
+  pkg/
+    street_chaves_rust.js
+    street_chaves_rust_bg.wasm
+  assets/
+    images/
+    audio/
+      effects/
+      music/
+    data/
+```
 
-The host owns the Canvas element and its DOM lifecycle. The application adapter owns its internal simulation and may own the Canvas rendering context after mounting. Browser objects remain on the browser side; the game core sees stable resource IDs and platform-neutral metadata only.
+All manifest paths are relative to `web-export.json`. The manifest lists the compiled JavaScript/WASM bundle and the game resources. Resource IDs remain stable when physical files are renamed or moved.
 
-SDL3 remains a separate native adapter. It must not be part of the browser host contract or a dependency of the WASM target.
+## Publisher API
 
-## Host-facing JavaScript facade
+The shared API is `foundation_runtime::web_export`:
 
-A WASM application package should expose a small JavaScript facade, regardless of the language used to compile its core. The facade hides toolchain-specific glue (for example wasm-bindgen output) from the Construct plugin.
+- `WebExportBuilder::new()` declares application identity.
+- `wasm_bundle_files()` registers the generated JavaScript glue and WASM module.
+- `asset_file()` registers a resource ID, kind, published path and source file.
+- `package_file()` registers the HTML shell, entry point, fallback encodings and other package files.
+- `write_to()` validates and stages the complete package, then writes the manifest.
 
-Conceptual interface:
+Example:
 
-- `mount(options)`: attach the application to the host-provided Canvas and host services.
-- `initialize(config)`: initialize the application and report readiness.
-- `send(command)`: deliver an application-defined command or normalized input.
-- `registerResource(descriptor, source)`: register an external resource once.
-- `releaseResource(resourceId)`: explicitly release a registered resource.
-- `resize(viewport)`: update logical/output dimensions and pixel ratio.
-- `setPaused(paused)`: pause or resume application progression.
-- `dispose()`: stop work, detach listeners and release application-owned resources.
+```rust
+use foundation_runtime::web_export::{
+    WebAssetKind, WebExportAsset, WebExportBuilder,
+};
 
-The facade may return Promises for asynchronous operations. It must expose structured readiness and failure results. The exact JavaScript class/function shape is intentionally left to the host API specification; the semantic operations and ownership rules above are the compatibility requirements.
+WebExportBuilder::new("street-chaves", "Street Chaves")
+    .wasm_bundle_files(
+        "web/pkg/street_chaves_rust.js",
+        "web/pkg/street_chaves_rust_bg.wasm",
+        "pkg/street_chaves_rust.js",
+        "pkg/street_chaves_rust_bg.wasm",
+    )
+    .asset_file(
+        WebExportAsset::new(
+            "stage_01",
+            "assets/images/stages/stage-01.bmp",
+            WebAssetKind::Image,
+        ),
+        "verified-assets/stage-01.bmp",
+    )
+    .package_file("web/index.html", "index.html")
+    .package_file("web/main.js", "main.js")
+    .write_to("dist/street-chaves-web")?;
+```
 
-## Versioning and negotiation
+Fallback encodings declared in an asset's `fallbacks` list must also be staged with `package_file()` at the exact destination paths listed in the manifest. All required bundle and resource files must be registered. Absolute paths, traversal segments, duplicate destinations and attempts to overwrite the reserved manifest path are rejected.
 
-Every application package declares a host API compatibility range or exact supported major version. The host reports its API version before initialization.
+## Browser host
 
-- Major-version mismatch must fail explicitly.
-- Additive optional fields may be introduced without changing the major version.
-- Removing or changing the meaning of a required field requires a major version change.
-- Unknown optional fields must be safely ignored.
-- The application must not infer capabilities from Construct version strings; use explicit host capabilities.
+The optional Foundation `web-canvas` feature implements the shared runtime contract for `wasm32-unknown-unknown`:
 
-Initialization should report the negotiated protocol version and supported capabilities. Do not silently continue with an incompatible host.
+- Canvas 2D presentation using ordered renderer-neutral draw commands.
+- Browser keyboard normalization.
+- WebAudio decoding and playback using stable audio clip IDs.
+- Image decoding and registration using stable texture IDs.
+- Data-resource fetching that returns unmodified bytes to the game.
+- Loading through `Canvas2dHost::load_web_export()`.
 
-## Lifecycle state model
+The game owns its simulation, fixed timestep, game state and mapping from its domain resource IDs to Foundation texture/audio IDs. Foundation owns browser resource loading, decoding and platform handles.
 
-The host and application should expose observable states:
+## Versioning and validation
 
-`created → loading → mounted → initializing → ready → disposed`
+The manifest has an independent `schema_version`. Consumers should validate the schema before loading resources and preserve explicit resource IDs and paths. New optional package capabilities must be versioned and covered by fixtures.
 
-A failure may occur during loading, mounting or initialization and must include a stable error code plus diagnostic context. Paused/running is an orthogonal runtime state after readiness.
+A minimum package fixture includes:
 
-Commands that require readiness must either be rejected with an explicit not-ready error or queued under a documented bounded policy. Silent command loss is not acceptable. Disposal must be idempotent and safe while asynchronous resource decoding is pending.
+- One generated JavaScript file and one WASM module.
+- One image, one audio file and one data file.
+- At least one nested resource directory.
+- A filename with mixed case to verify path preservation.
+- One optional audio fallback with a matching staged source file.
+- A malformed path that attempts to escape the package and must be rejected.
 
-## Canvas and viewport contract
+## Current implementation boundary
 
-The host creates and attaches a dedicated Canvas. It supports overlay and underlay composition relative to the Construct surface, but does not promise that CSS z-index alone works in every export target.
+The library currently stages directory packages and writes the manifest. It does not yet create ZIP archives, compile the consumer's WASM module, generate an HTML shell, transcode media, optimize images or provide a publishing CLI.
 
-The host communicates a viewport descriptor containing at least:
-
-- logical width and height;
-- CSS pixel width and height;
-- backing-store pixel width and height;
-- device-pixel ratio;
-- viewport origin/offset when relevant;
-- visibility and layer mode.
-
-The application must distinguish logical coordinates from backing-store pixels. Resizing must not silently reset application state. The host owns DOM placement, stacking, visibility and element cleanup; the application owns its rendering policy and must not modify Construct's own canvas/context.
-
-Pointer and keyboard routing are host capabilities, not assumptions. A host must declare which input capabilities it provides and whether the custom Canvas receives pointer events.
-
-## External resource registration
-
-Resources are registered once and referenced by stable logical IDs. The host/browser adapter retains browser-side image objects in a private registry. The application core receives only IDs and platform-neutral metadata.
-
-A minimal image descriptor includes:
-
-- stable resource ID;
-- resource kind;
-- pixel width and height;
-- optional content/version hash and MIME type.
-
-Atlas rectangles, pivots, trim data and animation metadata are optional extensions. They should be added only when a consumer needs them.
-
-Registration is asynchronous and reports ready or failed. Duplicate IDs, replacement, release, missing IDs, decode errors, CORS failures and disposal during decode must have explicit behavior. Resource replacement must be explicit; an ID must not silently start referring to unrelated content.
-
-The host/plugin must use documented Construct SDK asset access where available. If a supported SDK path cannot provide an image source, accept an explicit URL or encoded byte payload. Never depend on undocumented private texture objects.
-
-## Commands, events and diagnostics
-
-Commands and events use structured payloads with stable names/IDs and explicit fields. The host transports application-defined messages without interpreting game-specific semantics.
-
-The application may emit lifecycle events (ready, error, disposed), resource events (ready, failed) and application-defined semantic events. Construct adapters translate those events into the corresponding SDK triggers/expressions.
-
-Diagnostics should include protocol version, application identifier/version, operation, resource ID when relevant, and a stable error code. Avoid logging full binary payloads or sensitive URL query strings.
-
-## Rendering interoperability
-
-The host contract does not mandate whether drawing commands are interpreted by JavaScript or whether the application adapter draws directly into the mounted Canvas. Both models are compatible if:
-
-- the application owns the visual result on its dedicated surface;
-- the host retains Canvas lifecycle/composition ownership;
-- resource IDs resolve consistently;
-- logical viewport semantics are preserved;
-- rendering never mutates authoritative simulation state.
-
-For StreetChavesRust, the intended browser adapter is Rust/WASM + Canvas 2D, while the native adapter is Rust + SDL3. Both consume the same renderer-neutral presentation contract. This is a consumer implementation choice, not a requirement imposed on every WASM application.
-
-## Minimum interoperability fixture
-
-Before claiming compatibility, provide a tiny non-game-specific WASM application that:
-
-1. mounts into a host-created Canvas;
-2. negotiates the host API version;
-3. renders a visible test shape;
-4. registers and draws one external image by stable resource ID;
-5. receives one host command and emits one structured event;
-6. responds to resize and pause/resume;
-7. disposes cleanly, including pending resource work.
-
-Run the same fixture in a standalone HTML harness and through each supported Construct adapter. Record exact Construct version, export mode, browser and limitations. C2 and C3 require independent validation.
-
-## Relationship to ConstructWASMCanvas
-
-ConstructWASMCanvas is the generic host/plugin implementation. StreetChavesRust is one consumer and a potential reference implementation of the Rust/WASM + Canvas 2D application side.
-
-The host contract must remain independent of StreetChavesRust types, fighter IDs, combat commands and asset formats. Conversely, StreetChavesRust should not import Construct SDK code or depend on the plugin repository to build its native SDL3 target.
-
-The companion host specification lives in the [ConstructWASMCanvas repository](https://github.com/Floflis/ConstructWASMCanvas). Keep the two documents aligned when the protocol is revised.
+The browser host uses Canvas 2D and buffered WebAudio. Music streaming, WebGL, browser gamepad and pointer/touch adapters are not implemented by this first slice. The same game core can still build native and browser targets without depending on browser APIs.

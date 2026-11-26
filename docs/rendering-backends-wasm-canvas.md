@@ -210,7 +210,7 @@ A future CI matrix should at least cover:
 - A browser smoke/integration test that loads the WASM module, initializes a canvas, advances a deterministic short fight fixture and verifies that drawing is issued.
 - A native headless test proving the engine can run without initializing SDL or opening a window.
 
-The current browser entry point is built with `wasm-pack --target web`. The exported HTML harness and Construct-style manifest example live in `web/`; other packaging/deployment integrations can be added without changing the game-facing Foundation contracts.
+The current browser entry point is built with `wasm-pack --target web`. The HTML harness and Foundation `web-export.json` example live in `web/`; other packaging/deployment integrations can be added without changing the game-facing Foundation contracts.
 
 ## Testing and parity strategy
 
@@ -288,12 +288,13 @@ These decisions must be made from implementation evidence. Do not add WebGL/WebG
 - Claiming full game parity or a playable Web version before the corresponding systems and assets exist.
 
 
-## Construct 2/3 embedding
+## Publishing boundary
 
-A separate integration proposal describes embedding the WASM + Canvas subsystem inside an exported Construct project. Construct acts as the host/orchestrator, while the Rust engine owns fight simulation and its dedicated Canvas surface. The proposal includes overlay/underlay composition, a generic Construct plugin, a versioned host API, and one-time registration of externally supplied sprites through stable resource IDs.
+The browser build is a first-class output of the same Rust game codebase. StreetChavesRust compiles its own WASM module and JavaScript glue, then uses RustMultiConsoleFoundation's `WebExportBuilder` to stage the generated bundle, selected resources and page shell into a deployable directory.
 
-See [Construct 2/3 integration: embedded WASM + Canvas](construct-wasm-canvas-integration.md) for the full design, including the browser-side resource registry and Petmals Pink&Dark SyncFight use case.
+Foundation owns the shared `web-export.json` manifest, package-path validation, directory staging, browser resource loading and Canvas 2D/WebAudio host. StreetChavesRust owns the game-specific resource catalog, simulation, presentation composition and fixed logical tick. ImpossibleEngine uses the same Foundation publishing API from its own project-export backend.
 
+There is no external editor plugin or second runtime that orchestrates the browser build. The consumer compiles its own application and supplies its files to Foundation.
 
 ## Alternative SDL3/Emscripten WebAssembly route
 
@@ -303,7 +304,7 @@ A Rust build targeting `wasm32-unknown-emscripten` can interoperate with Emscrip
 
 The direct `wasm32-unknown-unknown` + `wasm-bindgen`/web bindings route is different: SDL is replaced at the browser boundary by a browser renderer, which may target Canvas 2D or WebGL. SDL calls are not automatically translated into Canvas 2D operations.
 
-Do not choose between these routes from assumptions. The [Web rendering backend study](web-rendering-backend-study.md) defines the two feasibility spikes and a shared-scene benchmark plan. It also records Construct 2/3 integration constraints, including the C3 worker/DOM boundary and SDL/Emscripten's main-thread rendering requirement.
+Do not choose between these routes from assumptions. The [Web rendering backend study](web-rendering-backend-study.md) defines the browser-host requirements and a shared-scene benchmark plan. SDL/Emscripten rendering still has a main-thread constraint that must be verified in a real browser build.
 
 No SDL3/Emscripten Rust build or browser performance result is claimed by this documentation.
 
