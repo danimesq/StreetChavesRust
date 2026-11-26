@@ -3,19 +3,25 @@
 //! Foundation owns SDL3, the window, event polling, textures and PCM audio.
 //! This module owns Pascal resource interpretation and maps game snapshots to draw commands.
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::audio_foundation::{FoundationAudioOutput, PascalAudioLayout};
 use crate::combat_runtime::SIDE_LEFT;
 use crate::fight_simulation::{FightPresentationFrame, FightSimulation, FighterPresentation};
 use crate::fixed_timestep::{FixedTimestepClock, TickBatch};
 use crate::input::{Button, Direction, InputEvent, InputFrame, InputSampler};
 use crate::startup_flow::{StartupPhase, StartupScreen};
+#[cfg(not(target_arch = "wasm32"))]
 use foundation_runtime::native_sdl::Sdl3Host;
+#[cfg(target_arch = "wasm32")]
+use foundation_runtime::web::{Canvas2dHost, LoadedWebAssets};
 use foundation_runtime::{
-    DrawCommand, FrameOutput, PadDirection, PlayerInputSnapshot, Rect, RgbaImage, RuntimeConfig,
-    RuntimeError, RuntimeHost, TextureId,
+    AudioClipId, AudioRequest, DrawCommand, FrameOutput, PadDirection, PlayerInputSnapshot, Rect,
+    RgbaImage, RuntimeConfig, RuntimeError, RuntimeHost, TextureId, TextureRegistrar,
 };
 use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs;
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -38,9 +44,9 @@ pub struct FighterAssetInfo {
     pub frames: usize,
 }
 
-/// SDL3 frontend for the two-player deterministic game core.
-pub struct NativeFightHost {
-    host: Sdl3Host,
+/// Backend-neutral presentation and fixed-step host for the two-player game core.
+pub struct FightPresentationHost<H: RuntimeHost + TextureRegistrar> {
+    host: H,
     clock: FixedTimestepClock,
     input: [InputSampler; 2],
     last_host_time: Duration,
@@ -55,18 +61,42 @@ pub struct NativeFightHost {
     camera_max_x: i32,
     damage_level: f64,
     diagnostics: Vec<String>,
+    #[cfg(not(target_arch = "wasm32"))]
     audio: FoundationAudioOutput,
+    #[cfg(not(target_arch = "wasm32"))]
     audio_layout: Option<PascalAudioLayout>,
+    #[cfg(target_arch = "wasm32")]
+    web_effect_clips: HashMap<u16, AudioClipId>,
+    #[cfg(target_arch = "wasm32")]
+    web_effect_bank_len: usize,
+    #[cfg(target_arch = "wasm32")]
+    web_music: Option<AudioClipId>,
 }
 
-impl NativeFightHost {
+/// Native public host name retained for existing consumers.
+#[cfg(not(target_arch = "wasm32"))]
+pub type NativeFightHost = FightPresentationHost<Sdl3Host>;
+
+/// Browser public host name for the same presentation/simulation bridge.
+#[cfg(target_arch = "wasm32")]
+pub type WebFightHost = FightPresentationHost<Canvas2dHost>;
+
+#[cfg(not(target_arch = "wasm32"))]
+impl FightPresentationHost<Sdl3Host> {
     pub fn new(config: RuntimeConfig) -> Result<Self, RuntimeError> {
+        let host = Sdl3Host::new(config.clone())?;
+        Self::with_host(host, config)
+    }
+}
+
+impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
+    /// Construct the shared game host around any Foundation runtime adapter.
+    pub fn with_host(host: H, config: RuntimeConfig) -> Result<Self, RuntimeError> {
         if config.width == 0 || config.height == 0 {
             return Err(RuntimeError::InvalidConfig(
                 "logical dimensions must be non-zero",
             ));
         }
-        let host = Sdl3Host::new(config.clone())?;
         let now = host.now();
         Ok(Self {
             host,
@@ -84,9 +114,25 @@ impl NativeFightHost {
             camera_max_x: config.width as i32,
             damage_level: 0.9,
             diagnostics: Vec::new(),
+            #[cfg(not(target_arch = "wasm32"))]
             audio: FoundationAudioOutput::new(),
+            #[cfg(not(target_arch = "wasm32"))]
             audio_layout: None,
+            #[cfg(target_arch = "wasm32")]
+            web_effect_clips: HashMap::new(),
+            #[cfg(target_arch = "wasm32")]
+            web_effect_bank_len: 0,
+            #[cfg(target_arch = "wasm32")]
+            web_music: None,
         })
+    }
+
+    pub fn host(&self) -> &H {
+        &self.host
+    }
+
+    pub fn host_mut(&mut self) -> &mut H {
+        &mut self.host
     }
 
     pub fn should_quit(&self) -> bool {
@@ -101,16 +147,19 @@ impl NativeFightHost {
         std::mem::take(&mut self.diagnostics)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_bmp_texture(&mut self, path: impl AsRef<Path>) -> Result<TextureId, RuntimeError> {
         let image = Sdl3Host::load_bmp(path)?;
         self.host.register_texture(&image)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_png_texture(&mut self, path: impl AsRef<Path>) -> Result<TextureId, RuntimeError> {
         let image = Sdl3Host::load_png(path)?;
         self.host.register_texture(&image)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_original_stage(
         &mut self,
         game_root: impl AsRef<Path>,
@@ -132,6 +181,7 @@ impl NativeFightHost {
     }
 
     /// Loads a fighter's local Pascal sprite strip and its source INI pivot metadata.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_original_fighter(
         &mut self,
         game_root: impl AsRef<Path>,
@@ -230,6 +280,7 @@ impl NativeFightHost {
         })
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_original_game_settings(&mut self, game_root: impl AsRef<Path>) {
         let ini = IniDocument::read(&game_root.as_ref().join("Dados/Jogo.ini"));
         self.damage_level = ini
@@ -240,6 +291,7 @@ impl NativeFightHost {
             .clamp(0.3, 2.0);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_pascal_audio(&mut self, game_root: impl AsRef<Path>) -> PascalAudioLayout {
         let layout = self.audio.load_pascal_resources(&mut self.host, game_root);
         self.audio_layout = Some(layout.clone());
@@ -247,6 +299,7 @@ impl NativeFightHost {
     }
 
     /// Loads original local assets after character select. Missing assets stay diagnostics.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_original_game(
         &mut self,
         game_root: impl AsRef<Path>,
@@ -325,10 +378,25 @@ impl NativeFightHost {
                 self.diagnostics.push(format!("melee resolution: {error}"));
             }
         }
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(layout) = self.audio_layout.as_ref() {
             let _ = self
                 .audio
                 .play_pending_fight_sound(&mut self.host, layout, fight);
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        if let Some(sound_id) = fight.state.pending_sound.filter(|id| *id != 0) {
+            let slot = sound_id;
+            if usize::from(slot) < self.web_effect_bank_len {
+                let _ = fight.take_pending_sound();
+                if let Some(clip) = self.web_effect_clips.get(&slot).copied() {
+                    let _ = self.host.audio(&AudioRequest::PlayClip {
+                        clip,
+                        looped: false,
+                    });
+                }
+            }
         }
     }
 
