@@ -5,7 +5,7 @@
     "name": "Street Chaves"
   },
   "wasm": {
-    "javascript_glue": "pkg/street_chaves_rust.js",
+    "javascript_glue": "pkg/street_chaves.js",
     "wasm_module": "pkg/street_chaves_rust_bg.wasm"
   },
   "assets": [
