@@ -62,7 +62,7 @@ impl StreetChavesWebRuntime {
         let assets = self
             .host
             .host_mut()
-            .load_asset_manifest(manifest_url)
+            .load_web_export(manifest_url)
             .await
             .map_err(js_error)?;
         let count = assets.textures.len() + assets.audio_clips.len() + assets.data.len();
