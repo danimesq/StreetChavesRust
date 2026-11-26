@@ -2,154 +2,120 @@
 
 ## Status
 
-This PR adds the first executable package-management layer:
+Custom characters now have a shared package loader **and a bounded gameplay runtime**.
 
-- Platform-neutral validation from package-relative file paths and bytes.
-- Native directory loading on non-WASM targets.
-- An opt-in in-memory registry with install/enable/disable operations.
-- A browser/WASM bridge that accepts files supplied by the browser host and exposes installation, activation, listing, and asset-byte retrieval to JavaScript.
-- Defensive checks for schema version, package size, asset size, file count, duplicate paths, missing assets, and path traversal.
+- Native directory loading and browser/WASM byte handoff use the same `character.json` package format.
+- Runtime IDs are strings at package level and map to numeric engine IDs starting at 16. Built-in C01-C15 are never renumbered or replaced.
+- A validated definition supplies frame-centre offsets, hurtboxes, ordered attack rows, move timelines, push windows, invulnerability gates, sound/effect events and post-hit recoil.
+- `FightSimulation` can register a package, select it into either fighter slot, start its named moves and execute its frames through the same tick path used by built-in fighters.
+- The runtime interprets declarative data only. It never executes packaged Pascal ROT, Rust, JavaScript, WASM or native code.
 
-This is **not yet a claim that arbitrary custom fighters are playable in the fight simulation**. The current combat/runtime tables and FightSimulation are still based on the original 15 fighters. The package loader is real; wiring arbitrary package definitions into the full fighter lifecycle, animation, collision, commands, AI, effects, portraits, and audio remains a separate integration milestone. The Chapolin sample is a data-package example, not a shipped binary or a fully playable C16 port.
+The Chapolin C16 example is a **headless-playable logic package**: its five specials, 50 centre offsets, 50 hurtboxes and 20 attack rows are represented as data and exercised by integration tests. The repository does not bundle the original Chapolin bitmap/sprite sheet or audio files. A graphical host must supply rights-cleared artwork and map it as a package asset before it can draw the actual character. This is an asset/provenance boundary, not a second character format.
 
-## Package format
+## Package layout
 
-Each package is a directory with a character.json manifest and package-relative assets:
+Each character is a directory with one manifest and optional assets:
 
-\`\`\`text
+```text
 chapolin/
 ├── character.json
 └── assets/
-    └── chapolin.png        # artwork supplied/cleared by the package author
-\`\`\`
+    └── chapolin.png        # optional art supplied/cleared by the package author
+```
 
-Minimal manifest:
+The example at `examples/custom-characters/chapolin/` contains the complete source-derived C16 logic tables and move timelines. It intentionally has an empty `assets` map because the source art is not redistributed.
 
-\`\`\`json
-{
-  "schema_version": 1,
-  "id": "chapolin",
-  "display_name": "Chapolin Colorado",
-  "author": "StreetChaves custom character example",
-  "version": "1.0.0",
-  "fighter": {
-    "attributes": {
-      "sprite_height": 199,
-      "walk_speed": 9.0
-    },
-    "moves": [
-      { "id": "special_1", "name": "Corneta Paralisadora" },
-      { "id": "special_2", "name": "Marreta Biônica" },
-      { "id": "special_3", "name": "Chipote Voador" },
-      { "id": "special_4", "name": "Pílulas de Nanicolina" },
-      { "id": "special_5", "name": "Sigam-me os Bons!" }
-    ],
-    "animations": {}
-  },
-  "assets": {
-    "fighter_strip": "assets/chapolin.png"
-  }
-}
-\`\`\`
+## Native installation and use
 
-The Chapolin move names and observed sprite height/walk speed are source-derived from the Pascal C16 reference. This manifest intentionally does not pretend that an empty animation table or an arbitrary sprite is a complete C16 port. Package authors must provide the referenced asset; the loader rejects missing declared assets.
+A native host loads the directory, registers the package with the simulation, selects the fighter and maps input to a named move:
 
-## Native installation
-
-A native host can load a package directory without compiling the package into the executable:
-
-\`\`\`rust
-use street_chaves::custom_character::{load_directory, CustomCharacterRegistry};
+```rust
+use street_chaves::custom_character::load_directory;
 
 let package = load_directory("custom-characters/chapolin")?;
-let mut characters = CustomCharacterRegistry::default();
-characters.install(package)?;
-characters.enable("chapolin")?;
-# Ok::<(), Box<dyn std::error::Error>>(())
-\`\`\`
+let runtime_id = fight.register_custom_character_package(package)?;
+assert_eq!(runtime_id, 16);
 
-A game host can scan a user-writable directory such as:
+fight.select_custom_character(0, "chapolin")?;
+fight.queue_custom_character_move(0, "special_2", 2)?; // strong Marreta Biônica
+```
 
-\`\`\`text
+A typical user-writable installation path is:
+
+```text
 <GameData>/
 └── custom-characters/
     └── chapolin/
         ├── character.json
         └── assets/
             └── chapolin.png
-\`\`\`
+```
 
-The package is data, not a plugin binary. Do not load executable code from character packages. Keep user-installed packages outside the read-only application installation directory and offer a clear enable/disable control.
+Copying a package folder does not rebuild or modify the executable. The host decides whether a package should be selected; installing a package does not silently replace an existing roster slot.
 
-## Browser and WebAssembly installation
+## Web and WebAssembly
 
-WASM cannot assume direct access to the user's disk. The browser host must let the user select a package folder (or its files), read each selected file as bytes, and pass relative paths plus byte arrays into the WASM bridge.
+WASM cannot assume direct access to the user's disk. The browser host selects the package folder (or its files), preserves relative paths, and passes byte arrays to the Rust/WASM game host. The same `CustomCharacterPackage::from_files`, `FightSimulation::register_custom_character_package`, `select_custom_character` and `queue_custom_character_move` APIs are used after file selection. There is no Web-only manifest or move format.
 
-The WASM bridge exports:
+The package-validation bridge added in the package-foundation milestone exports:
 
-- install_custom_character_package(paths, contents)
-- enable_custom_character(id)
-- disable_custom_character(id)
-- custom_character_is_enabled(id)
-- list_custom_characters()
-- get_custom_character_asset(id, asset_id)
+- `install_custom_character_package(paths, contents)`
+- `enable_custom_character(id)`
+- `disable_custom_character(id)`
+- `custom_character_is_enabled(id)`
+- `list_custom_characters()`
+- `get_custom_character_asset(id, asset_id)`
 
-The arrays passed to install must have the same length. Each path is relative to the package root; each content item is a Uint8Array. The bridge validates the exact same package format as native loading. It does not need a native filesystem, and no separate Web-only character format is introduced.
+Each content item is a `Uint8Array`; each path is relative to the selected package root. The game host then constructs the same package object and registers it with its `FightSimulation`. Image decoding, file selection, persistent browser storage and drawing remain host responsibilities.
 
-A minimal browser host flow (the host owns the file picker and reads the files):
+For a normal browser file input, use `webkitdirectory` where supported or allow multi-file selection, preserving each file's relative path. Never flatten files into basenames, because different folders may contain files with the same name.
 
-\`\`\`javascript
-async function installSelectedCharacter(files, wasm) {
-  const paths = [];
-  const contents = [];
+## Shared gameplay API
 
-  for (const file of files) {
-    // webkitRelativePath preserves the selected directory structure.
-    const path = file.webkitRelativePath.split("/").slice(1).join("/");
-    paths.push(path);
-    contents.push(new Uint8Array(await file.arrayBuffer()));
-  }
+The important engine entry points are:
 
-  const installed = wasm.install_custom_character_package(paths, contents);
-  wasm.enable_custom_character(installed.id);
-  return installed;
-}
-\`\`\`
+- `register_custom_character_package(package)`: validate the declarative runtime definition and install/activate it.
+- `select_custom_character(fighter_index, package_id)`: select it for player 1 or player 2.
+- `queue_custom_character_move(fighter_index, move_id, force_strength)`: start a named weak/strong special.
+- `custom_character_definition(runtime_id)`: expose validated frame-centre offsets, frame boxes and move metadata to render hosts.
+- `custom_character_asset(runtime_id, asset_id)`: retrieve optional packaged asset bytes.
 
-For a normal browser file input, set webkitdirectory where supported or allow multi-file selection and preserve each file's relative path. A host should display validation errors and never silently flatten files with duplicate names. The browser host decodes image/audio bytes and registers them with the renderer; the Rust game core only sees logical asset IDs and bytes.
+The move queue is deliberately a host-facing input seam. Built-in C01-C15 command recognizers remain intact; a host maps its custom-character controls to a package move ID rather than injecting executable command scripts.
 
-The WASM bridge registry is in-memory for the lifetime of the WASM instance. Persistence across reloads is a host responsibility (for example IndexedDB or reselecting the folder). Package bytes are not baked into the WASM binary.
+## Declarative C16 gameplay
 
-## Security and limits
+The Chapolin manifest records the source-observed attributes `AlturaSprite=199` and `Velocidade=9.0`, all 50 `CentroX` rows, all 50 `Corpo` rows and the 20 ordered `Ataque` rows. It also maps the five special actions:
+
+| Move | Action | Weak / strong duration | Implemented behavior |
+|---|---:|---:|---|
+| Corneta Paralisadora | 25 | 30 / 30 | Frame timeline, sound and effect 37 at frame 10 |
+| Marreta Biônica | 26 | 16 / 24 | Strength-specific hammer timeline, strong push and recoil 20 on strong hit |
+| Chipote Voador | 27 | 10 / 16 | Rising push, kick classification and opponent-invulnerability gates |
+| Pílulas de Nanicolina | 28 | 34 / 34 | Shrink/run/grow timeline, strength-specific push and recoil 15 on hit |
+| Sigam-me os Bons! | 29 | 38 / 38 | Power/low-health gate, invulnerability through frame 16, slam, effect 38 and screen shake |
+
+The runtime advances one declarative frame per simulation tick, applies the matching C16 body/attack table rows, updates push/invulnerability state and emits typed effect events. Sound IDs are exposed through the existing pending-sound field.
+
+The Pascal C16 source is a fork extension, not an original C01-C15 roster member:
+
+- [C16.ini](https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C16.ini)
+- [C16.rot](https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C16.rot)
+
+The source ROT file is used as a behavioral reference only. Its code is not loaded or executed by this package.
+
+## Security and compatibility
 
 - Maximum 256 files per package.
 - Maximum 32 MiB total package size.
 - Maximum 16 MiB per non-manifest asset.
-- Only package-relative paths are accepted.
-- Absolute paths, parent traversal, backslashes, drive-letter/colon paths, empty path segments, and control characters are rejected.
-- Native directory loading rejects symlinks.
-- Duplicate package IDs cannot be installed twice into the same registry.
-- Package data is declarative JSON. No Rust, Pascal, JavaScript, WASM, or native plugin execution is supported.
+- Only package-relative paths are accepted; absolute paths and traversal are rejected.
+- Native loading rejects symlinks.
+- Duplicate package IDs and duplicate runtime IDs are rejected.
+- Built-in IDs 1..15 remain reserved. Custom IDs must be 16..255.
+- Declarative frame arrays, move counts, durations, push values and numeric fields are bounded and validated.
+- Custom packages cannot inject code or mutate arbitrary engine fields.
+- Package installation does not execute arbitrary `.rot` content.
 
-These limits are conservative defaults for an initial implementation and can be revised with explicit tests and product requirements.
+## Remaining host work
 
-## Base roster compatibility
-
-Custom package IDs are stable strings (for example, chapolin), not legacy numeric slots. They do not renumber C01-C15 or claim C16 is an original-roster member. Enabling a package changes only the custom-package registry; it does not yet insert a new fighter into the current fixed roster selection or simulation state.
-
-The eventual roster integration must allocate a runtime identity independently from original IDs 1..15 and ensure packages cannot overwrite built-in fighters.
-
-## Chapolin provenance and assets
-
-The Pascal reference contains C16 INI/ROT data and generated art, but the existence of those files does not establish that every asset is safe to redistribute. This PR does not copy the C16 BMP/PNG art or executable ROT script into the Rust repository. The sample manifest records source-observed metadata and move names only. A distributable Chapolin package needs a separate provenance/permission review and cleared artwork/audio.
-
-The Pascal C16 ROT script is executable game logic, not passive animation metadata. This loader does not execute arbitrary ROT supplied by custom packages. C16's full behavior must be translated into the documented, bounded custom-character behavior model and covered by tests before the sample is called playable.
-
-## API example
-
-The same core API is used by native and browser hosts:
-
-- Native: call load_directory(path), then install/enable the returned package.
-- Browser/WASM: call CustomCharacterPackage::from_files through the exported JS bridge using user-selected file bytes.
-
-This keeps package validation and identity rules shared. Platform-specific file selection, persistence, image decoding, and rendering remain in the host.
+The core now simulates custom moves and emits typed effect requests. A graphical host still needs to provide/clear sprite assets, decode and draw those assets, render emitted custom-effect events and map keyboard/controller input to custom move IDs. Web persistence (for example IndexedDB) and native package discovery are host-level concerns. The repository's fight core remains renderer-independent.
