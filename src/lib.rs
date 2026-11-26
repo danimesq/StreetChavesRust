@@ -7,11 +7,28 @@
 
 use std::fmt;
 
+/// Pascal-shaped 48-voice PCM mixer, independent of platform audio APIs.
+pub mod audio;
+
+/// Pascal resource-bank mapping delegated to Foundation's audio host.
+#[cfg(all(feature = "native-foundation", not(target_arch = "wasm32")))]
+pub mod audio_foundation;
+
+/// Native two-player fixed-step bridge and renderer consumer for Foundation SDL3.
+#[cfg(all(feature = "native-foundation", not(target_arch = "wasm32")))]
+pub mod native_foundation;
+
+/// Platform-neutral opening, title and fighter-selection state machine.
+pub mod startup_flow;
+
 /// Source-preserving lexer and parser for the pinned Pascal ROT dialect.
 pub mod rot_runtime;
 
 /// Platform-neutral custom-character package validation and opt-in activation.
 pub mod custom_character;
+
+/// Bounded declarative custom-fighter definitions and move timelines.
+pub mod custom_character_runtime;
 
 /// JavaScript bridge for browser-hosted custom character packages.
 #[cfg(target_arch = "wasm32")]

@@ -11,6 +11,8 @@ This directory records the research and engineering decisions for an independent
 
 - [Rust Gaming Eclipse integration plan](rust-gaming-eclipse.md): StreetChaves as an independent consumer, Foundation integration gates, optional Bevy/Rapier evaluation, and the future ImpossibleEngine migration boundary.
 
+- [Native and browser presentation host roadmap](presentation-host-roadmap.md)
+- [Native SDL3 audio backend (PR #36)](audio-backend-pr36.md) — renderer-neutral snapshots, native SDL and WASM/Canvas host plan, audio queue, local asset paths.
 - [Rust architecture proposal](rust-architecture.md): a proposed separation of deterministic game logic from SDL3 presentation and platform services.\n- [Iroh multiplayer networking study](iroh-multiplayer-study-pr31.md): online/LAN connectivity, QUIC, relays, mDNS, topology choices, authority, tick synchronization, security, and a staged prototype plan.
 - [Custom character package format](custom-character-package-format.md): JSON character definitions mapped onto the existing Street Chaves data folders, with filesystem loading for native targets and a host resource API for WASM/Canvas and Construct.
 - [Rendering backends and WebAssembly/Canvas architecture](rendering-backends-wasm-canvas.md): one shared Rust engine with replaceable native SDL3 and browser Canvas 2D adapters, build boundaries, timing, resources, tests and staged implementation.
@@ -86,3 +88,7 @@ These repositories are independent projects, not a parent/child chain. For the R
 - [Custom character packages](custom-character-packages.md): platform-neutral package validation and opt-in activation, native directory loading, and browser/WASM file handoff.
 
 - [Custom character packages](custom-character-packages.md): implemented native/WASM package ingestion, validation, activation API, browser file handoff, and current gameplay integration boundaries.
+
+- [Foundation native host integration (PR #37)](foundation-native-host-pr37.md): actual SDL3 host consumption, two-player 28 ms input/tick bridge, explicit sprite-frame mappings and Pascal audio banks delegated to Foundation.
+
+- [First native playable loop (PR #41)](native-playable-loop-pr38.md): boot intro, title/Start, two-player fighter selection, Foundation SDL3 host, Pascal sprite-sheet loader, HUD and current full-game gaps.

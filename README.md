@@ -4,7 +4,7 @@
 
 An independent Rust reimplementation project inspired by **Street Chaves — O Lutador da Vila**. The goal is to understand the game’s behavior, compare existing reconstructions, and build a clean Rust implementation with a testable game core and a separate SDL3 presentation layer.
 
-> **Project status: research, deterministic Pascal runtime evidence, and foundational Rust contracts.**
+> **Project status: deterministic Pascal runtime evidence, a native Foundation/SDL3 host integration path, and foundational Rust contracts.**
 > The repository contains Rust contracts for ordered combat timelines, Pascal/FPC 3.2.2 MTwist RNG compatibility, strict AABB geometry, and source-specific hitbox/hurtbox lifecycle behavior. The static .rot normalizer covers all 15 fighters: 5,091 symbolic events, 1,749 guard groups, 255 unique RNG sites (465 fighter-timeline occurrences), plus 71 Pascal .pas/.inc RNG references. Separately, an experimental Pascal schema-v2 runtime exporter now captures concrete ticks, nested script invocations, actual branch/loop outcomes and SortearValor draws. Two fixed-seed 3,000-step runs compiled with FPC 3.2.2 and produced byte-identical traces and logica.txt checkpoints. The Rust joiner reconciled 8,841 draws: 8,415 unique .rot matches, 0 ambiguous, 0 unmatched, and 426 non-.rot contexts (422 direct wrapper calls, 4 Pascal helpers). The Pascal exporter remains on a research branch; Rust simulation/replay and original-executable parity remain incomplete. The game is not yet playable.
 
 ## Project goals
@@ -86,8 +86,23 @@ Unverified behavior stays documented as an open question rather than being fille
 
 At this stage, the most useful contributions are reproducible observations, source references, test cases, and corrections to the research documents. Please distinguish direct source observations from interpretations and original-game claims.
 
-Run the current contract suite with `cargo test`. There is not yet a playable runtime or SDL3 frontend, so no game launch command is available.
+Run the platform-neutral contracts with `cargo test`. The optional native executable is available with `cargo run --features native-foundation --bin street-chaves-native`.
 
 ---
 
 *An independent implementation, informed by comparison rather than blind translation.*
+
+
+## Native host integration
+
+The opt-in native-foundation feature consumes the shared SDL3 host from RustMultiConsoleFoundation. It centralizes the native window, keyboard events, textures, WAV decoding and PCM mixer while StreetChavesRust retains its two-player 28 ms simulation clock and Pascal sound-bank indexing. See docs/foundation-native-host-pr37.md. Sprite-sheet source rectangles and pivots must be registered from audited local metadata; the runtime does not guess that P.Quadro is an atlas cell.
+
+
+## Native startup and fight executable
+
+```sh
+cargo run --features native-foundation --bin street-chaves-native
+cargo run --features native-foundation --bin street-chaves-native -- --game-root "/path/to/OpenStreetChaves" --stage 1 --p1 1 --p2 4
+```
+
+The executable starts with a vector opening, title/Start screen and two-player character selection before entering the fight. With `--game-root`, it loads local stage/fighter BMPs, INI pivots and WAV banks. See [the native playable loop guide](docs/native-playable-loop-pr38.md). Original game art/audio are not redistributed.

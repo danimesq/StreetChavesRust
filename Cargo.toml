@@ -2,7 +2,7 @@
 name = "street-chaves-rust"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.85"
 description = "Evidence-driven Rust reconstruction of Street Chaves combat rules"
 license = "MIT"
 
@@ -11,11 +11,23 @@ name = "street_chaves"
 path = "src/lib.rs"
 crate-type = ["rlib", "cdylib"]
 
+[features]
+default = []
+native-foundation = ["dep:foundation-runtime"]
+
 [dependencies]
 serde_json = "1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+foundation-runtime = { git = "https://github.com/danimesq/RustMultiConsoleFoundation", branch = "main", package = "foundation-runtime", optional = true, features = ["native-sdl3"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 js-sys = "0.3"
 
 [dev-dependencies]
+
+[[bin]]
+name = "street-chaves-native"
+path = "src/bin/street-chaves-native.rs"
+required-features = ["native-foundation"]
