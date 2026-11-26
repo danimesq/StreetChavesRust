@@ -2284,6 +2284,17 @@ mod rot_runtime_integration_tests {
         fight.tick_with_inputs([InputFrame::default(), InputFrame::default()]);
         assert!(fight.state.fighters[0].invulnerable);
         assert_eq!(fight.state.fighters[0].power, 0);
+        assert!(fight
+            .last_report()
+            .custom_character_events
+            .iter()
+            .any(|event| matches!(
+                event,
+                CustomCharacterEvent::ScreenFlash {
+                    fighter_index: 0,
+                    duration: 22
+                }
+            )));
     }
 
     #[test]
