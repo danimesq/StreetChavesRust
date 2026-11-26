@@ -19,14 +19,14 @@ struct Voice {
     pcm: Arc<[i16]>,
     position_frames: usize,
     looped: bool,
-    sequence: u64,
+    sequence: u32,
 }
 
 /// Deterministic PCM voice mixer. It deliberately knows nothing about SDL or files.
 #[derive(Debug)]
 pub struct AudioMixer {
     voices: [Option<Voice>; MAX_AUDIO_VOICES],
-    next_sequence: u64,
+    next_sequence: u32,
     callback_buffer: Vec<i16>,
 }
 
@@ -35,7 +35,9 @@ impl Default for AudioMixer {
         Self {
             voices: std::array::from_fn(|_| None),
             next_sequence: 0,
-            callback_buffer: Vec::new(),
+            // Pascal's mixer scratch buffer is capped at 16,384 S16 samples.
+            // Preallocate it before SDL starts pulling callback data.
+            callback_buffer: vec![0; 16_384],
         }
     }
 }
@@ -65,15 +67,20 @@ impl AudioMixer {
             .iter()
             .position(Option::is_none)
             .unwrap_or_else(|| {
-                self.voices
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, voice)| {
-                        voice.as_ref().map(|active| (index, active.sequence))
-                    })
-                    .min_by_key(|(_, sequence)| *sequence)
-                    .map(|(index, _)| index)
-                    .unwrap_or(0)
+                let mut oldest_index = 0;
+                for candidate_index in 1..MAX_AUDIO_VOICES {
+                    let candidate = self.voices[candidate_index]
+                        .as_ref()
+                        .expect("the voice pool is full");
+                    let oldest = self.voices[oldest_index]
+                        .as_ref()
+                        .expect("the voice pool is full");
+                    // Pascal compares Cardinal sequence differences as signed Integer values.
+                    if (candidate.sequence.wrapping_sub(oldest.sequence) as i32) < 0 {
+                        oldest_index = candidate_index;
+                    }
+                }
+                oldest_index
             });
 
         self.next_sequence = self.next_sequence.wrapping_add(1);
