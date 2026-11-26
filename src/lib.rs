@@ -7,6 +7,13 @@
 
 use std::fmt;
 
+/// Pascal-shaped 48-voice PCM mixer, independent of platform audio APIs.
+pub mod audio;
+
+/// Native SDL3 audio device and OpenStreetChaves resource-bank adapter.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod audio_sdl;
+
 /// Source-preserving lexer and parser for the pinned Pascal ROT dialect.
 pub mod rot_runtime;
 

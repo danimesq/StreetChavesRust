@@ -6,7 +6,9 @@ The combat core exposes `FightSimulation::presentation_frame()`. It returns a re
 
 The API does not advance simulation, timers, RNG, nor mutate fighter state. The snapshot is deliberately platform-neutral and can be consumed by SDL, Canvas2D or another renderer.
 
-## Next host milestone
+## Audio host slice
+
+The first native output slice is tracked in audio-backend-pr36.md. It ports the Pascal mixer contract to a platform-neutral Rust PCM mixer and a native SDL3 callback adapter. The host loads WAVs from a local OpenStreetChaves installation and consumes SomPendente once after each simulation tick. It does not place SDL types in the combat core and does not add SDL to the WASM target.
 
 ### Native SDL host
 
