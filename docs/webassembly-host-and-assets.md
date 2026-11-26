@@ -88,12 +88,20 @@ WebExportBuilder::new("street-chaves", "Street Chaves")
         ]),
         "verified-assets/Musica-01.ogg",
     )
+    .package_file(
+        "verified-assets/Musica-01.m4a",
+        "assets/audio/music/Musica-01.m4a",
+    )
+    .package_file(
+        "verified-assets/Musica-01.mp3",
+        "assets/audio/music/Musica-01.mp3",
+    )
     .package_file("web/index.html", "index.html")
     .package_file("web/main.js", "main.js")
     .write_to("dist/street-chaves-web")?;
 ```
 
-`wasm_bundle_files` registers the generated JavaScript/WASM sources and their published destinations. `asset_file` connects each game-facing resource ID to its source file and package path. `package_file` includes the page shell and consumer-owned entry point. `write_to` validates the package, copies the files and writes `web-export.json` at the package root.
+`wasm_bundle_files` registers the generated JavaScript/WASM sources and their published destinations. `asset_file` connects each game-facing resource ID and primary source file to its package path. The fallback source files must also be registered with `package_file` at the exact paths listed in `fallbacks`. `package_file` additionally includes the page shell and consumer-owned entry point. `write_to` validates the package, copies the files and writes `web-export.json` at the package root.
 
 The example source paths are placeholders for locally supplied, verified game assets. The repository does not bundle original copyrighted media. Foundation can only stage files that the build actually supplies; it does not generate or reconstruct missing game assets.
 
