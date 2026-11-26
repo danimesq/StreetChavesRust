@@ -24,15 +24,21 @@ fn js_error(error: impl std::fmt::Display) -> JsValue {
 #[wasm_bindgen]
 pub fn install_custom_character_package(paths: Array, contents: Array) -> Result<JsValue, JsValue> {
     if paths.length() != contents.length() {
-        return Err(JsValue::from_str("paths and contents must have the same length"));
+        return Err(JsValue::from_str(
+            "paths and contents must have the same length",
+        ));
     }
     let mut files = Vec::with_capacity(paths.length() as usize);
     for index in 0..paths.length() {
-        let path = paths.get(index).as_string()
+        let path = paths
+            .get(index)
+            .as_string()
             .ok_or_else(|| JsValue::from_str("package path must be a string"))?;
         let value = contents.get(index);
         if !value.is_instance_of::<Uint8Array>() {
-            return Err(JsValue::from_str("package file content must be a Uint8Array"));
+            return Err(JsValue::from_str(
+                "package file content must be a Uint8Array",
+            ));
         }
         let bytes = Uint8Array::new(&value).to_vec();
         files.push(PackageFile { path, bytes });
@@ -47,8 +53,16 @@ pub fn install_custom_character_package(paths: Array, contents: Array) -> Result
 
     let result = Object::new();
     Reflect::set(&result, &JsValue::from_str("id"), &JsValue::from_str(&id))?;
-    Reflect::set(&result, &JsValue::from_str("display_name"), &JsValue::from_str(&display_name))?;
-    Reflect::set(&result, &JsValue::from_str("version"), &JsValue::from_str(&version))?;
+    Reflect::set(
+        &result,
+        &JsValue::from_str("display_name"),
+        &JsValue::from_str(&display_name),
+    )?;
+    Reflect::set(
+        &result,
+        &JsValue::from_str("version"),
+        &JsValue::from_str(&version),
+    )?;
     Ok(result.into())
 }
 
@@ -74,9 +88,21 @@ pub fn list_custom_characters() -> Result<Array, JsValue> {
         let output = Array::new();
         for package in registry.enabled() {
             let item = Object::new();
-            Reflect::set(&item, &JsValue::from_str("id"), &JsValue::from_str(&package.manifest.id))?;
-            Reflect::set(&item, &JsValue::from_str("display_name"), &JsValue::from_str(&package.manifest.display_name))?;
-            Reflect::set(&item, &JsValue::from_str("version"), &JsValue::from_str(&package.manifest.version))?;
+            Reflect::set(
+                &item,
+                &JsValue::from_str("id"),
+                &JsValue::from_str(&package.manifest.id),
+            )?;
+            Reflect::set(
+                &item,
+                &JsValue::from_str("display_name"),
+                &JsValue::from_str(&package.manifest.display_name),
+            )?;
+            Reflect::set(
+                &item,
+                &JsValue::from_str("version"),
+                &JsValue::from_str(&package.manifest.version),
+            )?;
             output.push(&item);
         }
         Ok(output)
