@@ -7,7 +7,7 @@
 use std::cell::RefCell;
 
 use js_sys::{Array, Object, Reflect, Uint8Array};
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::{prelude::*, JsCast};
 
 use crate::custom_character::{CustomCharacterPackage, CustomCharacterRegistry, PackageFile};
 
