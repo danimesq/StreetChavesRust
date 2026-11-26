@@ -86,7 +86,7 @@ The current `load_web_resources()` implementation loads those IDs, decodes the f
 
 ## Browser entry point
 
-Foundation generates the HTML shell and copies [web/main.js](../web/main.js) as the configured bootstrap. That module:
+Foundation generates the HTML shell, including the configured canvas, audio-resume button and diagnostics element, and copies [web/main.js](../web/main.js) as the configured bootstrap. The generated element IDs match the StreetChaves bootstrap configuration. That module:
 
 1. Initializes the generated `street_chaves.js` WebAssembly glue.
 2. Creates the `StreetChavesWebRuntime` on the generated canvas.
