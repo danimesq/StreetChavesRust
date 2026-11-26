@@ -554,6 +554,33 @@ pub struct FightTickReport {
     pub errors: Vec<String>,
 }
 
+/// Renderer-neutral snapshot of one fighter for the presentation layer.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FighterPresentation {
+    pub slot: usize,
+    pub character_id: u8,
+    pub sprite_frame: i32,
+    pub action_id: u16,
+    pub action_frame: u16,
+    pub facing: u8,
+    pub x: f64,
+    pub y: f64,
+    pub health: f64,
+    pub power: u16,
+    pub invulnerable: bool,
+}
+
+/// Read-only presentation snapshot. Host renderers consume this without mutating simulation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FightPresentationFrame {
+    pub tick_index: u64,
+    pub fighters: [FighterPresentation; 2],
+    pub camera_x: f64,
+    pub pending_sound: Option<u16>,
+    pub screen_flash: u8,
+    pub screen_shake: u16,
+}
+
 /// Concrete SimulationTick implementation over the existing combat/effect state.
 #[derive(Debug, Clone)]
 pub struct FightSimulation {
@@ -828,6 +855,37 @@ impl FightSimulation {
         }
         self.pending_specials.push((fighter_index, command));
         true
+    }
+
+    /// Build a renderer/audio-host snapshot from current authoritative state.
+    /// This is observational only: it does not advance timers, RNG, or simulation.
+    pub fn presentation_frame(&self) -> FightPresentationFrame {
+        let fighter_snapshot = |slot: usize, fighter: &crate::combat_runtime::FighterState| {
+            FighterPresentation {
+                slot,
+                character_id: fighter.character_id,
+                sprite_frame: fighter.sprite_frame,
+                action_id: fighter.action_id,
+                action_frame: fighter.action_frame,
+                facing: fighter.facing,
+                x: fighter.x,
+                y: fighter.y,
+                health: fighter.health,
+                power: fighter.power,
+                invulnerable: fighter.invulnerable,
+            }
+        };
+        FightPresentationFrame {
+            tick_index: self.state.tick_index,
+            fighters: [
+                fighter_snapshot(0, &self.state.fighters[0]),
+                fighter_snapshot(1, &self.state.fighters[1]),
+            ],
+            camera_x: self.state.camera_x,
+            pending_sound: self.state.pending_sound,
+            screen_flash: self.state.screen_flash,
+            screen_shake: self.state.screen_shake,
+        }
     }
 
     pub fn last_report(&self) -> &FightTickReport {
@@ -2190,6 +2248,21 @@ mod rot_runtime_integration_tests {
             },
             2026,
         )
+    }
+
+    #[test]
+    fn presentation_frame_is_read_only_and_contains_fighter_render_fields() {
+        let fight = simulation();
+        let before = fight.state.clone();
+        let frame = fight.presentation_frame();
+
+        assert_eq!(frame.tick_index, before.tick_index);
+        assert_eq!(frame.fighters[0].character_id, before.fighters[0].character_id);
+        assert_eq!(frame.fighters[0].sprite_frame, before.fighters[0].sprite_frame);
+        assert_eq!(frame.fighters[0].x, before.fighters[0].x);
+        assert_eq!(frame.fighters[1].facing, before.fighters[1].facing);
+        assert_eq!(frame.pending_sound, before.pending_sound);
+        assert_eq!(fight.state, before, "snapshot must not mutate game state");
     }
 
     #[test]
