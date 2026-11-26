@@ -195,7 +195,9 @@ impl CustomCharacterRegistry {
     }
 
     pub fn disable(&mut self, id: &str) -> Result<(), PackageError> {
-        if !self.packages.contains_key(id) { return Err(PackageError::CharacterNotFound(id.to_owned())); }
+        if !self.packages.contains_key(id) {
+            return Err(PackageError::CharacterNotFound(id.to_owned()));
+        }
         self.enabled.remove(id);
         Ok(())
     }
