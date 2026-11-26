@@ -9,8 +9,8 @@ use crate::fixed_timestep::{FixedTimestepClock, TickBatch};
 use crate::input::{Button, Direction, InputEvent, InputSampler};
 use foundation_runtime::native_sdl::Sdl3Host;
 use foundation_runtime::{
-    DrawCommand, FrameOutput, PadDirection, PlayerInputSnapshot, Rect, RuntimeConfig,
-    RuntimeError, RuntimeHost, TextureId,
+    DrawCommand, FrameOutput, PadDirection, PlayerInputSnapshot, Rect, RuntimeConfig, RuntimeError,
+    RuntimeHost, TextureId,
 };
 use std::collections::HashMap;
 use std::path::Path;
@@ -59,9 +59,15 @@ impl NativeFightHost {
         })
     }
 
-    pub fn should_quit(&self) -> bool { self.quit_requested }
-    pub fn host(&self) -> &Sdl3Host { &self.host }
-    pub fn host_mut(&mut self) -> &mut Sdl3Host { &mut self.host }
+    pub fn should_quit(&self) -> bool {
+        self.quit_requested
+    }
+    pub fn host(&self) -> &Sdl3Host {
+        &self.host
+    }
+    pub fn host_mut(&mut self) -> &mut Sdl3Host {
+        &mut self.host
+    }
 
     pub fn load_bmp_texture(&mut self, path: impl AsRef<Path>) -> Result<TextureId, RuntimeError> {
         let image = Sdl3Host::load_bmp(path)?;
@@ -79,11 +85,17 @@ impl NativeFightHost {
         sprite_frame: i32,
         mapping: SpriteFrameMapping,
     ) -> Result<(), RuntimeError> {
-        if mapping.source.width == 0 || mapping.source.height == 0
-            || mapping.destination_width == 0 || mapping.destination_height == 0 {
-            return Err(RuntimeError::InvalidConfig("sprite dimensions must be non-zero"));
+        if mapping.source.width == 0
+            || mapping.source.height == 0
+            || mapping.destination_width == 0
+            || mapping.destination_height == 0
+        {
+            return Err(RuntimeError::InvalidConfig(
+                "sprite dimensions must be non-zero",
+            ));
         }
-        self.sprite_frames.insert((character_id, sprite_frame), mapping);
+        self.sprite_frames
+            .insert((character_id, sprite_frame), mapping);
         Ok(())
     }
 
@@ -93,10 +105,15 @@ impl NativeFightHost {
         layout
     }
 
-    pub fn audio_layout(&self) -> Option<&PascalAudioLayout> { self.audio_layout.as_ref() }
+    pub fn audio_layout(&self) -> Option<&PascalAudioLayout> {
+        self.audio_layout.as_ref()
+    }
 
     /// Drain host input and execute all due 28 ms logical ticks for both fighters.
-    pub fn poll_and_tick(&mut self, fight: &mut FightSimulation) -> Result<TickBatch, RuntimeError> {
+    pub fn poll_and_tick(
+        &mut self,
+        fight: &mut FightSimulation,
+    ) -> Result<TickBatch, RuntimeError> {
         let snapshot = self.host.poll_input()?;
         self.quit_requested = snapshot.quit_requested;
         for player in 0..2 {
@@ -112,16 +129,24 @@ impl NativeFightHost {
             let frames = std::array::from_fn(|player| self.input[player].sample_tick());
             fight.tick_with_inputs(frames);
             if let Some(layout) = self.audio_layout.as_ref() {
-                let _ = self.audio.play_pending_fight_sound(&mut self.host, layout, fight);
+                let _ = self
+                    .audio
+                    .play_pending_fight_sound(&mut self.host, layout, fight);
             }
         }
         Ok(batch)
     }
 
     /// Render an immutable fight snapshot. Stage/background commands are supplied by the game.
-    pub fn render(&mut self, frame: &FightPresentationFrame, scene: &[DrawCommand]) -> Result<(), RuntimeError> {
+    pub fn render(
+        &mut self,
+        frame: &FightPresentationFrame,
+        scene: &[DrawCommand],
+    ) -> Result<(), RuntimeError> {
         let mut commands = Vec::with_capacity(scene.len() + 12);
-        commands.push(DrawCommand::Clear { rgba: [12, 16, 28, 255] });
+        commands.push(DrawCommand::Clear {
+            rgba: [12, 16, 28, 255],
+        });
         commands.extend_from_slice(scene);
         for fighter in &frame.fighters {
             append_fighter_commands(&mut commands, fighter, frame.camera_x, &self.sprite_frames);
@@ -132,43 +157,66 @@ impl NativeFightHost {
                 rgba: [255, 255, 255, frame.screen_flash.saturating_mul(8)],
             });
         }
-        self.host.present(&FrameOutput { draw_commands: commands, audio: Vec::new() })
+        self.host.present(&FrameOutput {
+            draw_commands: commands,
+            audio: Vec::new(),
+        })
     }
 
-    pub fn render_fight(&mut self, fight: &FightSimulation, scene: &[DrawCommand]) -> Result<(), RuntimeError> {
+    pub fn render_fight(
+        &mut self,
+        fight: &FightSimulation,
+        scene: &[DrawCommand],
+    ) -> Result<(), RuntimeError> {
         self.render(&fight.presentation_frame(), scene)
     }
 
     pub fn load_fight_music(&mut self, number: usize) -> bool {
-        let Some(layout) = self.audio_layout.as_ref() else { return false };
+        let Some(layout) = self.audio_layout.as_ref() else {
+            return false;
+        };
         self.audio.load_fight_music(&mut self.host, layout, number)
     }
 
     pub fn play_music(&mut self) -> bool {
-        let Some(layout) = self.audio_layout.as_ref() else { return false };
+        let Some(layout) = self.audio_layout.as_ref() else {
+            return false;
+        };
         self.audio.play_music(&mut self.host, layout)
     }
 
     pub fn stop_music(&mut self) -> bool {
-        let Some(layout) = self.audio_layout.as_ref() else { return false };
+        let Some(layout) = self.audio_layout.as_ref() else {
+            return false;
+        };
         self.audio.stop_music(&mut self.host, layout)
     }
 
     pub fn play_victory_voice(&mut self, index: usize) -> bool {
-        let Some(layout) = self.audio_layout.as_ref() else { return false };
+        let Some(layout) = self.audio_layout.as_ref() else {
+            return false;
+        };
         self.audio.play_victory_voice(&mut self.host, layout, index)
     }
 }
 
 fn apply_player_snapshot(sampler: &mut InputSampler, player: PlayerInputSnapshot) {
-    sampler.apply_event(InputEvent::DirectionChanged(map_direction(player.direction)));
+    sampler.apply_event(InputEvent::DirectionChanged(map_direction(
+        player.direction,
+    )));
     for slot in 0..32 {
         let bit = 1_u32 << slot;
         if player.pressed_buttons & bit != 0 {
-            sampler.apply_event(InputEvent::ButtonChanged { button: Button(slot as u8), down: true });
+            sampler.apply_event(InputEvent::ButtonChanged {
+                button: Button(slot as u8),
+                down: true,
+            });
         }
         if player.released_buttons & bit != 0 {
-            sampler.apply_event(InputEvent::ButtonChanged { button: Button(slot as u8), down: false });
+            sampler.apply_event(InputEvent::ButtonChanged {
+                button: Button(slot as u8),
+                down: false,
+            });
         }
     }
 }
@@ -211,7 +259,11 @@ fn append_fighter_commands(
     }
 
     // Visible diagnostic silhouette until the relevant original frame is mapped.
-    let rgba = if fighter.slot == 0 { [224, 92, 92, 255] } else { [88, 150, 238, 255] };
+    let rgba = if fighter.slot == 0 {
+        [224, 92, 92, 255]
+    } else {
+        [88, 150, 238, 255]
+    };
     commands.push(DrawCommand::Rect {
         rect: Rect::new(x.saturating_sub(8), y.saturating_sub(24), 16, 24),
         rgba,
@@ -232,12 +284,22 @@ mod tests {
     fn players_keep_special_button_edges_in_separate_samplers() {
         let mut p1 = InputSampler::default();
         let mut p2 = InputSampler::default();
-        apply_player_snapshot(&mut p1, PlayerInputSnapshot {
-            held_buttons: 1 << 8, pressed_buttons: 1 << 8, ..Default::default()
-        });
-        apply_player_snapshot(&mut p2, PlayerInputSnapshot {
-            held_buttons: 1 << 12, pressed_buttons: 1 << 12, ..Default::default()
-        });
+        apply_player_snapshot(
+            &mut p1,
+            PlayerInputSnapshot {
+                held_buttons: 1 << 8,
+                pressed_buttons: 1 << 8,
+                ..Default::default()
+            },
+        );
+        apply_player_snapshot(
+            &mut p2,
+            PlayerInputSnapshot {
+                held_buttons: 1 << 12,
+                pressed_buttons: 1 << 12,
+                ..Default::default()
+            },
+        );
         let one = p1.sample_tick();
         let two = p2.sample_tick();
         assert!(one.was_pressed(Button(8)));
@@ -249,19 +311,40 @@ mod tests {
     #[test]
     fn sprite_frame_lookup_uses_registered_metadata_not_the_frame_number_as_an_offset() {
         let mut map = HashMap::new();
-        map.insert((1, 42), SpriteFrameMapping {
-            texture: TextureId(7), source: Rect::new(96, 32, 24, 40),
-            destination_width: 48, destination_height: 80, anchor_x: 12, anchor_y: 72,
-        });
+        map.insert(
+            (1, 42),
+            SpriteFrameMapping {
+                texture: TextureId(7),
+                source: Rect::new(96, 32, 24, 40),
+                destination_width: 48,
+                destination_height: 80,
+                anchor_x: 12,
+                anchor_y: 72,
+            },
+        );
         let fighter = FighterPresentation {
-            slot: 0, character_id: 1, sprite_frame: 42, action_id: 1, action_frame: 0,
-            facing: SIDE_LEFT, x: 120.0, y: 180.0, health: 100.0, power: 0, invulnerable: false,
+            slot: 0,
+            character_id: 1,
+            sprite_frame: 42,
+            action_id: 1,
+            action_frame: 0,
+            facing: SIDE_LEFT,
+            x: 120.0,
+            y: 180.0,
+            health: 100.0,
+            power: 0,
+            invulnerable: false,
         };
         let mut commands = Vec::new();
         append_fighter_commands(&mut commands, &fighter, 20.0, &map);
-        assert_eq!(commands, vec![DrawCommand::Texture {
-            texture: TextureId(7), source: Some(Rect::new(96, 32, 24, 40)),
-            destination: Rect::new(88, 108, 48, 80), flip_horizontal: true,
-        }]);
+        assert_eq!(
+            commands,
+            vec![DrawCommand::Texture {
+                texture: TextureId(7),
+                source: Some(Rect::new(96, 32, 24, 40)),
+                destination: Rect::new(88, 108, 48, 80),
+                flip_horizontal: true,
+            }]
+        );
     }
 }
