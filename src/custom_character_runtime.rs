@@ -122,10 +122,7 @@ impl CustomCharacterDefinition {
                 return Err(format!("duplicate custom move id {:?}", movement.id));
             }
             if !action_ids.insert(movement.action_id) {
-                return Err(format!(
-                    "duplicate custom action id {}",
-                    movement.action_id
-                ));
+                return Err(format!("duplicate custom action id {}", movement.action_id));
             }
         }
 
@@ -176,8 +173,8 @@ fn parse_frame_boxes(value: &Value) -> Result<FighterFrameBoxes, String> {
         let values = number_array::<2>(row, "frame_boxes.center_x row")?;
         let frame = u16::try_from(values[0])
             .map_err(|_| "center_x frame must be a positive Word".to_owned())?;
-        let offset = i16::try_from(values[1])
-            .map_err(|_| "center_x offset must fit SmallInt".to_owned())?;
+        let offset =
+            i16::try_from(values[1]).map_err(|_| "center_x offset must fit SmallInt".to_owned())?;
         boxes.center_x.push((frame, offset));
     }
 
@@ -291,7 +288,9 @@ fn parse_move(value: &Value) -> Result<CustomMoveDefinition, String> {
         let max_hit_count = optional_u8(rule, "max_hit_count")?;
         let value = required_bool(rule, "value")?;
         if start_frame > end_frame {
-            return Err(format!("custom move {id:?} has an invalid invulnerability window"));
+            return Err(format!(
+                "custom move {id:?} has an invalid invulnerability window"
+            ));
         }
         opponent_invulnerability.push(CustomInvulnerabilityRule {
             start_frame,
@@ -425,10 +424,7 @@ fn required<'a>(
         .ok_or_else(|| format!("missing required field {key:?}"))
 }
 
-fn required_string(
-    object: &serde_json::Map<String, Value>,
-    key: &str,
-) -> Result<String, String> {
+fn required_string(object: &serde_json::Map<String, Value>, key: &str) -> Result<String, String> {
     required(object, key)?
         .as_str()
         .map(str::to_owned)
@@ -465,7 +461,11 @@ fn required_f64(object: &serde_json::Map<String, Value>, key: &str) -> Result<f6
 fn optional_f64(object: &serde_json::Map<String, Value>, key: &str) -> Result<Option<f64>, String> {
     object
         .get(key)
-        .map(|value| value.as_f64().ok_or_else(|| format!("{key} must be numeric")))
+        .map(|value| {
+            value
+                .as_f64()
+                .ok_or_else(|| format!("{key} must be numeric"))
+        })
         .transpose()
 }
 
@@ -481,10 +481,7 @@ fn optional_u8(object: &serde_json::Map<String, Value>, key: &str) -> Result<Opt
         .transpose()
 }
 
-fn optional_u16(
-    object: &serde_json::Map<String, Value>,
-    key: &str,
-) -> Result<Option<u16>, String> {
+fn optional_u16(object: &serde_json::Map<String, Value>, key: &str) -> Result<Option<u16>, String> {
     object
         .get(key)
         .map(|value| {
@@ -508,7 +505,11 @@ fn optional_bool(
 ) -> Result<Option<bool>, String> {
     object
         .get(key)
-        .map(|value| value.as_bool().ok_or_else(|| format!("{key} must be a boolean")))
+        .map(|value| {
+            value
+                .as_bool()
+                .ok_or_else(|| format!("{key} must be a boolean"))
+        })
         .transpose()
 }
 
@@ -516,7 +517,10 @@ fn optional_object<'a>(
     object: &'a serde_json::Map<String, Value>,
     key: &str,
 ) -> Result<Option<&'a serde_json::Map<String, Value>>, String> {
-    object.get(key).map(|value| object_value(value, key)).transpose()
+    object
+        .get(key)
+        .map(|value| object_value(value, key))
+        .transpose()
 }
 
 fn object_value<'a>(
@@ -669,7 +673,13 @@ mod tests {
         assert_eq!(definition.frame_boxes.hurtboxes[0].frame, 1);
         assert_eq!(definition.frame_boxes.hurtboxes[0].bounds.x1, -12);
         assert_eq!(definition.frame_boxes.hurtboxes[0].bounds.y2, 200);
-        assert_eq!(definition.frame_boxes.attacks[12].strength_condition, Some(1));
-        assert_eq!(definition.frame_boxes.attacks[13].strength_condition, Some(2));
+        assert_eq!(
+            definition.frame_boxes.attacks[12].strength_condition,
+            Some(1)
+        );
+        assert_eq!(
+            definition.frame_boxes.attacks[13].strength_condition,
+            Some(2)
+        );
     }
 }
