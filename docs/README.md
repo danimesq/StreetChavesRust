@@ -26,6 +26,10 @@ This directory records the research and engineering decisions for an independent
 - [Temporary ROT runtime research and delivery plan](rot-runtime-research-plan.md): detailed interpreter semantics, exact action-call order, C02-C15 script audit, C01/C13 regression gates, counter investigation and progressive removal criteria. Temporary PR planning document.
 - [PR #21 — Progressive character migration to the ROT runtime](character-action-migration-pr21.md): migration scope, C01/C13 hand-port retirement gates, roster expansion order and explicit runtime non-claims.
 
+## Combat
+
+- [Character-specific combat parity (PR #33)](character-combat-parity-pr33.md): C17 differential combo windows, per-character hitstun, spin, launch overrides and regression gates.
+
 ## Research documents
 
 - [Original executable reverse engineering](original-executable-reverse-engineering.md): preliminary PE/toolchain findings and the investigation plan for embedded resources, external assets, gameplay cross-references, and final compatibility fixtures.
