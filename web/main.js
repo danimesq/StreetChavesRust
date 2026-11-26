@@ -40,6 +40,16 @@ try {
   }
   resize();
 
+  let wasHidden = document.hidden;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      wasHidden = true;
+    } else if (wasHidden) {
+      game.reset_after_suspend();
+      wasHidden = false;
+    }
+  });
+
   function frame() {
     try {
       game.frame();
