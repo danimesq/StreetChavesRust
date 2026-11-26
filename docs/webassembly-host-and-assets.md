@@ -52,31 +52,31 @@ All manifest paths are relative to `web-export.json`. The package keeps the Java
 
 The example manifest lives at [web-export.example.json](../web/web-export.example.json). Its resource paths are a catalog template: the repository does not bundle the original copyrighted game media.
 
-### Create the package manifest with Foundation
+### Build and stage the package with Foundation
 
-StreetChavesRust depends on the public `foundation_runtime::web_export` API. A game build/publishing step can create the same descriptor programmatically:
+StreetChavesRust depends on the public `foundation_runtime::web_export` API. A game build/publishing step can use the builder to copy the generated WASM bundle, the selected resource files and the web shell into the deployable output directory:
 
 ```rust
 use foundation_runtime::web_export::{
-    WebAssetKind, WebExportAsset, WebExportBuilder, WEB_EXPORT_MANIFEST_FILE,
+    WebAssetKind, WebExportAsset, WebExportBuilder,
 };
 
-let manifest = WebExportBuilder::new("street-chaves", "Street Chaves")
-    .wasm_bundle(
+WebExportBuilder::new("street-chaves", "Street Chaves")
+    .wasm_bundle_files(
+        "web/pkg/street_chaves_rust.js",
+        "web/pkg/street_chaves_rust_bg.wasm",
         "pkg/street_chaves_rust.js",
         "pkg/street_chaves_rust_bg.wasm",
     )
-    .asset(WebExportAsset::new(
-        "stage_01",
-        "assets/images/stages/stage-01.bmp",
-        WebAssetKind::Image,
-    ))
-    .asset(WebExportAsset::new(
-        "fighter_ini_01",
-        "assets/data/C01.ini",
-        WebAssetKind::Data,
-    ))
-    .asset(
+    .asset_file(
+        WebExportAsset::new(
+            "stage_01",
+            "assets/images/stages/stage-01.bmp",
+            WebAssetKind::Image,
+        ),
+        "verified-assets/stage-01.bmp",
+    )
+    .asset_file(
         WebExportAsset::new(
             "fight_music",
             "assets/audio/music/Musica-01.ogg",
@@ -86,16 +86,16 @@ let manifest = WebExportBuilder::new("street-chaves", "Street Chaves")
             "assets/audio/music/Musica-01.m4a",
             "assets/audio/music/Musica-01.mp3",
         ]),
+        "verified-assets/Musica-01.ogg",
     )
-    .build()?;
-
-std::fs::write(
-    output_dir.join(WEB_EXPORT_MANIFEST_FILE),
-    manifest.to_json()?,
-)?;
+    .package_file("web/index.html", "index.html")
+    .package_file("web/main.js", "main.js")
+    .write_to("dist/street-chaves-web")?;
 ```
 
-The builder validates the application identity, generated WASM/JavaScript paths, resource IDs, relative paths, fallback paths and volume values. The consuming build step is responsible for compiling the game crate and copying every declared file to its matching package path. This integration slice does not yet add an archive writer, HTML shell generator, media transcoder or automatic asset optimizer.
+`wasm_bundle_files` registers the generated JavaScript/WASM sources and their published destinations. `asset_file` connects each game-facing resource ID to its source file and package path. `package_file` includes the page shell and consumer-owned entry point. `write_to` validates the package, copies the files and writes `web-export.json` at the package root.
+
+The example source paths are placeholders for locally supplied, verified game assets. The repository does not bundle original copyrighted media. Foundation can only stage files that the build actually supplies; it does not generate or reconstruct missing game assets.
 
 ## Street Chaves resource catalog
 
