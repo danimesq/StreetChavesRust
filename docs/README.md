@@ -11,6 +11,7 @@ This directory records the research and engineering decisions for an independent
 
 - [Rust Gaming Eclipse integration plan](rust-gaming-eclipse.md): StreetChaves as an independent consumer, Foundation integration gates, optional Bevy/Rapier evaluation, and the future ImpossibleEngine migration boundary.
 
+- [Native and browser presentation host roadmap](presentation-host-roadmap.md) — renderer-neutral snapshots, native SDL and WASM/Canvas host plan, audio queue, local asset paths.
 - [Rust architecture proposal](rust-architecture.md): a proposed separation of deterministic game logic from SDL3 presentation and platform services.\n- [Iroh multiplayer networking study](iroh-multiplayer-study-pr31.md): online/LAN connectivity, QUIC, relays, mDNS, topology choices, authority, tick synchronization, security, and a staged prototype plan.
 - [Custom character package format](custom-character-package-format.md): JSON character definitions mapped onto the existing Street Chaves data folders, with filesystem loading for native targets and a host resource API for WASM/Canvas and Construct.
 - [Rendering backends and WebAssembly/Canvas architecture](rendering-backends-wasm-canvas.md): one shared Rust engine with replaceable native SDL3 and browser Canvas 2D adapters, build boundaries, timing, resources, tests and staged implementation.
