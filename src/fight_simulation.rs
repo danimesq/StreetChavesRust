@@ -2736,7 +2736,10 @@ mod rot_runtime_integration_tests {
 
         // defendergolpe computes Round(0.5 * 0.4) = 0. FPC Random(Int64(0))
         // returns zero while consuming its two-word Int64 RNG request.
-        assert_eq!(pascal_round_to_i64(0.5 * fight.cpu_defense_probability_factor()), 0);
+        assert_eq!(
+            pascal_round_to_i64(0.5 * fight.cpu_defense_probability_factor()),
+            0
+        );
         fight.execute_cpu_defense(1).unwrap();
 
         assert_eq!(fight.state.fighters[1].action_id, ACTION_DEFENDING);
