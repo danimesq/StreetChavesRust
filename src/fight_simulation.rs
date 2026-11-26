@@ -860,8 +860,8 @@ impl FightSimulation {
     /// Build a renderer/audio-host snapshot from current authoritative state.
     /// This is observational only: it does not advance timers, RNG, or simulation.
     pub fn presentation_frame(&self) -> FightPresentationFrame {
-        let fighter_snapshot = |slot: usize, fighter: &crate::combat_runtime::FighterState| {
-            FighterPresentation {
+        let fighter_snapshot =
+            |slot: usize, fighter: &crate::combat_runtime::FighterState| FighterPresentation {
                 slot,
                 character_id: fighter.character_id,
                 sprite_frame: fighter.sprite_frame,
@@ -873,8 +873,7 @@ impl FightSimulation {
                 health: fighter.health,
                 power: fighter.power,
                 invulnerable: fighter.invulnerable,
-            }
-        };
+            };
         FightPresentationFrame {
             tick_index: self.state.tick_index,
             fighters: [
@@ -2257,8 +2256,14 @@ mod rot_runtime_integration_tests {
         let frame = fight.presentation_frame();
 
         assert_eq!(frame.tick_index, before.tick_index);
-        assert_eq!(frame.fighters[0].character_id, before.fighters[0].character_id);
-        assert_eq!(frame.fighters[0].sprite_frame, before.fighters[0].sprite_frame);
+        assert_eq!(
+            frame.fighters[0].character_id,
+            before.fighters[0].character_id
+        );
+        assert_eq!(
+            frame.fighters[0].sprite_frame,
+            before.fighters[0].sprite_frame
+        );
         assert_eq!(frame.fighters[0].x, before.fighters[0].x);
         assert_eq!(frame.fighters[1].facing, before.fighters[1].facing);
         assert_eq!(frame.pending_sound, before.pending_sound);
