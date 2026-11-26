@@ -60,8 +60,7 @@ impl ArcadeSettings {
             1 => self.round_time = (i16::from(self.round_time) + direction).clamp(1, 4) as u8,
             2 => self.power_mode = (i16::from(self.power_mode) + direction).clamp(1, 4) as u8,
             3 => {
-                self.damage_level = (self.damage_level + f64::from(direction) * 0.1)
-                    .round()
+                self.damage_level = ((self.damage_level * 10.0 + f64::from(direction)).round() / 10.0)
                     .clamp(0.3, 2.0);
             }
             4 => self.blood = if delta != 0 { !self.blood } else { self.blood },
