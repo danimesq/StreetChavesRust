@@ -15,6 +15,9 @@ on:
       - "Cargo.toml"
       - "src/**"
       - "tests/**"
+      - "FoundationWebBuild.toml"
+      - "web/**"
+      - "docs/CHS-SCREEN-STATUS.md"
       - ".github/workflows/rust-contracts.yml"
 
 permissions:
