@@ -99,7 +99,9 @@ impl StartupFlow {
                     self.phase = StartupPhase::CharacterSelect;
                     self.ticks = 0;
                     self.confirmed = [false; 2];
-                    self.p2_active = p2_confirm || inputs[1].direction != Direction::Neutral;
+                    self.p2_active = self.p2_active
+                        || p2_confirm
+                        || inputs[1].direction != Direction::Neutral;
                 }
             }
             StartupPhase::CharacterSelect => {
