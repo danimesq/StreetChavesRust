@@ -95,6 +95,17 @@ impl RotCombatHost<'_> {
             ));
         }
         let character_id = self.state.fighters[fighter_index].character_id;
+        if character_id >= 16 {
+            let jog = (fighter_index + 1) as u8;
+            let previous_player_index = self.player_index;
+            self.player_index = fighter_index;
+            self.recursion_depth += 1;
+            let result = execute_rot_section(self.common, "Acao", jog, command_code, self)
+                .and_then(|()| execute_rot_section(self.common, "AcaoFim", jog, command_code, self));
+            self.recursion_depth -= 1;
+            self.player_index = previous_player_index;
+            return result;
+        }
         let (filename, source) = match character_id {
             1 => ("C01.rot", include_str!("../research/pascal-rot/C01.rot")),
             2 => ("C02.rot", include_str!("../research/pascal-rot/C02.rot")),
@@ -1014,6 +1025,28 @@ impl FightSimulation {
         character_id: u8,
         command_code: u8,
     ) -> Result<(), String> {
+        if character_id >= 16 {
+            let common = RotDocument::from_str(
+                "Comum.rot",
+                include_str!("../research/pascal-rot/Comum.rot"),
+            )
+            .map_err(|error| error.to_string())?;
+            let jog = (fighter_index + 1) as u8;
+            let special = self.config.special;
+            let mut host = RotCombatHost {
+                state: &mut self.state,
+                rng: &mut self.rng,
+                player_index: fighter_index,
+                charge_gain: special.charge_gain,
+                charge_max: special.charge_max,
+                ground_y: special.ground_y,
+                common: &common,
+                recursion_depth: 0,
+            };
+            execute_rot_section(&common, "Acao", jog, command_code, &mut host)?;
+            execute_rot_section(&common, "AcaoFim", jog, command_code, &mut host)?;
+            return Ok(());
+        }
         let (filename, source) = match character_id {
             1 => ("C01.rot", include_str!("../research/pascal-rot/C01.rot")),
             2 => ("C02.rot", include_str!("../research/pascal-rot/C02.rot")),
@@ -1455,6 +1488,15 @@ impl FightSimulation {
             return;
         }
 
+        if self.custom_character_definitions.contains_key(&character_id) {
+            if let Err(error) = self.advance_custom_character_frame(fighter_index, report) {
+                report.errors.push(format!(
+                    "custom character {character_id} [Quadro] fighter {fighter_index}: {error}"
+                ));
+            }
+            return;
+        }
+
         // Preserve the existing, tested C01 manual frame path for its implemented
         // special/victory/pose branches. Other branches and C02-C15 use live ROT.
         let c01_manual = character_id == 1
@@ -1548,6 +1590,131 @@ impl FightSimulation {
         {
             fighter.action_frame = fighter.action_frame.saturating_add(1);
         }
+    }
+
+    /// Advance a custom character's declarative frame/move timeline.
+    fn advance_custom_character_frame(
+        &mut self,
+        fighter_index: usize,
+        report: &mut FightTickReport,
+    ) -> Result<(), String> {
+        let runtime_id = self.state.fighters[fighter_index].character_id;
+        let definition = self
+            .custom_character_definitions
+            .get(&runtime_id)
+            .cloned()
+            .ok_or_else(|| format!("custom runtime ID {runtime_id} is not registered"))?;
+        let action_id = self.state.fighters[fighter_index].action_id;
+        let action_frame = self.state.fighters[fighter_index].action_frame;
+        let force_strength = self.state.fighters[fighter_index].force_strength;
+        let facing = self.state.fighters[fighter_index].facing;
+        let offset = (fighter_index as i32) * 50;
+
+        self.state.fighters[fighter_index].speed = definition.walk_speed;
+        if let Some(movement) = definition.move_by_action(action_id).cloned() {
+            let timeline = if force_strength == 1 {
+                &movement.sprite_frames_weak
+            } else {
+                &movement.sprite_frames_strong
+            };
+            let sprite = *timeline
+                .get(usize::from(action_frame))
+                .ok_or_else(|| format!("move {:?} has no sprite for frame {action_frame}", movement.id))?;
+            {
+                let fighter = &mut self.state.fighters[fighter_index];
+                fighter.sprite_frame = offset + i32::from(sprite);
+                fighter.is_kick = movement.is_kick;
+                if let Some(last_invulnerable_frame) = movement.self_invulnerable_until {
+                    fighter.invulnerable = action_frame <= last_invulnerable_frame;
+                }
+                if movement.vertical_delta != 0.0 {
+                    fighter.y += movement.vertical_delta;
+                }
+                for window in &movement.push_windows {
+                    if (window.start_frame..=window.end_frame).contains(&action_frame) {
+                        let distance = if force_strength == 1 {
+                            window.weak_distance
+                        } else {
+                            window.strong_distance
+                        };
+                        fighter.x += if facing == SIDE_LEFT { -distance } else { distance };
+                    }
+                }
+            }
+
+            let opponent_index = 1 - fighter_index;
+            let opponent_hits = self.state.fighters[fighter_index].hit_count;
+            for rule in &movement.opponent_invulnerability {
+                let hit_count_matches = opponent_hits >= rule.min_hit_count
+                    && rule.max_hit_count.map_or(true, |maximum| opponent_hits <= maximum);
+                if (rule.start_frame..=rule.end_frame).contains(&action_frame)
+                    && hit_count_matches
+                {
+                    self.state.fighters[opponent_index].invulnerable = rule.value;
+                }
+            }
+
+            for event in &movement.effects {
+                if event.frame != action_frame {
+                    continue;
+                }
+                let variant = if force_strength == 1 {
+                    event.weak_variant
+                } else {
+                    event.strong_variant
+                };
+                let x_offset = if facing == SIDE_LEFT {
+                    -i32::from(event.offset_x)
+                } else {
+                    i32::from(event.offset_x)
+                };
+                report.custom_character_events.push(CustomCharacterEvent::SpawnEffect {
+                    fighter_index,
+                    effect_id: event.effect_id,
+                    variant,
+                    x: self.state.fighters[fighter_index].x + f64::from(x_offset),
+                    y: self.state.fighters[fighter_index].y + f64::from(event.offset_y),
+                });
+            }
+            for event in &movement.sounds {
+                if event.frame == action_frame {
+                    self.state.pending_sound = Some(event.sound_id);
+                }
+            }
+            if let Some((frame, duration)) = movement.screen_shake {
+                if frame == action_frame {
+                    self.state.screen_shake = duration;
+                }
+            }
+        } else {
+            // Common movement/basic-attack animation remains owned by Comum.rot.
+            let fighter = &mut self.state.fighters[fighter_index];
+            if fighter.sprite_frame <= 0 {
+                fighter.sprite_frame = offset + 1;
+            }
+        }
+
+        self.apply_fighter_boxes(fighter_index)?;
+        report
+            .custom_character_frame_executions
+            .push((fighter_index, runtime_id));
+
+        let fighter = &mut self.state.fighters[fighter_index];
+        if fighter.action_frame < fighter.action_duration {
+            fighter.action_frame = fighter.action_frame.saturating_add(1);
+        }
+        if fighter.action_frame >= fighter.action_duration
+            && definition.move_by_action(action_id).is_some()
+        {
+            fighter.action_id = ACTION_IDLE;
+            fighter.action_frame = 0;
+            fighter.action_duration = 99;
+            fighter.attack_active = false;
+            fighter.attack_box = None;
+            fighter.invulnerable = false;
+            fighter.is_kick = false;
+        }
+        Ok(())
     }
 
     /// Apply the current character's Corpo row and all matching Ataque rows.
