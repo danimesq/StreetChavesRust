@@ -894,7 +894,10 @@ impl FightSimulation {
     /// being replayed once per presentation frame.
     pub fn take_pending_sound(&mut self) -> Option<u16> {
         // Pascal reserves zero as the "no sound pending" sentinel.
-        self.state.pending_sound.take().filter(|sound_id| *sound_id != 0)
+        self.state
+            .pending_sound
+            .take()
+            .filter(|sound_id| *sound_id != 0)
     }
 
     pub fn last_report(&self) -> &FightTickReport {
