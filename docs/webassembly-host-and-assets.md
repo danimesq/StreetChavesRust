@@ -1,12 +1,14 @@
-# WebAssembly browser host and exported assets
+# WebAssembly browser host and Foundation export package
 
-## Scope
+## Scope and ownership
 
-StreetChavesRust uses RustMultiConsoleFoundation for native and browser graphics/audio. The game simulation, startup flow, 28 ms fixed timestep, Pascal resource interpretation, presentation composition and audio events remain Rust. The Foundation selects the platform host:
+StreetChavesRust uses RustMultiConsoleFoundation for native and browser presentation. The game simulation, startup flow, 28 ms fixed timestep, resource interpretation, presentation composition and audio events remain in StreetChavesRust. Foundation selects and supplies the platform host:
 
 - Native: SDL3 through `foundation-runtime/native-sdl3`.
 - Browser: Canvas 2D + WebAudio through `foundation-runtime/web-canvas`.
 - WebGL is intentionally deferred.
+
+The browser build uses the shared Foundation Web/WASM export API. The same manifest contract is intended for game exporters and engine publishing backends, including ImpossibleEngine.
 
 ## Build the browser package
 
@@ -15,119 +17,108 @@ The browser adapter targets `wasm32-unknown-unknown`, not Emscripten:
 ```sh
 rustup target add wasm32-unknown-unknown
 cargo install wasm-pack
-wasm-pack build --target web --features web-foundation
+wasm-pack build --target web --features web-foundation --out-dir web/pkg
 ```
 
-This generates the JavaScript glue and WASM module in `pkg/`. The native build continues to use:
+This produces the JavaScript glue and WASM module under `web/pkg/`. The native build continues to use:
 
 ```sh
 cargo run --features native-foundation --bin street-chaves-native
 ```
 
-## Construct 3-style exported HTML5 asset layout
+## Foundation Web export package
 
-The web package adopts the documented Construct 3 Web export conventions for resource files: an `images/` tree for image resources, `media/Sounds/` and `media/Music/` for audio, and preserved subfolders under project files (here `Files/`). The export also contains the HTML entry point, JavaScript/WASM runtime files and the Foundation sidecar manifest. This is a Construct-compatible resource layout, not a claim that StreetChaves emits Construct's own generated runtime bundle. The browser never receives native filesystem paths. Folder names and case are preserved; the legacy Flat export mode is not used.
-
-Suggested layout:
+The published package uses one `web-export.json` manifest at its root. A suggested directory layout is:
 
 ```text
 web/
   index.html
   main.js
+  web-export.json
+  pkg/
+    street_chaves_rust.js
+    street_chaves_rust_bg.wasm
   assets/
-    street-chaves-manifest.json
-    stages/
-      stage-01.bmp
-    fighters/
-      C01.bmp
-      C02.bmp
-      ...
-    data/
-      C01.ini
-      C02.ini
-      ...
-      Jogo.ini
+    images/
+      stages/
+      fighters/
     audio/
-      Som-01.ogg
-      Som-01.m4a
-      Som-02.ogg
-      ...
-      Musica-01.ogg
-      Musica-01.m4a
+      effects/
+      music/
+    data/
 ```
 
-Copy only game assets that the distributor is legally entitled to use. The repository does not bundle original copyrighted game media.
+All manifest paths are relative to `web-export.json`. The package keeps the JavaScript glue, WASM module and game resources in explicit locations. Folder names and filename case are preserved.
 
-### Manifest example
+The example manifest lives at [web-export.example.json](../web/web-export.example.json). Its resource paths are a catalog template: the repository does not bundle the original copyrighted game media.
 
-```json
-{
-  "schema_version": 1,
-  "assets": [
-    {
-      "id": "stage_01",
-      "path": "images/stages/stage-01.bmp",
-      "kind": "image"
-    },
-    {
-      "id": "fighter_01",
-      "path": "images/fighters/C01.bmp",
-      "kind": "image"
-    },
-    {
-      "id": "fighter_ini_01",
-      "path": "Files/data/C01.ini",
-      "kind": "data"
-    },
-    {
-      "id": "fighter_04",
-      "path": "images/fighters/C04.bmp",
-      "kind": "image"
-    },
-    {
-      "id": "fighter_ini_04",
-      "path": "Files/data/C04.ini",
-      "kind": "data"
-    },
-    {
-      "id": "game_settings",
-      "path": "Files/data/Jogo.ini",
-      "kind": "data"
-    },
-    {
-      "id": "effect_slot_001",
-      "path": "media/Sounds/Som-02.ogg",
-      "fallbacks": ["media/Sounds/Som-02.m4a"],
-      "kind": "audio"
-    },
-    {
-      "id": "fight_music",
-      "path": "media/Music/Musica-01.ogg",
-      "fallbacks": ["media/Music/Musica-01.m4a"],
-      "kind": "audio"
-    }
-  ]
-}
+### Create the package manifest with Foundation
+
+StreetChavesRust depends on the public `foundation_runtime::web_export` API. A game build/publishing step can create the same descriptor programmatically:
+
+```rust
+use foundation_runtime::web_export::{
+    WebAssetKind, WebExportAsset, WebExportBuilder, WEB_EXPORT_MANIFEST_FILE,
+};
+
+let manifest = WebExportBuilder::new("street-chaves", "Street Chaves")
+    .wasm_bundle(
+        "pkg/street_chaves_rust.js",
+        "pkg/street_chaves_rust_bg.wasm",
+    )
+    .asset(WebExportAsset::new(
+        "stage_01",
+        "assets/images/stages/stage-01.bmp",
+        WebAssetKind::Image,
+    ))
+    .asset(WebExportAsset::new(
+        "fighter_ini_01",
+        "assets/data/C01.ini",
+        WebAssetKind::Data,
+    ))
+    .asset(
+        WebExportAsset::new(
+            "fight_music",
+            "assets/audio/music/Musica-01.ogg",
+            WebAssetKind::Audio,
+        )
+        .with_fallbacks([
+            "assets/audio/music/Musica-01.m4a",
+            "assets/audio/music/Musica-01.mp3",
+        ]),
+    )
+    .build()?;
+
+std::fs::write(
+    output_dir.join(WEB_EXPORT_MANIFEST_FILE),
+    manifest.to_json()?,
+)?;
 ```
 
-The runtime expects these resource IDs:
+The builder validates the application identity, generated WASM/JavaScript paths, resource IDs, relative paths, fallback paths and volume values. The consuming build step is responsible for compiling the game crate and copying every declared file to its matching package path. This integration slice does not yet add an archive writer, HTML shell generator, media transcoder or automatic asset optimizer.
+
+## Street Chaves resource catalog
+
+The example catalog maps game-facing IDs to explicit package paths:
 
 | ID | Meaning |
 |---|---|
-| `stage_NN` | Stage bitmap/image for stage NN |
+| `stage_NN` | Stage image for stage NN |
 | `fighter_NN` | Fighter sprite strip for character NN |
-| `fighter_ini_NN` | Fighter INI data bytes, including sprite height, speed and CentroX pivots |
-| `game_settings` | Optional game settings INI data bytes |
+| `fighter_ini_NN` | Fighter INI bytes, including sprite height, speed and CentroX pivots |
+| `game_settings` | Optional game settings INI bytes |
 | `effect_slot_NNN` | Zero-based Pascal sound-bank slot NNN |
 | `fight_music` | Optional looping track for the selected fight |
 
-Include the chosen fighter's sprite strip and INI file for every character selectable in the shipped build. The example above includes only Chaves and Quico as a compact demonstration; a full roster manifest should enumerate all 15 original fighters and any custom packages it supports.
+Include the selected fighter's sprite strip and INI file for every character selectable in the shipped build. The compact example includes only Chaves and Quico; a complete roster catalog must enumerate every shipped fighter and any custom packages it supports.
 
-Audio entries may provide alternate encodings using `fallbacks` and a per-resource `volume_percent` (0–400, default 100), preserving the original sound-bank volume configuration in the browser package. The Foundation tries each path until the browser fetches and decodes one successfully. Use formats appropriate to the deployment browsers, for example OGG plus M4A/MP3 alternatives. The decoder is the browser's native `decodeAudioData()`; supported codecs vary by browser.
+Audio entries may provide alternate encodings through `fallbacks` and a per-resource `volume_percent` (0–400, default 100), preserving the game's sound-bank volume settings. Foundation tries each declared path until the browser fetches and decodes one successfully. The browser's `decodeAudioData()` codec support varies by platform.
+
+Effects and music may be placed in separate directories to keep the package organized. Both currently use Foundation's buffered WebAudio path; streamed music is not implemented by this host.
 
 ## HTML entry point
 
-A minimal standalone page can load the WASM module and host the game:
+A minimal standalone page can load the generated WASM module and host the game:
 
 ```html
 <!doctype html>
@@ -155,14 +146,14 @@ A minimal standalone page can load the WASM module and host the game:
 </html>
 ```
 
-`main.js` (after running wasm-pack):
+`main.js` (after running `wasm-pack`):
 
 ```js
-import init, { StreetChavesWebRuntime } from "../pkg/street_chaves_rust.js";
+import init, { StreetChavesWebRuntime } from "./pkg/street_chaves_rust.js";
 
 await init();
 const game = new StreetChavesWebRuntime("street-chaves");
-await game.load_assets("./assets/street-chaves-manifest.json");
+await game.load_assets("./web-export.json");
 
 document.querySelector("#enable-audio").addEventListener("click", async () => {
   await game.resume_audio();
@@ -196,7 +187,7 @@ function frame() {
 requestAnimationFrame(frame);
 ```
 
-The Enable audio button must be clicked/tapped by the player because browsers can suspend a new AudioContext until a user gesture. The game's keyboard Start interaction can then proceed normally.
+The Enable audio button must be clicked/tapped because browsers can suspend a new AudioContext until a user gesture. The game can then proceed with its normal Start interaction.
 
 ## Shared runtime contract
 
@@ -206,14 +197,15 @@ The WASM host instantiates the same generic `FightPresentationHost` as the nativ
 - The browser alias is `WebFightHost`.
 - Both use Foundation `RuntimeHost` and `TextureRegistrar`.
 - The game host owns the fixed timestep and submits the same ordered `DrawCommand` output.
-- Foundation owns actual renderer/audio devices and platform texture handles.
+- Foundation owns the actual renderer/audio devices and platform texture handles.
 
-The browser animation loop is presentation scheduling only. The 28 ms logical simulation ticks are computed from the Foundation's monotonic browser clock and never tied to the requestAnimationFrame frequency. When the page becomes hidden, the web harness stops presenting; on visibility return it rebases the 28 ms accumulator and releases held keys so background time cannot become a burst of catch-up simulation ticks.
+The browser animation loop is presentation scheduling only. The 28 ms logical simulation ticks are computed from Foundation's monotonic browser clock and never tied to the `requestAnimationFrame` frequency. When the page becomes hidden, the harness stops presenting; on visibility return it rebases the 28 ms accumulator and releases held keys so background time cannot become a burst of catch-up simulation ticks.
 
 ## Current browser limitations
 
-- Canvas 2D is the only web renderer in this PR; WebGL is deferred.
+- Canvas 2D is the only web renderer in this integration; WebGL is deferred.
 - Keyboard input uses the same two-player bindings as native. Gamepad/touch support is a later adapter capability.
-- WebAudio delegates final mixing to the browser. Clip IDs, volume, loop, stop, restart, and voice-limit behavior are preserved at the host contract; bit-exact S16 PCM output is not claimed.
-- Custom character packages continue to use the existing host-supplied byte package API. This initial asset manifest covers the original fighter/stage/audio/data resources; generic custom-package rendering/registration remains a separate integration step.
+- WebAudio delegates final mixing to the browser. Clip IDs, volume, loop, stop, restart and voice-limit behavior are preserved at the host contract; bit-exact S16 PCM output is not claimed.
+- Custom character packages continue to use the existing host-supplied byte package API. This initial export catalog covers the original fighter/stage/audio/data resource IDs; generic custom-package rendering and registration remain separate integration work.
 - The browser must serve the manifest and resources via HTTP(S); CORS and browser codec policies apply.
+- This is a Foundation manifest and runtime integration, not a complete publishing application. The game build still creates the WASM bundle and stages the declared resource files.
