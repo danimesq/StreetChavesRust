@@ -1,6 +1,6 @@
 # Street Chaves Rust: Foundation Web build
 
-This folder contains the game-owned browser bootstrap and HTML source template. Rust compilation, WebAssembly binding generation, HTML assembly, resource staging and ZIP publication are owned by RustMultiConsoleFoundation.
+This folder contains the game-owned browser bootstrap. Rust compilation, WebAssembly binding generation, HTML shell generation, resource staging and ZIP publication are owned by RustMultiConsoleFoundation.
 
 ## Source checkouts
 
