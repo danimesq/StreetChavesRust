@@ -403,7 +403,8 @@ impl RotExecutionHost for RotCombatHost<'_> {
         match name.to_ascii_lowercase().as_str() {
             "cargamax" => Some(RotValue::Real(self.charge_max)),
             "ganhocarga" => Some(RotValue::Real(self.charge_gain)),
-            "chaoy" => Some(RotValue::Real(self.ground_y)),
+            // Pascal ChavesTipos.pas declares ChaoY as Word, not Double.
+            "chaoy" => Some(rot_int(self.ground_y as i64)),
             "camerax" => Some(RotValue::Real(self.state.camera_x)),
             "sompendente" => Some(rot_int(i64::from(self.state.pending_sound.unwrap_or(0)))),
             "flashtela" => Some(rot_int(i64::from(self.state.screen_flash))),
