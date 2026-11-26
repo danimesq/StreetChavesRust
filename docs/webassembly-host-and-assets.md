@@ -208,7 +208,7 @@ The WASM host instantiates the same generic `FightPresentationHost` as the nativ
 - The game host owns the fixed timestep and submits the same ordered `DrawCommand` output.
 - Foundation owns actual renderer/audio devices and platform texture handles.
 
-The browser animation loop is presentation scheduling only. The 28 ms logical simulation ticks are computed from the Foundation's monotonic browser clock and never tied to the requestAnimationFrame frequency.
+The browser animation loop is presentation scheduling only. The 28 ms logical simulation ticks are computed from the Foundation's monotonic browser clock and never tied to the requestAnimationFrame frequency. When the page becomes hidden, the web harness stops presenting; on visibility return it rebases the 28 ms accumulator and releases held keys so background time cannot become a burst of catch-up simulation ticks.
 
 ## Current browser limitations
 
