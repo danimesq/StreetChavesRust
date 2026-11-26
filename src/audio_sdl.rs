@@ -295,20 +295,21 @@ impl SdlAudioOutput {
 
         // Voices are appended fighter-first, then in the configured variant order.
         let victory = self.create_bank(false);
+        let fighter_data_pattern = resources
+            .get("Lutadores", "Dados")
+            .unwrap_or("Dados/Lutadores/C##.ini");
         let configured_fighters = resources
             .get("Falas", "Quantidade")
-            .or_else(|| resources.get("Lutadores", "Quantidade"))
-            .and_then(|value| value.parse::<usize>().ok());
-        let fighter_count = configured_fighters.unwrap_or_else(|| {
-            victory_variants
-                .first()
-                .map(|pattern| {
-                    (1..=255)
-                        .take_while(|number| rooted_path(&root, &numbered_file(pattern, *number)).is_file())
-                        .count()
-                })
-                .unwrap_or(0)
-        });
+            .and_then(|value| value.parse::<usize>().ok())
+            .or_else(|| {
+                resources
+                    .get("Lutadores", "Quantidade")
+                    .and_then(|value| value.parse::<usize>().ok())
+            });
+        // Pascal counts FQtdLutadores from the [Lutadores] Dados pattern, not from WAV
+        // presence. Missing voice files still reserve each fighter/variant bank position.
+        let fighter_count = configured_fighters
+            .unwrap_or_else(|| count_numbered_files(&root, fighter_data_pattern));
         for fighter in 1..=fighter_count {
             for pattern in &victory_variants {
                 let path = rooted_path(&root, &numbered_file(pattern, fighter));
@@ -440,6 +441,13 @@ impl SdlAudioOutput {
     }
 }
 
+/// Count a numbered resource series exactly until the first missing path.
+fn count_numbered_files(root: &Path, pattern: &str) -> usize {
+    (1..=255)
+        .take_while(|number| rooted_path(root, &numbered_file(pattern, *number)).is_file())
+        .count()
+}
+
 fn rooted_path(root: &Path, resource: &str) -> PathBuf {
     let path = Path::new(resource);
     if path.is_absolute() {
@@ -558,6 +566,27 @@ mod tests {
             "Falas/Fala-16-a.wav"
         );
         assert_eq!(numbered_file("Embutidos/Musica.wav", 2), "Embutidos/Musica.wav");
+    }
+
+    #[test]
+    fn fighter_count_follows_the_pascal_lutadores_data_pattern() {
+        let root = std::env::temp_dir().join(format!(
+            "street-chaves-audio-count-{}",
+            std::process::id()
+        ));
+        let data = root.join("Dados/Lutadores");
+        fs::create_dir_all(&data).unwrap();
+        fs::write(data.join("C01.ini"), "[Geral]").unwrap();
+        fs::write(data.join("C02.ini"), "[Geral]").unwrap();
+        fs::write(data.join("C04.ini"), "[Geral]").unwrap();
+
+        assert_eq!(
+            count_numbered_files(&root, "Dados/Lutadores/C##.ini"),
+            2,
+            "Pascal stops at the first missing fighter INI"
+        );
+
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
