@@ -2723,15 +2723,38 @@ mod rot_runtime_integration_tests {
     }
 
     #[test]
+    fn cpu_defends_against_a_nearby_active_fighter_attack_at_high_difficulty() {
+        let mut fight = simulation();
+        fight.configure_cpu_opponent(true, 8);
+        fight.set_cpu_campaign_phase(8);
+        fight.state.fighters[0].x = 100.0;
+        fight.state.fighters[0].y = 200.0;
+        fight.state.fighters[0].attack_active = true;
+        fight.state.fighters[1].x = 150.0;
+        fight.state.fighters[1].action_id = ACTION_IDLE;
+        fight.state.fighters[1].defending = false;
+
+        // defendergolpe computes Round(0.5 * 0.4) = 0. FPC Random(Int64(0))
+        // returns zero while consuming its two-word Int64 RNG request.
+        assert_eq!(pascal_round_to_i64(0.5 * fight.cpu_defense_probability_factor()), 0);
+        fight.execute_cpu_defense(1).unwrap();
+
+        assert_eq!(fight.state.fighters[1].action_id, ACTION_DEFENDING);
+        assert!(fight.state.fighters[1].defending);
+    }
+
+    #[test]
     fn all_fifteen_character_ia_sections_execute_through_the_shared_rot_host() {
         for character_id in 1..=15 {
             let mut fight = simulation();
             let (filename, source) = embedded_character_rot_source(character_id).unwrap();
             fight.cpu_character_rot[1] = Some(RotDocument::from_str(filename, source).unwrap());
             fight.state.fighters[1].character_id = character_id;
-            // Exercise the real guard and interpreter for every script. Follow-up
-            // command tests cover AcaoJogador's per-character action routing.
-            fight.state.fighters[1].defending = true;
+            // Run with the AI enabled so character-specific conditions and
+            // nested AcaoJogador routes are actually evaluated.
+            fight.state.fighters[0].x = 90.0;
+            fight.state.fighters[1].x = 150.0;
+            fight.state.fighters[1].defending = false;
             let inputs = fight.cpu_projectile_context(1).inputs;
             fight
                 .execute_cpu_ai(1, inputs)
