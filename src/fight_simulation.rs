@@ -1,8 +1,5 @@
 //! First concrete, renderer-free fight orchestrator.
 use crate::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome};
-use crate::custom_character::{CustomCharacterPackage, CustomCharacterRegistry};
-use crate::custom_character_runtime::CustomCharacterDefinition;
-use std::collections::BTreeMap;
 use crate::combat_resolution::{
     resolve_melee_contact, resolve_melee_contact_after_guard_break, CombatResolution,
     CombatResolutionContext,
@@ -17,6 +14,8 @@ use crate::combat_runtime::{
     ACTION_WEAK_KICK, ACTION_WEAK_PUNCH, SIDE_LEFT,
 };
 use crate::command_recognition::{AttackButton, CommandRecognizer};
+use crate::custom_character::{CustomCharacterPackage, CustomCharacterRegistry};
+use crate::custom_character_runtime::CustomCharacterDefinition;
 use crate::effect_runtime::{EffectTickContext, EffectTickResult, EFFECT_SIDE_RIGHT};
 use crate::fighter_box_data::{load_fighter_frame_boxes, FighterFrameBoxes};
 use crate::fighter_command_data::{embedded_character_command_rules, CharacterCommandRules};
@@ -26,6 +25,7 @@ use crate::rot_runtime::{RotDocument, RotExecutionFrame, RotExecutionHost, RotVa
 use crate::runtime::SimulationTick;
 use crate::Fpc322Rng;
 use crate::{ActionId, PascalAttackState};
+use std::collections::BTreeMap;
 
 /// Bridge from Pascal ROT field/helper names to the authoritative fight state.
 struct RotCombatHost<'a> {
@@ -101,7 +101,9 @@ impl RotCombatHost<'_> {
             self.player_index = fighter_index;
             self.recursion_depth += 1;
             let result = execute_rot_section(self.common, "Acao", jog, command_code, self)
-                .and_then(|()| execute_rot_section(self.common, "AcaoFim", jog, command_code, self));
+                .and_then(|()| {
+                    execute_rot_section(self.common, "AcaoFim", jog, command_code, self)
+                });
             self.recursion_depth -= 1;
             self.player_index = previous_player_index;
             return result;
@@ -610,7 +612,10 @@ impl FightSimulation {
         package: CustomCharacterPackage,
     ) -> Result<u8, String> {
         let definition = CustomCharacterDefinition::from_package(&package)?;
-        if self.custom_character_definitions.contains_key(&definition.runtime_id) {
+        if self
+            .custom_character_definitions
+            .contains_key(&definition.runtime_id)
+        {
             return Err(format!(
                 "custom runtime ID {} is already registered",
                 definition.runtime_id
@@ -666,8 +671,7 @@ impl FightSimulation {
         self.state.fighters[fighter_index].action_id = ACTION_IDLE;
         self.state.fighters[fighter_index].action_frame = 0;
         self.state.fighters[fighter_index].action_duration = 99;
-        self.state.fighters[fighter_index].sprite_frame =
-            (fighter_index as i32) * 50 + 1;
+        self.state.fighters[fighter_index].sprite_frame = (fighter_index as i32) * 50 + 1;
         self.state.fighters[fighter_index].speed = definition.walk_speed;
         self.state.fighters[fighter_index].attack_active = false;
         self.state.fighters[fighter_index].attack_box = None;
@@ -709,7 +713,11 @@ impl FightSimulation {
             ),
             ACTION_SPECIAL3 => matches!(
                 current_action,
-                ACTION_IDLE | ACTION_WALKING | ACTION_JUMPING | ACTION_LOW_DEFENDING | ACTION_SPECIAL2
+                ACTION_IDLE
+                    | ACTION_WALKING
+                    | ACTION_JUMPING
+                    | ACTION_LOW_DEFENDING
+                    | ACTION_SPECIAL2
             ),
             ACTION_SPECIAL_FINAL => matches!(
                 current_action,
@@ -751,8 +759,7 @@ impl FightSimulation {
             movement.sprite_frames_strong[0]
         };
         let fighter = &mut self.state.fighters[fighter_index];
-        if movement.charge_multiplier > 0.0
-            && fighter.charge_power < self.config.special.charge_max
+        if movement.charge_multiplier > 0.0 && fighter.charge_power < self.config.special.charge_max
         {
             fighter.charge_power += movement.charge_multiplier * self.config.special.charge_gain;
         }
@@ -797,11 +804,7 @@ impl FightSimulation {
 
     /// Retrieve a package asset by the fighter's runtime ID and logical asset ID.
     /// Native renderers and browser hosts use the same lookup after selecting a fighter.
-    pub fn custom_character_asset(
-        &self,
-        runtime_id: u8,
-        asset_id: &str,
-    ) -> Option<&[u8]> {
+    pub fn custom_character_asset(&self, runtime_id: u8, asset_id: &str) -> Option<&[u8]> {
         let definition = self.custom_character_definitions.get(&runtime_id)?;
         self.custom_character_registry
             .get(&definition.package_id)?
@@ -1499,7 +1502,10 @@ impl FightSimulation {
             return;
         }
 
-        if self.custom_character_definitions.contains_key(&character_id) {
+        if self
+            .custom_character_definitions
+            .contains_key(&character_id)
+        {
             if let Err(error) = self.advance_custom_character_frame(fighter_index, report) {
                 report.errors.push(format!(
                     "custom character {character_id} [Quadro] fighter {fighter_index}: {error}"
@@ -1628,9 +1634,12 @@ impl FightSimulation {
             } else {
                 &movement.sprite_frames_strong
             };
-            let sprite = *timeline
-                .get(usize::from(action_frame))
-                .ok_or_else(|| format!("move {:?} has no sprite for frame {action_frame}", movement.id))?;
+            let sprite = *timeline.get(usize::from(action_frame)).ok_or_else(|| {
+                format!(
+                    "move {:?} has no sprite for frame {action_frame}",
+                    movement.id
+                )
+            })?;
             {
                 let fighter = &mut self.state.fighters[fighter_index];
                 fighter.sprite_frame = offset + i32::from(sprite);
@@ -1648,7 +1657,11 @@ impl FightSimulation {
                         } else {
                             window.strong_distance
                         };
-                        fighter.x += if facing == SIDE_LEFT { -distance } else { distance };
+                        fighter.x += if facing == SIDE_LEFT {
+                            -distance
+                        } else {
+                            distance
+                        };
                     }
                 }
             }
@@ -1657,9 +1670,10 @@ impl FightSimulation {
             let opponent_hits = self.state.fighters[fighter_index].hit_count;
             for rule in &movement.opponent_invulnerability {
                 let hit_count_matches = opponent_hits >= rule.min_hit_count
-                    && rule.max_hit_count.map_or(true, |maximum| opponent_hits <= maximum);
-                if (rule.start_frame..=rule.end_frame).contains(&action_frame)
-                    && hit_count_matches
+                    && rule
+                        .max_hit_count
+                        .map_or(true, |maximum| opponent_hits <= maximum);
+                if (rule.start_frame..=rule.end_frame).contains(&action_frame) && hit_count_matches
                 {
                     self.state.fighters[opponent_index].invulnerable = rule.value;
                 }
@@ -1679,13 +1693,15 @@ impl FightSimulation {
                 } else {
                     i32::from(event.offset_x)
                 };
-                report.custom_character_events.push(CustomCharacterEvent::SpawnEffect {
-                    fighter_index,
-                    effect_id: event.effect_id,
-                    variant,
-                    x: self.state.fighters[fighter_index].x + f64::from(x_offset),
-                    y: self.state.fighters[fighter_index].y + f64::from(event.offset_y),
-                });
+                report
+                    .custom_character_events
+                    .push(CustomCharacterEvent::SpawnEffect {
+                        fighter_index,
+                        effect_id: event.effect_id,
+                        variant,
+                        x: self.state.fighters[fighter_index].x + f64::from(x_offset),
+                        y: self.state.fighters[fighter_index].y + f64::from(event.offset_y),
+                    });
             }
             for event in &movement.sounds {
                 if event.frame == action_frame {
@@ -2175,9 +2191,14 @@ mod rot_runtime_integration_tests {
         }])
         .unwrap();
 
-        assert_eq!(fight.register_custom_character_package(package).unwrap(), 16);
+        assert_eq!(
+            fight.register_custom_character_package(package).unwrap(),
+            16
+        );
         assert_eq!(fight.select_custom_character(0, "chapolin").unwrap(), 16);
-        fight.queue_custom_character_move(0, "special_2", 2).unwrap();
+        fight
+            .queue_custom_character_move(0, "special_2", 2)
+            .unwrap();
         fight.tick_with_inputs([InputFrame::default(), InputFrame::default()]);
 
         let chapolin = &fight.state.fighters[0];
@@ -2186,7 +2207,10 @@ mod rot_runtime_integration_tests {
         assert_eq!(chapolin.action_frame, 1);
         assert_eq!(chapolin.sprite_frame, 40);
         assert_eq!(chapolin.x, 106.0);
-        assert_eq!(fight.last_report().custom_character_frame_executions, vec![(0, 16)]);
+        assert_eq!(
+            fight.last_report().custom_character_frame_executions,
+            vec![(0, 16)]
+        );
         assert!(fight.last_report().errors.is_empty());
     }
 
@@ -2202,23 +2226,29 @@ mod rot_runtime_integration_tests {
         .unwrap();
         fight.register_custom_character_package(package).unwrap();
         fight.select_custom_character(0, "chapolin").unwrap();
-        fight.queue_custom_character_move(0, "special_1", 1).unwrap();
+        fight
+            .queue_custom_character_move(0, "special_1", 1)
+            .unwrap();
 
         for _ in 0..11 {
             fight.tick_with_inputs([InputFrame::default(), InputFrame::default()]);
         }
 
-        assert!(fight.last_report().custom_character_events.iter().any(|event| {
-            matches!(
-                event,
-                CustomCharacterEvent::SpawnEffect {
-                    fighter_index: 0,
-                    effect_id: 37,
-                    variant: Some('A'),
-                    ..
-                }
-            )
-        }));
+        assert!(fight
+            .last_report()
+            .custom_character_events
+            .iter()
+            .any(|event| {
+                matches!(
+                    event,
+                    CustomCharacterEvent::SpawnEffect {
+                        fighter_index: 0,
+                        effect_id: 37,
+                        variant: Some('A'),
+                        ..
+                    }
+                )
+            }));
     }
 
     #[test]
@@ -2234,9 +2264,13 @@ mod rot_runtime_integration_tests {
         fight.register_custom_character_package(package).unwrap();
         fight.select_custom_character(0, "chapolin").unwrap();
 
-        assert!(fight.queue_custom_character_move(0, "special_final", 1).is_err());
+        assert!(fight
+            .queue_custom_character_move(0, "special_final", 1)
+            .is_err());
         fight.state.fighters[0].power = 1;
-        fight.queue_custom_character_move(0, "special_final", 1).unwrap();
+        fight
+            .queue_custom_character_move(0, "special_final", 1)
+            .unwrap();
         fight.tick_with_inputs([InputFrame::default(), InputFrame::default()]);
         assert!(fight.state.fighters[0].invulnerable);
         assert_eq!(fight.state.fighters[0].power, 0);
