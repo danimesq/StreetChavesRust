@@ -936,9 +936,9 @@ fn append_hud(
             rect: Rect::new(left, 18, bar_width as u32, 9),
             rgba: [46, 48, 58, 255],
         });
-        let health = fighter.health.clamp(0.0, 100.0);
+        let health = fighter.health.clamp(0.0, 125.0);
         commands.push(DrawCommand::Rect {
-            rect: Rect::new(left, 18, (bar_width as f64 * health / 100.0) as u32, 9),
+            rect: Rect::new(left, 18, (bar_width as f64 * health / 125.0) as u32, 9),
             rgba: if health > 35.0 {
                 [70, 196, 116, 255]
             } else {
@@ -949,9 +949,9 @@ fn append_hud(
             rect: Rect::new(left, 31, 86, 4),
             rgba: [46, 48, 58, 255],
         });
-        let charge = fighter.charge_power.clamp(0.0, 100.0);
+        let charge = fighter.charge_power.clamp(0.0, 102.0);
         commands.push(DrawCommand::Rect {
-            rect: Rect::new(left, 31, (86.0 * charge / 100.0) as u32, 4),
+            rect: Rect::new(left, 31, (86.0 * charge / 102.0) as u32, 4),
             rgba: [70, 164, 232, 255],
         });
         draw_text(

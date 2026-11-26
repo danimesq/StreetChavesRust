@@ -96,7 +96,7 @@ impl StartupFlow {
                     self.phase = StartupPhase::CharacterSelect;
                     self.ticks = 0;
                     self.confirmed = [false; 2];
-                    self.p2_active = false;
+                    self.p2_active = p2_confirm || inputs[1].direction != Direction::Neutral;
                 }
             }
             StartupPhase::CharacterSelect => {
@@ -222,7 +222,9 @@ mod tests {
                 ..Default::default()
             },
         ];
-        flow.tick(p2_move);
+        for _ in 0..5 {
+            flow.tick(p2_move);
+        }
         assert_eq!(flow.tick(press_start()), StartupEvent::None);
         let both_confirm = [
             InputFrame {
@@ -240,6 +242,25 @@ mod tests {
                 characters: [1, 3]
             }
         );
+    }
+
+
+    #[test]
+    fn player_two_can_join_from_the_title_screen() {
+        let mut flow = StartupFlow::default();
+        let both_start = [
+            InputFrame {
+                pressed_buttons: 1,
+                ..Default::default()
+            },
+            InputFrame {
+                pressed_buttons: 1,
+                ..Default::default()
+            },
+        ];
+        flow.tick(both_start);
+        flow.tick(press_start());
+        assert!(flow.screen().p2_active);
     }
 
     #[test]
