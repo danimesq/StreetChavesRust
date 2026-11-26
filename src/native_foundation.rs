@@ -7,6 +7,7 @@ use crate::combat_runtime::{SIDE_LEFT, SIDE_RIGHT};
 use crate::fight_simulation::{FightPresentationFrame, FightSimulation, FighterPresentation};
 use crate::fixed_timestep::{FixedTimestepClock, TickBatch};
 use crate::input::{Button, Direction, InputEvent, InputSampler};
+use crate::startup_flow::{StartupPhase, StartupScreen};
 use foundation_runtime::native_sdl::Sdl3Host;
 use foundation_runtime::{
     DrawCommand, FrameOutput, PadDirection, PlayerInputSnapshot, Rect, RgbaImage,
@@ -326,14 +327,13 @@ impl NativeFightHost {
         fight.state.camera_x = f64::from(desired.clamp(0, self.camera_max_x));
     }
 
-    /// Poll normalized Foundation input and execute due 28 ms ticks for both players.
+    /// Poll the host and return one normalized input sample per due 28 ms tick.
     ///
-    /// The original collision resolver runs after fighter frame updates. It stays disabled
-    /// until both local AlturaSprite values are known, rather than guessing hit geometry.
-    pub fn poll_and_tick(
+    /// Startup/menu screens and the fight can consume the exact same authoritative input
+    /// stream without polling SDL twice or advancing the simulation behind the menu.
+    pub fn poll_input_ticks(
         &mut self,
-        fight: &mut FightSimulation,
-    ) -> Result<TickBatch, RuntimeError> {
+    ) -> Result<(TickBatch, Vec<[crate::input::InputFrame; 2]>), RuntimeError> {
         let snapshot = self.host.poll_input()?;
         self.quit_requested = snapshot.quit_requested;
         for player in 0..2 {
@@ -344,27 +344,270 @@ impl NativeFightHost {
         let elapsed = now.saturating_sub(self.last_host_time);
         self.last_host_time = now;
         let batch = self.clock.advance(elapsed);
+        let samples = (0..batch.ticks_due)
+            .map(|_| std::array::from_fn(|player| self.input[player].sample_tick()))
+            .collect();
+        Ok((batch, samples))
+    }
 
-        for _ in 0..batch.ticks_due {
-            let inputs = std::array::from_fn(|player| self.input[player].sample_tick());
-            fight.tick_with_inputs(inputs);
-
-            if self.sprite_heights.iter().all(|height| *height > 0) {
-                if let Err(error) =
-                    fight.resolve_melee_contacts(self.sprite_heights, self.damage_level, false)
-                {
-                    self.diagnostics
-                        .push(format!("melee resolution: {error}"));
-                }
-            }
-
-            if let Some(layout) = self.audio_layout.as_ref() {
-                let _ = self
-                    .audio
-                    .play_pending_fight_sound(&mut self.host, layout, fight);
+    /// Execute one already-sampled logical tick and its source-ordered host consequences.
+    pub fn tick_fight(
+        &mut self,
+        fight: &mut FightSimulation,
+        inputs: [crate::input::InputFrame; 2],
+    ) {
+        fight.tick_with_inputs(inputs);
+        if self.sprite_heights.iter().all(|height| *height > 0) {
+            if let Err(error) =
+                fight.resolve_melee_contacts(self.sprite_heights, self.damage_level, false)
+            {
+                self.diagnostics
+                    .push(format!("melee resolution: {error}"));
             }
         }
+        if let Some(layout) = self.audio_layout.as_ref() {
+            let _ = self
+                .audio
+                .play_pending_fight_sound(&mut self.host, layout, fight);
+        }
+    }
+
+    /// Convenience wrapper for applications that enter directly into a fight.
+    pub fn poll_and_tick(
+        &mut self,
+        fight: &mut FightSimulation,
+    ) -> Result<TickBatch, RuntimeError> {
+        let (batch, samples) = self.poll_input_ticks()?;
+        for inputs in samples {
+            self.tick_fight(fight, inputs);
+        }
         Ok(batch)
+    }
+
+    /// Render the boot intro, title/start screen or character-selection screen.
+    pub fn render_startup(&mut self, screen: &StartupScreen) -> Result<(), RuntimeError> {
+        let width = self.logical_width;
+        let height = self.logical_height;
+        let mut commands = Vec::with_capacity(320);
+        commands.push(DrawCommand::Clear {
+            rgba: [13, 18, 35, 255],
+        });
+
+        match screen.phase {
+            StartupPhase::Opening => {
+                append_training_stage(&mut commands, width, height, f64::from(screen.ticks / 5));
+                commands.push(DrawCommand::Rect {
+                    rect: Rect::new(0, 0, width, 54),
+                    rgba: [14, 22, 46, 175],
+                });
+                draw_text(&mut commands, 118, 18, "PRESENTS", [245, 230, 190, 255], 2);
+                // Three compact story panels echo the original opening's vila-to-logo rhythm.
+                let beat = (screen.ticks / 45) % 3;
+                for index in 0..3 {
+                    let x = 24 + index * 122;
+                    let active = index == beat as i32;
+                    commands.push(DrawCommand::Rect {
+                        rect: Rect::new(x, 72, 108, 82),
+                        rgba: if active {
+                            [50, 76, 104, 255]
+                        } else {
+                            [29, 42, 65, 255]
+                        },
+                    });
+                    commands.push(DrawCommand::Rect {
+                        rect: Rect::new(x + 8, 82, 92, 52),
+                        rgba: [105, 152, 174, 255],
+                    });
+                    commands.push(DrawCommand::Rect {
+                        rect: Rect::new(x + 16, 118, 76, 18),
+                        rgba: [115, 90, 65, 255],
+                    });
+                    if active {
+                        draw_text(
+                            &mut commands,
+                            x + 24,
+                            140,
+                            match index {
+                                0 => "A VILA",
+                                1 => "OS VIZINHOS",
+                                _ => "O DESAFIO",
+                            },
+                            [255, 224, 135, 255],
+                            1,
+                        );
+                    }
+                }
+                draw_text(
+                    &mut commands,
+                    88,
+                    190,
+                    "STREET CHAVES",
+                    [255, 224, 126, 255],
+                    3,
+                );
+                draw_text(
+                    &mut commands,
+                    125,
+                    224,
+                    "O LUTADOR DA VILA",
+                    [238, 238, 232, 255],
+                    1,
+                );
+                if (screen.ticks / 14) % 2 == 0 {
+                    draw_text(
+                        &mut commands,
+                        136,
+                        264,
+                        "PRESS Z OR R TO SKIP",
+                        [255, 255, 255, 255],
+                        1,
+                    );
+                }
+            }
+            StartupPhase::Title => {
+                append_training_stage(&mut commands, width, height, 0.0);
+                commands.push(DrawCommand::Rect {
+                    rect: Rect::new(24, 38, width.saturating_sub(48), 214),
+                    rgba: [9, 14, 30, 220],
+                });
+                commands.push(DrawCommand::Rect {
+                    rect: Rect::new(28, 42, width.saturating_sub(56), 206),
+                    rgba: [47, 66, 94, 255],
+                });
+                draw_text(&mut commands, 57, 82, "STREET", [255, 223, 130, 255], 4);
+                draw_text(&mut commands, 66, 124, "CHAVES", [255, 244, 211, 255], 4);
+                draw_text(
+                    &mut commands,
+                    105,
+                    166,
+                    "O LUTADOR DA VILA",
+                    [194, 222, 237, 255],
+                    1,
+                );
+                draw_text(
+                    &mut commands,
+                    100,
+                    204,
+                    "PRESS Z TO START",
+                    [255, 255, 255, 255],
+                    2,
+                );
+                if (screen.ticks / 16) % 2 == 0 {
+                    draw_text(
+                        &mut commands,
+                        90,
+                        230,
+                        "P2: PRESS R TO JOIN",
+                        [185, 225, 250, 255],
+                        1,
+                    );
+                }
+            }
+            StartupPhase::CharacterSelect => {
+                commands.push(DrawCommand::Rect {
+                    rect: Rect::new(0, 0, width, height),
+                    rgba: [20, 30, 54, 255],
+                });
+                draw_text(
+                    &mut commands,
+                    78,
+                    12,
+                    "SELECT YOUR FIGHTER",
+                    [255, 225, 145, 255],
+                    2,
+                );
+                draw_text(
+                    &mut commands,
+                    24,
+                    34,
+                    &format!("P1: {}", fighter_display_name(screen.selected[0])),
+                    if screen.confirmed[0] {
+                        [118, 238, 164, 255]
+                    } else {
+                        [255, 234, 170, 255]
+                    },
+                    1,
+                );
+                let p2_status = if screen.confirmed[1] {
+                    "P2 READY"
+                } else if screen.p2_active {
+                    "P2 SELECTING"
+                } else {
+                    "P2 DEFAULT"
+                };
+                draw_text(&mut commands, 270, 34, p2_status, [176, 220, 248, 255], 1);
+
+                const LABELS: [&str; 15] = [
+                    "CHAVES", "MADRUGA", "CHIQUINHA", "QUICO", "FLORINDA",
+                    "GIRAFAL", "BARRIGA", "BRUXA", "PATY", "NHONHO",
+                    "GODINES", "FURTADO", "JAIMINHO", "NEVES", "GLORIA",
+                ];
+                for index in 0..15 {
+                    let column = index % 5;
+                    let row = index / 5;
+                    let x = 17 + column as i32 * 73;
+                    let y = 62 + row as i32 * 56;
+                    let character_id = index as u8 + 1;
+                    let color = fighter_palette(character_id).0;
+                    commands.push(DrawCommand::Rect {
+                        rect: Rect::new(x, y, 69, 49),
+                        rgba: [38, 48, 68, 255],
+                    });
+                    commands.push(DrawCommand::Rect {
+                        rect: Rect::new(x + 5, y + 5, 18, 31),
+                        rgba: color,
+                    });
+                    draw_text(
+                        &mut commands,
+                        x + 27,
+                        y + 20,
+                        LABELS[index],
+                        [244, 244, 235, 255],
+                        1,
+                    );
+                    if screen.selected[0] == character_id {
+                        outline_rect(&mut commands, x, y, 69, 49, [255, 218, 102, 255]);
+                    }
+                    if screen.p2_active && screen.selected[1] == character_id {
+                        outline_rect(&mut commands, x + 2, y + 2, 65, 45, [96, 206, 255, 255]);
+                    }
+                }
+                draw_text(
+                    &mut commands,
+                    18,
+                    238,
+                    "P1 ARROWS + Z CONFIRM",
+                    [255, 224, 132, 255],
+                    1,
+                );
+                draw_text(
+                    &mut commands,
+                    211,
+                    238,
+                    "P2 WASD + R CONFIRM",
+                    [152, 217, 250, 255],
+                    1,
+                );
+                draw_text(
+                    &mut commands,
+                    58,
+                    264,
+                    if screen.confirmed[0] && screen.confirmed[1] {
+                        "GET READY!"
+                    } else {
+                        "P2 CAN JOIN BEFORE P1 CONFIRMS"
+                    },
+                    [232, 236, 242, 255],
+                    1,
+                );
+            }
+            StartupPhase::Fighting => {}
+        }
+
+        self.host.present(&FrameOutput {
+            draw_commands: commands,
+            audio: Vec::new(),
+        })
     }
 
     /// Render the background, fighters, a vector fallback and the compact fight HUD.
@@ -749,6 +992,32 @@ fn append_hud(
         [224, 228, 236, 255],
         1,
     );
+}
+
+fn outline_rect(
+    commands: &mut Vec<DrawCommand>,
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+    rgba: [u8; 4],
+) {
+    commands.push(DrawCommand::Rect {
+        rect: Rect::new(x, y, width, 2),
+        rgba,
+    });
+    commands.push(DrawCommand::Rect {
+        rect: Rect::new(x, y + height as i32 - 2, width, 2),
+        rgba,
+    });
+    commands.push(DrawCommand::Rect {
+        rect: Rect::new(x, y, 2, height),
+        rgba,
+    });
+    commands.push(DrawCommand::Rect {
+        rect: Rect::new(x + width as i32 - 2, y, 2, height),
+        rgba,
+    });
 }
 
 fn draw_text(

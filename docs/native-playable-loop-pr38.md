@@ -1,46 +1,52 @@
-# First native runnable loop (PR #38)
+# First native playable loop (PR #38)
 
-## What this adds
+## Startup flow
 
-- A runnable native binary, \`street-chaves-native\`, backed by the merged Foundation SDL3 host.
-- A 400x300 logical scene and the existing authoritative 28 ms simulation clock.
-- Two-player input, tick advancement, fighter-frame snapshots, and the Pascal melee consequence resolver when both local sprite heights are known.
-- Original local BMP loading for the stage and fighter sprite strips.
-- A faithful implementation of the original sprite-sheet separator rule: a column is a separator when its top and bottom pixels are both dark (each RGB component <= 100).
-- Source INI \`AlturaSprite\`, \`Velocidade\`, and \`CentroX\` values; player two's sprite-list index offset of 50; white color-key transparency.
-- A compact health/charge/power HUD and animated vector fighters for machines without local game data.
-- Local Pascal sound-bank loading through Foundation's WAV decoder and shared PCM mixer.
+The executable now begins at its own opening sequence instead of jumping directly into a fight:
 
-## Run without game assets
+1. **Opening intro**: a short, animated vector sequence inspired by the original game's vila-to-logo opening.
+2. **Title / Start screen**: the Street Chaves title and a Start prompt.
+3. **Fighter selection**: a 15-character grid with independent local P1/P2 cursors and confirmation.
+4. **Fight**: enters the 28 ms simulation after selection.
 
-    cargo run --features native-foundation --bin street-chaves-native
+P1 navigates with the arrow keys and confirms with Z. P2 can join during selection with WASD and confirms with R. If P2 does not join, the second selected fighter remains a stationary training opponent. There is no CPU opponent AI yet.
 
-This opens a procedural training stage with animated placeholder fighters. It is a real input/tick/render loop, but it does not claim to reproduce the original game's art.
+## Run without original assets
+
+```sh
+cargo run --features native-foundation --bin street-chaves-native
+```
+
+The opening, title, and character-selection screens use generated vector/pixel-art presentation. The fight uses a procedural training stage and animated placeholder fighters.
 
 ## Run with a local OpenStreetChaves folder
 
-    cargo run --features native-foundation --bin street-chaves-native -- \
-      --game-root "/path/to/OpenStreetChaves" \
-      --stage 1 --p1 1 --p2 4
+```sh
+cargo run --features native-foundation --bin street-chaves-native -- \
+  --game-root "/path/to/OpenStreetChaves" \
+  --stage 1 --p1 1 --p2 4
+```
 
-The loader reads files such as:
+The IDs passed through `--p1` and `--p2` set the initial cursors in the selection screen. Local original assets load after confirmation:
 
-- \`Cenarios/Cenario-01.bmp\`
-- \`Lutadores/C01.bmp\`, \`Lutadores/C04.bmp\`
-- \`Dados/Lutadores/C01.ini\`, \`Dados/Lutadores/C04.ini\`
-- \`Dados/Recursos.ini\`, \`Dados/Jogo.ini\`
-- Optional WAV banks under \`Sons/\`, \`Musicas/\`, \`Falas/\`, and \`Embutidos/\`
+- `Cenarios/Cenario-01.bmp`
+- `Lutadores/C01.bmp`, `Lutadores/C04.bmp`
+- `Dados/Lutadores/C01.ini`, `Dados/Lutadores/C04.ini`
+- `Dados/Recursos.ini`, `Dados/Jogo.ini`
+- Optional WAV banks under `Sons/`, `Musicas/`, `Falas/`, and `Embutidos/`
 
-Original game art and audio remain local user-provided files. No extracted sprites or sound files are committed.
+The sprite-sheet loader reproduces the Pascal separator-column rule: top and bottom pixels both need RGB components <= 100. It applies the source white color key, reads `AlturaSprite`, `Velocidade`, and `CentroX`, and uses the P2 +50 sprite-list displacement. No proprietary game BMP/WAV asset is committed.
 
 ## Input
 
-- P1: arrows, Z/X/C/V
-- P2: WASD, R/T/Y/U
-- Escape: exit
+- P1: arrows to move/select, Z to confirm, X/C/V for other fight buttons.
+- P2: WASD to move/select, R to join/confirm, T/Y/U for other fight buttons.
+- Escape: quit.
+
+The Foundation host owns SDL3, the native window, texture uploads, WAV decoding and the PCM mixer. StreetChavesRust owns the opening/menu state machine, local resource interpretation, 28 ms clock, game simulation and presentation.
 
 ## Accuracy boundary
 
-The stage BMP is rendered as a static background. Fighter sprite strips use the exact original separator-column algorithm and INI pivots. The current simulation executes its implemented Pascal-derived command/frame scripts and can resolve melee contacts once the local sprite heights are loaded.
+The menu flow and vector opening are new Rust presentation, not a pixel-perfect port of the original intro assets. The actual Pascal resources and title/attract animation need separate provenance-aware loading. In the fight, implemented Pascal-derived scripts run and melee contacts are resolved once local fighter heights are known.
 
-This is the first runnable loop, not a completed full-game port. The broader original loop still has pending systems such as complete stage object/animation scripts, effect rendering/collision, original game flow and round transitions, AI opponent behavior, and the full physics/knockback sequence. If a required local asset is missing, a diagnostic is recorded and the vector/training fallback remains available.
+Still pending beyond this first startup-to-fight loop: full original character-select artwork/layout, options/key-binding screens, configuration persistence, stage animation/object scripts, effect rendering and collision, round transitions/records/continue/final screens, AI opponent behavior, and the complete physics/knockback sequence.

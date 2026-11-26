@@ -567,11 +567,6 @@ pub struct FighterPresentation {
     pub y: f64,
     pub health: f64,
     pub power: u16,
-    pub charge_power: f64,
-    pub in_air: bool,
-    pub defending: bool,
-    pub is_kick: bool,
-    pub force_strength: u8,
     pub invulnerable: bool,
 }
 
@@ -877,11 +872,6 @@ impl FightSimulation {
                 y: fighter.y,
                 health: fighter.health,
                 power: fighter.power,
-                charge_power: fighter.charge_power,
-                in_air: fighter.in_air,
-                defending: fighter.defending,
-                is_kick: fighter.is_kick,
-                force_strength: fighter.force_strength,
                 invulnerable: fighter.invulnerable,
             };
         FightPresentationFrame {

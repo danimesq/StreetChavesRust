@@ -1,7 +1,7 @@
-//! First native runnable loop for the Street Chaves Rust reconstruction.
+//! First native game loop for Street Chaves Rust.
 //!
-//! Without --game-root it opens a procedural training stage with animated vector fighters.
-//! With --game-root it loads the original local Pascal BMP/INI/WAV resource layout.
+//! The process starts at the opening animation, reaches the Start screen, lets local
+//! players choose fighters, and only then enters the fixed-tick fight runtime.
 
 use std::env;
 use std::path::PathBuf;
@@ -9,11 +9,10 @@ use std::thread;
 use std::time::Duration;
 
 use foundation_runtime::RuntimeConfig;
-use street_chaves::combat_runtime::{
-    BodyBox, FighterState, ACTION_IDLE, SIDE_LEFT, SIDE_RIGHT,
-};
+use street_chaves::combat_runtime::{BodyBox, FighterState, ACTION_IDLE, SIDE_LEFT, SIDE_RIGHT};
 use street_chaves::fight_simulation::{FightSimulation, FightSimulationConfig};
 use street_chaves::native_foundation::NativeFightHost;
+use street_chaves::startup_flow::{StartupEvent, StartupFlow, StartupPhase};
 use street_chaves::{ChavesSpecialContext, CombatState, VictoryAnimationContext};
 
 #[derive(Debug)]
@@ -35,6 +34,8 @@ fn main() {
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let options = parse_args()?;
     let mut fight = build_fight(options.players, options.seed);
+    let mut startup = StartupFlow::new(options.players);
+    let mut assets_loaded = false;
 
     let mut native = NativeFightHost::new(RuntimeConfig {
         title: "Street Chaves Rust".to_owned(),
@@ -43,36 +44,58 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         pixel_art: true,
     })?;
 
-    if let Some(root) = options.game_root.as_ref() {
-        for message in native.load_original_game(
-            root,
-            options.stage,
-            options.players,
-            &mut fight,
-            !options.no_audio,
-        ) {
-            eprintln!("[assets] {message}");
-        }
-    } else {
-        eprintln!("[assets] no --game-root supplied; using procedural training stage and vector fighters");
-    }
-
-    eprintln!("[game] P1={}, P2={}, stage={}, fixed tick=28ms", options.players[0], options.players[1], options.stage);
+    eprintln!("[boot] opening intro -> start screen -> fighter select -> fight");
     eprintln!("[controls] P1 arrows + Z/X/C/V; P2 WASD + R/T/Y/U; ESC exits");
 
     let mut last_frame = std::time::Instant::now();
     while !native.should_quit() {
-        native.poll_and_tick(&mut fight)?;
-        native.update_camera(&mut fight);
-        native.render_fight(&fight, &[])?;
+        let (_batch, input_ticks) = native.poll_input_ticks()?;
+        for inputs in input_ticks {
+            match startup.tick(inputs) {
+                StartupEvent::StartFight { characters } => {
+                    eprintln!("[select] P1=C{:02}, P2=C{:02}", characters[0], characters[1]);
+                    fight = build_fight(characters, options.seed);
 
-        // Rendering is intentionally decoupled from the authoritative 28 ms simulation clock.
+                    if let Some(root) = options.game_root.as_ref() {
+                        for message in native.load_original_game(
+                            root,
+                            options.stage,
+                            characters,
+                            &mut fight,
+                            !options.no_audio,
+                        ) {
+                            eprintln!("[assets] {message}");
+                        }
+                    } else {
+                        eprintln!("[assets] no --game-root supplied; using procedural stage and animated fighter fallbacks");
+                    }
+                    assets_loaded = true;
+                }
+                StartupEvent::None if startup.phase() == StartupPhase::Fighting => {
+                    native.tick_fight(&mut fight, inputs);
+                }
+                StartupEvent::None => {}
+            }
+        }
+
+        if startup.phase() == StartupPhase::Fighting {
+            native.update_camera(&mut fight);
+            native.render_fight(&fight, &[])?;
+        } else {
+            native.render_startup(&startup.screen())?;
+        }
+
+        // Rendering remains independent from the authoritative 28 ms simulation clock.
         let elapsed = last_frame.elapsed();
         let target = Duration::from_millis(16);
         if elapsed < target {
             thread::sleep(target - elapsed);
         }
         last_frame = std::time::Instant::now();
+    }
+
+    if !assets_loaded {
+        eprintln!("[shutdown] exited before selecting a fighter");
     }
     Ok(())
 }
@@ -98,7 +121,7 @@ fn build_fight(players: [u8; 2], seed: i32) -> FightSimulation {
         FightSimulationConfig {
             special: ChavesSpecialContext {
                 charge_gain: 2.0,
-                charge_max: 100.0,
+                charge_max: 102.0,
                 ground_y: 300.0,
             },
             frame: VictoryAnimationContext {
@@ -148,7 +171,7 @@ fn make_fighter(
         y: 300.0,
         speed: walk_speed,
         distance_ai: 100,
-        health: 100.0,
+        health: 125.0,
         power: 0,
         charge_power: 0.0,
         jump_direction: 0,
@@ -222,15 +245,17 @@ fn print_help() {
          Options:\n\
            --game-root PATH   Local OpenStreetChaves installation/data folder\n\
            --stage N          Original stage number (default: 1)\n\
-           --p1 N             P1 Pascal fighter ID 1..15 (default: 1, Chaves)\n\
-           --p2 N             P2 Pascal fighter ID 1..15 (default: 4, Quico)\n\
+           --p1 N             P1 initial character selection (default: 1, Chaves)\n\
+           --p2 N             P2 initial character selection (default: 4, Quico)\n\
            --seed N           Deterministic RNG seed (default: 2026)\n\
            --no-audio         Do not load local WAV banks\n\
            --help             Show this help\n\
          \n\
+         Startup:\n\
+           Opening intro -> Press Start -> Fighter Select -> Fight\n\
          Controls:\n\
-           P1: arrows + Z/X/C/V\n\
-           P2: WASD + R/T/Y/U\n\
+           P1: arrows + Z/X/C/V; Z confirms menus\n\
+           P2: WASD + R/T/Y/U; R joins/confirms P2\n\
            ESC: quit"
     );
 }

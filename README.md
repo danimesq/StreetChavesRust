@@ -86,7 +86,7 @@ Unverified behavior stays documented as an open question rather than being fille
 
 At this stage, the most useful contributions are reproducible observations, source references, test cases, and corrections to the research documents. Please distinguish direct source observations from interpretations and original-game claims.
 
-Run the current contract suite with `cargo test`. There is not yet a playable runtime or SDL3 frontend, so no game launch command is available.
+Run the platform-neutral contract suite with `cargo test`. The optional native SDL3 executable is available with `cargo run --features native-foundation --bin street-chaves-native`.
 
 ---
 
@@ -108,4 +108,4 @@ Run with local OpenStreetChaves assets for original stage/fighter sheets/audio:
 
     cargo run --features native-foundation --bin street-chaves-native -- --game-root "/path/to/OpenStreetChaves" --stage 1 --p1 1 --p2 4
 
-Without a game folder it opens a procedural training stage with animated vector fighters. See [the native runnable loop guide](docs/native-playable-loop-pr38.md). Original game BMP/WAV assets are not redistributed.
+Without a game folder it runs a vector opening intro, a Start screen, local fighter selection, and a procedural training fight. See [the native playable loop guide](docs/native-playable-loop-pr38.md). Original game BMP/WAV assets are not redistributed.
