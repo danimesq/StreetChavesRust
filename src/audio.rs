@@ -169,8 +169,7 @@ fn mix_voices_into(voices: &mut [Option<Voice>; MAX_AUDIO_VOICES], output: &mut 
         }
 
         output[frame * MIXER_CHANNELS] = left.clamp(i16::MIN as i32, i16::MAX as i32) as i16;
-        output[frame * MIXER_CHANNELS + 1] =
-            right.clamp(i16::MIN as i32, i16::MAX as i32) as i16;
+        output[frame * MIXER_CHANNELS + 1] = right.clamp(i16::MIN as i32, i16::MAX as i32) as i16;
     }
 
     // A non-stereo-aligned tail must never leak stale samples to the device.
@@ -185,7 +184,10 @@ mod tests {
     use super::*;
 
     fn pcm(frames: &[(i16, i16)]) -> Arc<[i16]> {
-        let samples: Vec<i16> = frames.iter().flat_map(|(left, right)| [*left, *right]).collect();
+        let samples: Vec<i16> = frames
+            .iter()
+            .flat_map(|(left, right)| [*left, *right])
+            .collect();
         Arc::from(samples)
     }
 

@@ -191,7 +191,11 @@ impl SdlAudioOutput {
             },
             None => return false,
         };
-        let pcm = match self.samples.get(sample_id).and_then(|sample| sample.clone()) {
+        let pcm = match self
+            .samples
+            .get(sample_id)
+            .and_then(|sample| sample.clone())
+        {
             Some(pcm) => pcm,
             None => return false,
         };
@@ -226,10 +230,7 @@ impl SdlAudioOutput {
     ///
     /// Chaves.ini overrides Dados/Som.ini. Files are loaded locally from game_root; extracted
     /// original audio is not copied into or redistributed by this repository.
-    pub fn load_pascal_resources(
-        &mut self,
-        game_root: impl AsRef<Path>,
-    ) -> PascalAudioLayout {
+    pub fn load_pascal_resources(&mut self, game_root: impl AsRef<Path>) -> PascalAudioLayout {
         let root = game_root.as_ref().to_path_buf();
         let resources = IniDocument::read(&root.join("Dados/Recursos.ini"));
         let mut volumes = IniDocument::read(&root.join("Dados/Som.ini"));
@@ -399,13 +400,9 @@ impl SdlAudioOutput {
         }
     }
 
-    fn decode_wav(
-        &self,
-        path: &Path,
-        volume_percent: i32,
-    ) -> Result<Arc<[i16]>, AudioHostError> {
-        let wav = AudioSpecWAV::load_wav(path)
-            .map_err(|error| AudioHostError::Sdl(error.to_string()))?;
+    fn decode_wav(&self, path: &Path, volume_percent: i32) -> Result<Arc<[i16]>, AudioHostError> {
+        let wav =
+            AudioSpecWAV::load_wav(path).map_err(|error| AudioHostError::Sdl(error.to_string()))?;
         let source_spec = AudioSpec::new(
             Some(wav.freq),
             Some(i32::from(wav.channels)),
@@ -557,23 +554,21 @@ mod tests {
 
     #[test]
     fn pascal_numbered_files_replace_only_the_first_hash_run() {
-        assert_eq!(
-            numbered_file("Sons/Som-##.wav", 7),
-            "Sons/Som-07.wav"
-        );
+        assert_eq!(numbered_file("Sons/Som-##.wav", 7), "Sons/Som-07.wav");
         assert_eq!(
             numbered_file("Falas/Fala-##-a.wav", 16),
             "Falas/Fala-16-a.wav"
         );
-        assert_eq!(numbered_file("Embutidos/Musica.wav", 2), "Embutidos/Musica.wav");
+        assert_eq!(
+            numbered_file("Embutidos/Musica.wav", 2),
+            "Embutidos/Musica.wav"
+        );
     }
 
     #[test]
     fn fighter_count_follows_the_pascal_lutadores_data_pattern() {
-        let root = std::env::temp_dir().join(format!(
-            "street-chaves-audio-count-{}",
-            std::process::id()
-        ));
+        let root =
+            std::env::temp_dir().join(format!("street-chaves-audio-count-{}", std::process::id()));
         let data = root.join("Dados/Lutadores");
         fs::create_dir_all(&data).unwrap();
         fs::write(data.join("C01.ini"), "[Geral]").unwrap();
@@ -593,14 +588,8 @@ mod tests {
     fn user_volume_settings_override_data_defaults_case_insensitively() {
         let mut values = IniDocument::parse("[Volume]\nPadrao=100\nSons=80\nSom-05=65\n");
         values.merge(IniDocument::parse("[volume]\nsom-05=42\n"));
-        assert_eq!(
-            volume_for_path(Path::new("Sons/Som-05.wav"), &values),
-            42
-        );
-        assert_eq!(
-            volume_for_path(Path::new("Sons/Som-06.wav"), &values),
-            80
-        );
+        assert_eq!(volume_for_path(Path::new("Sons/Som-05.wav"), &values), 42);
+        assert_eq!(volume_for_path(Path::new("Sons/Som-06.wav"), &values), 80);
         assert_eq!(
             volume_for_path(Path::new("Falas/Fala-01-a.wav"), &values),
             100
