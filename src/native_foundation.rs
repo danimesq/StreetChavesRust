@@ -135,6 +135,16 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         &mut self.host
     }
 
+    /// Rebase the fixed-step clock after a browser visibility/background pause.
+    ///
+    /// A hidden tab must not turn minutes of suspended wall time into thousands of
+    /// catch-up simulation ticks. Fractional accumulated time is intentionally reset.
+    pub fn reset_after_suspend(&mut self) {
+        self.clock = FixedTimestepClock::new();
+        self.last_host_time = self.host.now();
+        self.host.reset_input_after_pause();
+    }
+
     pub fn should_quit(&self) -> bool {
         self.quit_requested
     }
