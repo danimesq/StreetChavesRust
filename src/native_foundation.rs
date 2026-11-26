@@ -391,14 +391,15 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                 Ok(texture) => {
                     self.stage_texture = Some(texture);
                     self.stage_size = (image.width, image.height);
-                    self.camera_max_x =
-                        image.width.saturating_sub(self.logical_width) as i32;
+                    self.camera_max_x = image.width.saturating_sub(self.logical_width) as i32;
                     messages.push(format!("loaded web stage {stage_number}"));
                 }
                 Err(error) => messages.push(format!("stage {stage_number}: {error}")),
             }
         } else {
-            messages.push(format!("web asset {stage_key} is missing; using training stage"));
+            messages.push(format!(
+                "web asset {stage_key} is missing; using training stage"
+            ));
         }
 
         if let Some(bytes) = assets.data.get("game_settings") {
@@ -493,12 +494,7 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                     (character_id, list_offset + frame_number),
                     SpriteFrameMapping {
                         texture,
-                        source: Rect::new(
-                            start_x as i32,
-                            0,
-                            frame_width,
-                            atlas.height,
-                        ),
+                        source: Rect::new(start_x as i32, 0, frame_width, atlas.height),
                         width: frame_width,
                         height: atlas.height,
                         center_x: centers.get(&frame_number).copied().unwrap_or(0),
@@ -551,7 +547,8 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         let Some(clip) = self.web_music else {
             return Ok(false);
         };
-        self.host.audio(&AudioRequest::PlayClip { clip, looped: true })?;
+        self.host
+            .audio(&AudioRequest::PlayClip { clip, looped: true })?;
         Ok(true)
     }
 
