@@ -3302,6 +3302,87 @@ mod rot_runtime_integration_tests {
         assert!(report.errors.is_empty());
     }
     #[test]
+    fn all_fifteen_original_fighters_execute_their_live_quadro_scripts() {
+        for character_id in 1..=15 {
+            let mut fight = simulation();
+            fight.state.fighters[0].character_id = character_id;
+            fight.frame_boxes[0] = Some(load_fighter_frame_boxes(character_id).unwrap());
+            fight.state.fighters[0].action_id = ACTION_IDLE;
+            let mut report = FightTickReport::default();
+
+            fight.advance_fighter_frame(0, &mut report);
+
+            assert!(
+                report.errors.is_empty(),
+                "C{character_id:02} [Quadro] failed: {:?}",
+                report.errors
+            );
+            assert_eq!(
+                report.rot_frame_executions,
+                vec![(0, character_id)],
+                "C{character_id:02} did not execute its pinned [Quadro]"
+            );
+            assert_eq!(report.box_updates, vec![0], "C{character_id:02} boxes were not updated");
+        }
+    }
+
+    #[test]
+    fn c08_special_five_clears_opponent_invulnerability_during_quadro() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 8;
+        fight.frame_boxes[0] = Some(load_fighter_frame_boxes(8).unwrap());
+        fight.state.fighters[0].action_id = ACTION_SPECIAL_FINAL;
+        fight.state.fighters[0].action_frame = 0;
+        fight.state.fighters[1].invulnerable = true;
+        let mut report = FightTickReport::default();
+
+        fight.advance_fighter_frame(0, &mut report);
+
+        assert!(report.errors.is_empty(), "{:?}", report.errors);
+        assert!(!fight.state.fighters[1].invulnerable);
+    }
+
+    #[test]
+    fn c13_special_five_clears_opponent_invulnerability_only_after_combo_hit_two() {
+        for (hit_count, expected_invulnerable) in [(1, true), (2, false)] {
+            let mut fight = simulation();
+            fight.state.fighters[0].character_id = 13;
+            fight.frame_boxes[0] = Some(load_fighter_frame_boxes(13).unwrap());
+            fight.state.fighters[0].action_id = ACTION_SPECIAL_FINAL;
+            fight.state.fighters[0].action_frame = 0;
+            fight.state.fighters[0].hit_count = hit_count;
+            fight.state.fighters[1].invulnerable = true;
+            let mut report = FightTickReport::default();
+
+            fight.advance_fighter_frame(0, &mut report);
+
+            assert!(report.errors.is_empty(), "C13: {:?}", report.errors);
+            assert_eq!(
+                fight.state.fighters[1].invulnerable,
+                expected_invulnerable,
+                "C13 with P.Acertos={hit_count}"
+            );
+        }
+    }
+
+    #[test]
+    fn c14_quadro_does_not_invent_opponent_side_effects() {
+        let mut fight = simulation();
+        fight.state.fighters[0].character_id = 14;
+        fight.frame_boxes[0] = Some(load_fighter_frame_boxes(14).unwrap());
+        fight.state.fighters[0].action_id = ACTION_SPECIAL_FINAL;
+        fight.state.fighters[0].action_frame = 0;
+        fight.state.fighters[1].invulnerable = true;
+        let opponent_before = fight.state.fighters[1].clone();
+        let mut report = FightTickReport::default();
+
+        fight.advance_fighter_frame(0, &mut report);
+
+        assert!(report.errors.is_empty(), "C14: {:?}", report.errors);
+        assert_eq!(fight.state.fighters[1], opponent_before);
+    }
+
+    #[test]
     fn aplicar_caixas_selects_pascal_strength_rows_in_original_ini_order() {
         let mut fight = simulation();
         fight.state.fighters[0].character_id = 11;
