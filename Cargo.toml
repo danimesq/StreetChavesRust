@@ -9,6 +9,7 @@ license = "MIT"
 [lib]
 name = "street_chaves"
 path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 serde_json = "1"
