@@ -43,6 +43,64 @@ fn rot_int(value: i64) -> RotValue {
     RotValue::Integer { value, wide: false }
 }
 
+#[derive(Debug, Clone, Copy)]
+struct CpuProjectileContext {
+    inputs: AiTickInputs,
+    projectile_y: f64,
+    projectile_terminating: bool,
+}
+
+/// Pascal Round uses nearest integer with ties to even.
+fn pascal_round_to_i64(value: f64) -> i64 {
+    value.round_ties_even() as i64
+}
+
+/// Static, source-pinned character script lookup for the original fifteen fighters.
+fn embedded_character_rot_source(character_id: u8) -> Option<(&'static str, &'static str)> {
+    Some(match character_id {
+        1 => ("C01.rot", include_str!("../research/pascal-rot/C01.rot")),
+        2 => ("C02.rot", include_str!("../research/pascal-rot/C02.rot")),
+        3 => ("C03.rot", include_str!("../research/pascal-rot/C03.rot")),
+        4 => ("C04.rot", include_str!("../research/pascal-rot/C04.rot")),
+        5 => ("C05.rot", include_str!("../research/pascal-rot/C05.rot")),
+        6 => ("C06.rot", include_str!("../research/pascal-rot/C06.rot")),
+        7 => ("C07.rot", include_str!("../research/pascal-rot/C07.rot")),
+        8 => ("C08.rot", include_str!("../research/pascal-rot/C08.rot")),
+        9 => ("C09.rot", include_str!("../research/pascal-rot/C09.rot")),
+        10 => ("C10.rot", include_str!("../research/pascal-rot/C10.rot")),
+        11 => ("C11.rot", include_str!("../research/pascal-rot/C11.rot")),
+        12 => ("C12.rot", include_str!("../research/pascal-rot/C12.rot")),
+        13 => ("C13.rot", include_str!("../research/pascal-rot/C13.rot")),
+        14 => ("C14.rot", include_str!("../research/pascal-rot/C14.rot")),
+        15 => ("C15.rot", include_str!("../research/pascal-rot/C15.rot")),
+        _ => return None,
+    })
+}
+
+/// Run a parsed source [IA] section with the exact values passed by CpuNovo.
+fn execute_rot_ai_section(
+    document: &RotDocument,
+    jog: u8,
+    inputs: AiTickInputs,
+    host: &mut RotCombatHost<'_>,
+) -> Result<(), String> {
+    let program = document
+        .parse_optional("IA")
+        .map_err(|error| error.to_string())?;
+    let Some(program) = program else {
+        return Ok(());
+    };
+    let mut frame =
+        RotExecutionFrame::new(&program, jog, 0).map_err(|error| error.to_string())?;
+    frame.set_symbol("Dist", rot_int(i64::from(inputs.distance)));
+    frame.set_symbol("DistProj", rot_int(i64::from(inputs.projectile_distance)));
+    frame.set_symbol("OppY", rot_int(i64::from(inputs.opponent_y)));
+    frame.set_symbol("Ameaca", rot_int(i64::from(inputs.threat)));
+    frame.set_symbol("Fator", RotValue::Real(inputs.difficulty_factor));
+    frame.execute_with_host(&program, host)
+        .map_err(|error| error.to_string())
+}
+
 fn rot_value_int(value: &RotValue) -> Result<i64, String> {
     match value {
         RotValue::Integer { value, .. } => Ok(*value),
@@ -374,16 +432,31 @@ impl RotExecutionHost for RotCombatHost<'_> {
                 if arguments.len() != 1 {
                     return Err("Random expects exactly one argument".to_owned());
                 }
-                let range = i32::try_from(rot_value_int(&arguments[0])?)
-                    .map_err(|_| "Random range is outside LongInt".to_owned())?;
-                if range <= 0 {
-                    return Err(format!("Random range must be positive, got {range}"));
-                }
-                let value = match self.rng.draw_longint(range) {
-                    Ok(value) => value,
-                    Err(never) => match never {},
+                // Round(Double) is Int64 in the source Pascal program. Preserve
+                // that overload because Int64 Random consumes two MT words, while
+                // Random(2)/Random(8) with literal integer arguments consumes one.
+                let (range, wide) = match &arguments[0] {
+                    RotValue::Integer { value, wide } => (*value, *wide),
+                    _ => return Err("Random range must be an integer".to_owned()),
                 };
-                Ok(rot_int(i64::from(value)))
+                if range < 0 {
+                    return Err(format!("Random range must be non-negative, got {range}"));
+                }
+                if wide {
+                    let value = match self.rng.draw_int64(range) {
+                        Ok(value) => value,
+                        Err(never) => match never {},
+                    };
+                    Ok(RotValue::Integer { value, wide: true })
+                } else {
+                    let range = i32::try_from(range)
+                        .map_err(|_| "Random range is outside LongInt".to_owned())?;
+                    let value = match self.rng.draw_longint(range) {
+                        Ok(value) => value,
+                        Err(never) => match never {},
+                    };
+                    Ok(rot_int(i64::from(value)))
+                }
             }
             "existeefeito" => {
                 if arguments.len() != 2 {
@@ -602,10 +675,15 @@ pub struct FightSimulation {
     custom_character_registry: CustomCharacterRegistry,
     custom_character_definitions: BTreeMap<u8, CustomCharacterDefinition>,
     last_report: FightTickReport,
-    /// Whether the inactive second cabinet slot is controlled by the Common.rot AI.
+    /// Whether the inactive second cabinet slot is controlled by the Pascal CPU.
     cpu_opponent_enabled: bool,
-    /// Tunable probability factor derived from the selected arcade difficulty.
-    ai_difficulty_factor: f64,
+    /// F1 "NivelJogo", 1 (easiest) through 8 (hardest).
+    cpu_difficulty_level: u8,
+    /// Pascal Fase, the campaign opponent index (1..=8).
+    cpu_campaign_phase: u8,
+    /// Parsed source scripts cached once per fight, not reparsed every 28 ms tick.
+    cpu_common_rot: Option<RotDocument>,
+    cpu_character_rot: [Option<RotDocument>; 2],
 }
 
 impl FightSimulation {
@@ -614,6 +692,17 @@ impl FightSimulation {
         let mut command_rules: [Option<CharacterCommandRules>; 2] = [None, None];
         let mut frame_boxes: [Option<FighterFrameBoxes>; 2] = [None, None];
         let mut command_data_errors = Vec::new();
+        let cpu_common_rot = match RotDocument::from_str(
+            "Comum.rot",
+            include_str!("../research/pascal-rot/Comum.rot"),
+        ) {
+            Ok(document) => Some(document),
+            Err(error) => {
+                command_data_errors.push(format!("Common.rot [IA]: {error}"));
+                None
+            }
+        };
+        let mut cpu_character_rot: [Option<RotDocument>; 2] = [None, None];
         for fighter_index in 0..2 {
             let character_id = state.fighters[fighter_index].character_id;
             if character_id < 16 {
@@ -625,6 +714,14 @@ impl FightSimulation {
                     Ok(tables) => frame_boxes[fighter_index] = Some(tables),
                     Err(error) => command_data_errors
                         .push(format!("fighter {fighter_index} frame tables: {error}")),
+                }
+                if let Some((filename, text)) = embedded_character_rot_source(character_id) {
+                    match RotDocument::from_str(filename, text) {
+                        Ok(document) => cpu_character_rot[fighter_index] = Some(document),
+                        Err(error) => command_data_errors.push(format!(
+                            "{filename} [IA]: {error}"
+                        )),
+                    }
                 }
             }
         }
@@ -641,22 +738,261 @@ impl FightSimulation {
             custom_character_definitions: BTreeMap::new(),
             last_report: FightTickReport::default(),
             cpu_opponent_enabled: false,
-            ai_difficulty_factor: 1.2,
+            cpu_difficulty_level: 4,
+            cpu_campaign_phase: 1,
+            cpu_common_rot,
+            cpu_character_rot,
         }
     }
 
-    /// Enable/disable the CPU in player-two's slot and select its arcade difficulty.
-    /// Higher arcade levels lower the Common.rot probability divisor, making the CPU
-    /// choose movement/attacks more frequently. This is a first tuning curve, not a
-    /// claim that the Pascal UI's undocumented Fator formula has been recovered.
+    /// Enable/disable the CPU in player-two's slot and apply the selected F1 level.
+    ///
+    /// The probability factors are evaluated from the original Pascal formulas at
+    /// each AI/defense tick, using the current campaign phase.
     pub fn configure_cpu_opponent(&mut self, enabled: bool, difficulty: u8) {
         self.cpu_opponent_enabled = enabled;
-        let level = difficulty.clamp(1, 8);
-        self.ai_difficulty_factor = (2.0 - f64::from(level - 1) * 0.2).clamp(0.6, 2.0);
+        self.cpu_difficulty_level = difficulty.clamp(1, 8);
+    }
+
+    /// Set Pascal Fase (the campaign opponent number, 1 through 8).
+    ///
+    /// StreetChavesRust currently starts at phase 1 because the full campaign
+    /// opponent-order state is still a separate implementation slice.
+    pub fn set_cpu_campaign_phase(&mut self, phase: u8) {
+        self.cpu_campaign_phase = phase.clamp(1, 8);
+    }
+
+    /// Exact CpuNovo formula from Estado7_Golpes.inc.
+    pub fn cpu_probability_factor(&self) -> f64 {
+        (8.0 - f64::from(self.cpu_difficulty_level)) * 0.6
+            + 1.3
+            - f64::from(self.cpu_campaign_phase) * 0.1
+    }
+
+    /// Exact defendergolpe formula from Estado7_Golpes.inc.
+    pub fn cpu_defense_probability_factor(&self) -> f64 {
+        ((8.0 - f64::from(self.cpu_difficulty_level)) * 0.9
+            + 1.2
+            - f64::from(self.cpu_campaign_phase) * 0.1)
+            .max(0.0)
     }
 
     pub fn cpu_opponent_enabled(&self) -> bool {
         self.cpu_opponent_enabled
+    }
+
+    /// Build the original CpuNovo inputs from current fighters and live effects.
+    ///
+    /// The effect walk deliberately does not break: Pascal overwrites DistProj and
+    /// ProjY for each matching slot, so the last qualifying effect wins.
+    fn cpu_projectile_context(&self, fighter_index: usize) -> CpuProjectileContext {
+        let opponent_index = 1 - fighter_index;
+        let fighter = &self.state.fighters[fighter_index];
+        let opponent = &self.state.fighters[opponent_index];
+        let fighter_x = pascal_round_to_i64(fighter.x);
+        let other_x = pascal_round_to_i64(opponent.x);
+        let distance = (fighter_x - other_x).abs() as i32;
+        let mut threat = 0;
+        let mut projectile_distance = 0;
+        let mut projectile_y = 0.0;
+        let mut projectile_terminating = false;
+        let jog = (fighter_index + 1) as u8;
+
+        for (_, effect) in self.state.effects.instances_in_slot_order() {
+            if effect.can_hit && effect.owner != jog && effect.effect_type != 0 {
+                threat = 1;
+                projectile_distance =
+                    (fighter_x - pascal_round_to_i64(effect.x)).abs() as i32;
+                projectile_y = effect.y;
+                projectile_terminating |= effect.terminating;
+            }
+        }
+
+        CpuProjectileContext {
+            inputs: AiTickInputs {
+                distance,
+                projectile_distance,
+                opponent_y: pascal_round_to_i64(opponent.y) as i32,
+                threat,
+                difficulty_factor: self.cpu_probability_factor(),
+            },
+            projectile_y,
+            projectile_terminating,
+        }
+    }
+
+    /// Execute Common.rot [IA] and the selected fighter's own Cnn.rot [IA].
+    ///
+    /// Both scripts run through one live ROT host and one FPC RNG cursor. All
+    /// nested AcaoJogador calls therefore preserve the Common/character/Common
+    /// action chain and the source order of LongInt/Int64 Random overloads.
+    fn execute_cpu_ai(
+        &mut self,
+        fighter_index: usize,
+        inputs: AiTickInputs,
+    ) -> Result<(), String> {
+        let common = self
+            .cpu_common_rot
+            .as_ref()
+            .ok_or_else(|| "Comum.rot [IA] was not parsed".to_owned())?;
+        let character = self
+            .cpu_character_rot
+            .get(fighter_index)
+            .and_then(Option::as_ref);
+        let special = self.config.special;
+        let jog = (fighter_index + 1) as u8;
+        let state = &mut self.state;
+        let rng = &mut self.rng;
+        let mut host = RotCombatHost {
+            state,
+            rng,
+            player_index: fighter_index,
+            charge_gain: special.charge_gain,
+            charge_max: special.charge_max,
+            ground_y: special.ground_y,
+            common,
+            recursion_depth: 0,
+        };
+
+        execute_rot_ai_section(common, jog, inputs, &mut host)?;
+        if let Some(character_document) = character {
+            execute_rot_ai_section(character_document, jog, inputs, &mut host)?;
+        }
+        Ok(())
+    }
+
+    /// Pascal Random(Int64), including range zero, which returns zero after the
+    /// source RNG call has consumed its normal two MT words.
+    fn cpu_random_int64(&mut self, range: i64) -> i64 {
+        match self.rng.draw_int64(range.max(0)) {
+            Ok(value) => value,
+            Err(never) => match never {},
+        }
+    }
+
+    /// Pascal Random(LongInt), including the source Random(8) jump-direction draw.
+    fn cpu_random_longint(&mut self, range: i32) -> i32 {
+        match self.rng.draw_longint(range.max(0)) {
+            Ok(value) => value,
+            Err(never) => match never {},
+        }
+    }
+
+    /// Dispatch CPU AcaoJogador through Common [Acao], Cnn [Acao], Common [AcaoFim].
+    fn execute_cpu_action(
+        &mut self,
+        fighter_index: usize,
+        command_code: u8,
+    ) -> Result<(), String> {
+        let common = self
+            .cpu_common_rot
+            .as_ref()
+            .ok_or_else(|| "Comum.rot is unavailable for CPU action dispatch".to_owned())?;
+        let special = self.config.special;
+        let jog = (fighter_index + 1) as u8;
+        let state = &mut self.state;
+        let rng = &mut self.rng;
+        let mut host = RotCombatHost {
+            state,
+            rng,
+            player_index: fighter_index,
+            charge_gain: special.charge_gain,
+            charge_max: special.charge_max,
+            ground_y: special.ground_y,
+            common,
+            recursion_depth: 0,
+        };
+        host.execute_nested_action(usize::from(jog - 1), command_code)
+    }
+
+    /// Source-ordered CPU defendergolpe branch for a non-player-controlled slot.
+    ///
+    /// This runs after the fighter [Quadro] updates and before the effect tick,
+    /// matching Estado7_Luta. The current effect-slot iteration determines the
+    /// projectile selected for DistProj/ProjY exactly as in the Pascal source.
+    fn execute_cpu_defense(&mut self, fighter_index: usize) -> Result<(), String> {
+        let context = self.cpu_projectile_context(fighter_index);
+        let inputs = context.inputs;
+        let factor = self.cpu_defense_probability_factor();
+        let opponent_index = 1 - fighter_index;
+        let opponent_attack_active = self.state.fighters[opponent_index].attack_active;
+        let opponent_y = self.state.fighters[opponent_index].y;
+        let fighter_y = self.state.fighters[fighter_index].y;
+        let ground_y = self.config.special.ground_y;
+
+        // Incoming fighter attack: the two height guards are independent.
+        if opponent_attack_active && inputs.distance <= 160 {
+            if ground_y - 30.0 >= opponent_y
+                && self.cpu_random_int64(pascal_round_to_i64(0.5 * factor)) == 0
+            {
+                self.execute_cpu_action(fighter_index, 12)?; // cmDefender
+            }
+            if ground_y - 30.0 <= opponent_y
+                && self.cpu_random_int64(pascal_round_to_i64(0.5 * factor)) == 0
+            {
+                self.execute_cpu_action(fighter_index, 13)?; // cmDefenderBaixo
+            }
+
+            if self.state.fighters[fighter_index].action_id == ACTION_DEFENDING {
+                self.execute_cpu_action(fighter_index, 12)?;
+            }
+            if self.state.fighters[fighter_index].action_id == ACTION_LOW_DEFENDING {
+                self.execute_cpu_action(fighter_index, 13)?;
+            }
+        }
+
+        // Jump response: an approaching projectile takes precedence over the idle jump.
+        let action = self.state.fighters[fighter_index].action_id;
+        if matches!(action, ACTION_IDLE | ACTION_WALKING) {
+            let should_jump = if inputs.threat == 1
+                && inputs.projectile_distance <= 130
+                && (fighter_y - 120.0) < context.projectile_y
+            {
+                self.cpu_random_int64(pascal_round_to_i64(5.0 * factor)) <= 3
+            } else if inputs.threat == 0 {
+                self.cpu_random_int64(pascal_round_to_i64(45.0 * factor)) == 0
+                    && !self.state.fighters[fighter_index].in_air
+                    && !context.projectile_terminating
+            } else {
+                false
+            };
+
+            if should_jump {
+                let fighter = &mut self.state.fighters[fighter_index];
+                fighter.vertical_velocity = -32;
+                fighter.in_air = true;
+                fighter.action_id = ACTION_JUMPING;
+                fighter.action_frame = 0;
+                fighter.action_duration = 99;
+                fighter.defending = false;
+                fighter.jump_direction = match fighter.facing {
+                    crate::combat_runtime::SIDE_RIGHT => 3,
+                    crate::combat_runtime::SIDE_LEFT => 2,
+                    _ => 1,
+                };
+                if self.cpu_random_longint(8) == 0 {
+                    self.state.fighters[fighter_index].jump_direction = 1;
+                }
+            }
+        }
+
+        // A projectile above the fighter calls standing defense; one below calls low defense.
+        let fighter_y = self.state.fighters[fighter_index].y;
+        if inputs.threat == 1
+            && inputs.projectile_distance <= 120
+            && (fighter_y - 120.0) < context.projectile_y
+            && self.cpu_random_int64(pascal_round_to_i64(0.4 * factor)) == 0
+        {
+            self.execute_cpu_action(fighter_index, 12)?;
+        }
+        if inputs.threat == 1
+            && inputs.projectile_distance <= 100
+            && (fighter_y - 120.0) >= context.projectile_y
+            && self.cpu_random_int64(pascal_round_to_i64(2.5 * factor)) == 0
+        {
+            self.execute_cpu_action(fighter_index, 13)?;
+        }
+        Ok(())
     }
 
     /// Install and activate a validated data-only custom fighter package.
@@ -2169,28 +2505,24 @@ impl FightSimulation {
             effective_inputs[1] = InputFrame::default();
         }
 
-        // L7_Entrada is gated by hit-stop and screen flash. Sequence tracking still
-        // runs afterwards, matching sequenciagolpe's placement in the Pascal loop.
+        // Pascal Estado7_Luta order: human inputs, special-sequence updates,
+        // then CpuNovo for each inactive slot.
         if !self.state.clock_stopped && self.state.screen_flash == 0 {
             self.dispatch_input_commands(effective_inputs, &mut report);
-            if self.cpu_opponent_enabled {
-                let distance = (self.state.fighters[0].x - self.state.fighters[1].x).abs() as i32;
-                let opponent_y = (self.state.fighters[0].y - self.state.fighters[1].y).abs() as i32;
-                let ai_input = AiTickInputs {
-                    distance,
-                    projectile_distance: i32::MAX,
-                    opponent_y,
-                    threat: 0,
-                    difficulty_factor: self.ai_difficulty_factor,
-                };
-                if let Err(error) = self.state.tick_common_ai(ai_input, &mut self.rng) {
-                    report
-                        .errors
-                        .push(format!("Common.rot [IA] player 2: {error}"));
-                }
-            }
         }
         self.update_command_sequences(effective_inputs, &mut report);
+
+        if self.cpu_opponent_enabled
+            && !self.state.clock_stopped
+            && self.state.screen_flash == 0
+        {
+            let context = self.cpu_projectile_context(1);
+            if let Err(error) = self.execute_cpu_ai(1, context.inputs) {
+                report.errors.push(format!(
+                    "Comum/C02-C15 [IA] CPU fighter 2: {error}"
+                ));
+            }
+        }
 
         if !self.state.clock_stopped {
             for (fighter_index, command) in std::mem::take(&mut self.pending_specials) {
@@ -2208,6 +2540,19 @@ impl FightSimulation {
 
             for fighter_index in 0..self.state.fighters.len() {
                 self.advance_fighter_frame(fighter_index, &mut report);
+            }
+        }
+
+        // Pascal defendergolpe runs after fighter animation updates, before
+        // desenhaefeitos advances projectile positions and lifetimes.
+        if self.cpu_opponent_enabled
+            && !self.state.clock_stopped
+            && self.state.screen_flash == 0
+        {
+            if let Err(error) = self.execute_cpu_defense(1) {
+                report.errors.push(format!(
+                    "Estado7_Golpes.inc [defendergolpe] CPU fighter 2: {error}"
+                ));
             }
         }
 
@@ -2313,6 +2658,92 @@ mod rot_runtime_integration_tests {
             },
             2026,
         )
+    }
+
+    #[test]
+    fn cpu_probability_factors_match_the_two_original_pascal_formulas() {
+        let mut fight = simulation();
+        fight.configure_cpu_opponent(true, 4);
+        assert!((fight.cpu_probability_factor() - 3.6).abs() < 1e-10);
+        assert!((fight.cpu_defense_probability_factor() - 4.7).abs() < 1e-10);
+
+        fight.configure_cpu_opponent(true, 8);
+        fight.set_cpu_campaign_phase(8);
+        assert!((fight.cpu_probability_factor() - 0.5).abs() < 1e-10);
+        assert!((fight.cpu_defense_probability_factor() - 0.4).abs() < 1e-10);
+    }
+
+    #[test]
+    fn cpu_projectile_context_matches_pascal_slot_order_and_enemy_filter() {
+        let mut fight = simulation();
+        fight.state.fighters[0].x = 100.0;
+        fight.state.fighters[0].y = 240.0;
+        fight.state.fighters[1].x = 300.0;
+        fight.state.fighters[1].y = 225.0;
+
+        // Both projectiles belong to P1. The last matching effect in the arena
+        // determines DistProj and ProjY, as CpuNovo/defendergolpe do in Pascal.
+        fight.state.effects.spawn(
+            7,
+            Some('A'),
+            1,
+            EFFECT_SIDE_RIGHT,
+            220.0,
+            90.0,
+            &mut fight.rng,
+        ).unwrap();
+        fight.state.effects.spawn(
+            7,
+            Some('B'),
+            1,
+            EFFECT_SIDE_RIGHT,
+            250.0,
+            110.0,
+            &mut fight.rng,
+        ).unwrap();
+
+        let context = fight.cpu_projectile_context(1);
+        assert_eq!(context.inputs.distance, 200);
+        assert_eq!(context.inputs.opponent_y, 240);
+        assert_eq!(context.inputs.threat, 1);
+        assert_eq!(context.inputs.projectile_distance, 50);
+        assert_eq!(context.projectile_y, 110.0);
+    }
+
+    #[test]
+    fn cpu_projectile_context_ignores_its_own_projectiles() {
+        let mut fight = simulation();
+        fight.state.fighters[1].x = 300.0;
+        fight.state.effects.spawn(
+            7,
+            Some('A'),
+            2,
+            crate::combat_runtime::SIDE_LEFT,
+            250.0,
+            110.0,
+            &mut fight.rng,
+        ).unwrap();
+
+        let context = fight.cpu_projectile_context(1);
+        assert_eq!(context.inputs.threat, 0);
+        assert_eq!(context.inputs.projectile_distance, 0);
+    }
+
+    #[test]
+    fn all_fifteen_character_ia_sections_execute_through_the_shared_rot_host() {
+        for character_id in 1..=15 {
+            let mut fight = simulation();
+            let (filename, source) = embedded_character_rot_source(character_id).unwrap();
+            fight.cpu_character_rot[1] =
+                Some(RotDocument::from_str(filename, source).unwrap());
+            fight.state.fighters[1].character_id = character_id;
+            // Exercise the real guard and interpreter for every script. Follow-up
+            // command tests cover AcaoJogador's per-character action routing.
+            fight.state.fighters[1].defending = true;
+            let inputs = fight.cpu_projectile_context(1).inputs;
+            fight.execute_cpu_ai(1, inputs)
+                .unwrap_or_else(|error| panic!("{filename} [IA]: {error}"));
+        }
     }
 
     #[test]
