@@ -837,3 +837,10 @@ path = "assets/audio/menu/Musica.wav"
 kind = "audio"
 volume-percent = 100
 source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Embutidos/Musica.wav"
+
+[[assets]]
+id = "upstream_license"
+source = "LICENSE"
+path = "licenses/OpenStreetChaves-GPL-3.0.txt"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/LICENSE"
