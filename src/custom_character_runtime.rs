@@ -186,10 +186,16 @@ fn parse_frame_boxes(value: &Value) -> Result<FighterFrameBoxes, String> {
         .ok_or_else(|| "frame_boxes.hurtboxes must be an array".to_owned())?;
     for row in hurtboxes {
         let values = number_array::<5>(row, "frame_boxes.hurtboxes row")?;
+        let bounds = [
+            i16::try_from(values[1]).map_err(|_| "hurtbox x1 is outside SmallInt range")?,
+            i16::try_from(values[2]).map_err(|_| "hurtbox y1 is outside SmallInt range")?,
+            i16::try_from(values[3]).map_err(|_| "hurtbox x2 is outside SmallInt range")?,
+            i16::try_from(values[4]).map_err(|_| "hurtbox y2 is outside SmallInt range")?,
+        ];
         boxes.hurtboxes.push(HurtboxRecord {
             frame: u16::try_from(values[0])
                 .map_err(|_| "hurtbox frame must be a positive Word".to_owned())?,
-            bounds: bounds_from([values[1], values[2], values[3], values[4]])?,
+            bounds: bounds_from(bounds)?,
         });
     }
 
@@ -619,5 +625,51 @@ mod tests {
             assets: Default::default(),
         };
         assert!(CustomCharacterDefinition::from_manifest(&manifest).is_err());
+    }
+
+    #[test]
+    fn parses_the_complete_chapolin_c16_package_definition() {
+        use crate::custom_character::{CustomCharacterPackage, PackageFile};
+
+        let package = CustomCharacterPackage::from_files([PackageFile {
+            path: "character.json".to_owned(),
+            bytes: include_bytes!("../examples/custom-characters/chapolin/character.json").to_vec(),
+        }])
+        .unwrap();
+        let definition = CustomCharacterDefinition::from_package(&package).unwrap();
+
+        assert_eq!(definition.runtime_id, 16);
+        assert_eq!(definition.sprite_height, 199);
+        assert_eq!(definition.walk_speed, 9.0);
+        assert_eq!(definition.frame_boxes.center_x.len(), 50);
+        assert_eq!(definition.frame_boxes.hurtboxes.len(), 50);
+        assert_eq!(definition.frame_boxes.attacks.len(), 20);
+        assert_eq!(definition.moves.len(), 5);
+
+        let hammer = definition.move_by_id("special_2").unwrap();
+        assert_eq!(hammer.action_id, 26);
+        assert_eq!(hammer.duration_weak, 16);
+        assert_eq!(hammer.duration_strong, 24);
+        assert_eq!(definition.opponent_recoil(26, 2), Some(20));
+        assert_eq!(definition.opponent_recoil(28, 1), Some(15));
+        assert_eq!(definition.opponent_recoil(26, 1), None);
+    }
+
+    #[test]
+    fn custom_package_frames_and_bounds_are_validated() {
+        use crate::custom_character::{CustomCharacterPackage, PackageFile};
+
+        let package = CustomCharacterPackage::from_files([PackageFile {
+            path: "character.json".to_owned(),
+            bytes: include_bytes!("../examples/custom-characters/chapolin/character.json").to_vec(),
+        }])
+        .unwrap();
+        let definition = CustomCharacterDefinition::from_package(&package).unwrap();
+
+        assert_eq!(definition.frame_boxes.hurtboxes[0].frame, 1);
+        assert_eq!(definition.frame_boxes.hurtboxes[0].bounds.x1, -12);
+        assert_eq!(definition.frame_boxes.hurtboxes[0].bounds.y2, 200);
+        assert_eq!(definition.frame_boxes.attacks[12].strength_condition, Some(1));
+        assert_eq!(definition.frame_boxes.attacks[13].strength_condition, Some(2));
     }
 }
