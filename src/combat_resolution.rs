@@ -8,8 +8,11 @@ use crate::combat_runtime::{
     FighterState, ACTION_AIR_STRONG_KICK, ACTION_AIR_STRONG_PUNCH, ACTION_AIR_WEAK_KICK,
     ACTION_AIR_WEAK_PUNCH, ACTION_CROUCH_STRONG_KICK, ACTION_CROUCH_WEAK_KICK, ACTION_DEFENDING,
     ACTION_LOW_DEFENDING, ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4, ACTION_SPECIAL_FINAL,
-    FORCE_STRONG, FORCE_WEAK,
+    FORCE_STRONG,
 };
+
+#[cfg(test)]
+use crate::combat_runtime::FORCE_WEAK;
 use crate::melee_collision::MeleeCollision;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -357,6 +360,8 @@ mod tests {
             attack_box: None,
             is_kick: false,
             recoil: 0,
+            hitstun: 0,
+            rotation_step: 0,
             vertical_velocity: 0,
             in_air: false,
             x: 100.0,
