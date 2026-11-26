@@ -616,8 +616,7 @@ mod tests {
         ] {
             let fighters = resolve_character_hit(character, action, 0, FORCE_STRONG, 120.0);
             assert_eq!(
-                fighters[0].hit_timer,
-                expected,
+                fighters[0].hit_timer, expected,
                 "C{character:02} action {action}"
             );
         }
@@ -637,8 +636,7 @@ mod tests {
         ] {
             let fighters = resolve_character_hit(character, action, frame, force, 120.0);
             assert_eq!(
-                fighters[1].hitstun,
-                expected,
+                fighters[1].hitstun, expected,
                 "C{character:02} action {action}"
             );
         }
@@ -672,8 +670,7 @@ mod tests {
         ] {
             let fighters = resolve_character_hit(character, action, frame, FORCE_WEAK, 120.0);
             assert_eq!(
-                fighters[1].rotation_step,
-                0,
+                fighters[1].rotation_step, 0,
                 "C{character:02} before spin gate"
             );
         }
