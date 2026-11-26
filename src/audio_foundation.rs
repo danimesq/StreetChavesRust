@@ -108,7 +108,7 @@ impl FoundationAudioOutput {
         true
     }
 
-    pub fn play(&self, host: &mut Sdl3Host, bank: AudioBankId, index: usize) -> bool {
+    pub fn play<H: RuntimeHost>(&self, host: &mut H, bank: AudioBankId, index: usize) -> bool {
         let Some(record) = self.banks.get(bank.0) else {
             return false;
         };
@@ -122,7 +122,7 @@ impl FoundationAudioOutput {
         .is_ok()
     }
 
-    pub fn stop(&self, host: &mut Sdl3Host, bank: AudioBankId, index: usize) -> bool {
+    pub fn stop<H: RuntimeHost>(&self, host: &mut H, bank: AudioBankId, index: usize) -> bool {
         let Some(Some(clip)) = self.banks.get(bank.0).and_then(|b| b.clips.get(index)) else {
             return false;
         };
@@ -257,7 +257,7 @@ impl FoundationAudioOutput {
     /// Consume the pending sound immediately after a logical tick, never from rendering.
     pub fn play_pending_fight_sound(
         &self,
-        host: &mut Sdl3Host,
+        host: &mut impl RuntimeHost,
         layout: &PascalAudioLayout,
         fight: &mut FightSimulation,
     ) -> bool {
@@ -294,7 +294,7 @@ impl FoundationAudioOutput {
 
     pub fn dispatch(
         &self,
-        host: &mut Sdl3Host,
+        host: &mut impl RuntimeHost,
         request: &AudioRequest,
     ) -> Result<(), RuntimeError> {
         host.audio(request)

@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "assets": [
+    {
+      "id": "stage_01",
+      "path": "images/stages/stage-01.bmp",
+      "kind": "image"
+    },
+    {
+      "id": "fighter_01",
+      "path": "images/fighters/C01.bmp",
+      "kind": "image"
+    },
+    {
+      "id": "fighter_ini_01",
+      "path": "Files/data/C01.ini",
+      "kind": "data"
+    },
+    {
+      "id": "fighter_04",
+      "path": "images/fighters/C04.bmp",
+      "kind": "image"
+    },
+    {
+      "id": "fighter_ini_04",
+      "path": "Files/data/C04.ini",
+      "kind": "data"
+    },
+    {
+      "id": "game_settings",
+      "path": "Files/data/Jogo.ini",
+      "kind": "data"
+    },
+    {
+      "id": "effect_slot_001",
+      "path": "media/Sounds/Som-02.ogg",
+      "fallbacks": [
+        "media/Sounds/Som-02.m4a",
+        "media/Sounds/Som-02.wav"
+      ],
+      "volume_percent": 100,
+      "kind": "audio"
+    },
+    {
+      "id": "fight_music",
+      "path": "media/Music/Musica-01.ogg",
+      "fallbacks": [
+        "media/Music/Musica-01.m4a",
+        "media/Music/Musica-01.mp3"
+      ],
+      "volume_percent": 100,
+      "kind": "audio"
+    }
+  ],
+  "package": {
+    "format": "construct3_web",
+    "export_mode": "folders",
+    "media_folder": "media/"
+  }
+}

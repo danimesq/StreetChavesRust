@@ -98,6 +98,22 @@ Run the platform-neutral contracts with `cargo test`. The optional native execut
 The opt-in native-foundation feature consumes the shared SDL3 host from RustMultiConsoleFoundation. It centralizes the native window, keyboard events, textures, WAV decoding and PCM mixer while StreetChavesRust retains its two-player 28 ms simulation clock and Pascal sound-bank indexing. See docs/foundation-native-host-pr37.md. Sprite-sheet source rectangles and pivots must be registered from audited local metadata; the runtime does not guess that P.Quadro is an atlas cell.
 
 
+## WebAssembly browser host
+
+The browser build uses the same Foundation-backed game presentation host as the native executable. Canvas 2D and WebAudio are provided by RustMultiConsoleFoundation; WebGL is deferred.
+
+Build with:
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install wasm-pack
+wasm-pack build --target web --features web-foundation --out-dir pkg
+```
+
+The standalone Construct-style HTML5 export harness and asset manifest example are in [web/](web/README.md). The manifest packages sprites, audio encodings and INI/data files beside the exported page. Native filesystem paths are never converted into browser URLs.
+
+See [WebAssembly host and exported assets](docs/webassembly-host-and-assets.md) for the full resource ID convention, browser host API, deployment instructions and current limitations.
+
 ## Native startup and fight executable
 
 ```sh

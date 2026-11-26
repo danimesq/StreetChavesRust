@@ -13,13 +13,12 @@ crate-type = ["rlib", "cdylib"]
 
 [features]
 default = []
-native-foundation = ["dep:foundation-runtime"]
+native-foundation = ["foundation-runtime/native-sdl3"]
+web-foundation = ["foundation-runtime/web-canvas"]
 
 [dependencies]
 serde_json = "1"
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-foundation-runtime = { git = "https://github.com/danimesq/RustMultiConsoleFoundation", branch = "main", package = "foundation-runtime", optional = true, features = ["native-sdl3"] }
+foundation-runtime = { git = "https://github.com/danimesq/RustMultiConsoleFoundation", branch = "web-canvas-audio", package = "foundation-runtime" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"

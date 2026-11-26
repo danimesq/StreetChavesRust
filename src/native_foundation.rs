@@ -1,21 +1,29 @@
-//! Native Street Chaves host using RustMultiConsoleFoundation.
+//! Shared Street Chaves presentation host using RustMultiConsoleFoundation.
 //!
-//! Foundation owns SDL3, the window, event polling, textures and PCM audio.
+//! Foundation owns platform input, drawing, texture handles and audio output.
 //! This module owns Pascal resource interpretation and maps game snapshots to draw commands.
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::audio_foundation::{FoundationAudioOutput, PascalAudioLayout};
 use crate::combat_runtime::SIDE_LEFT;
 use crate::fight_simulation::{FightPresentationFrame, FightSimulation, FighterPresentation};
 use crate::fixed_timestep::{FixedTimestepClock, TickBatch};
 use crate::input::{Button, Direction, InputEvent, InputFrame, InputSampler};
 use crate::startup_flow::{StartupPhase, StartupScreen};
+#[cfg(not(target_arch = "wasm32"))]
 use foundation_runtime::native_sdl::Sdl3Host;
+#[cfg(target_arch = "wasm32")]
+use foundation_runtime::web::{Canvas2dHost, LoadedWebAssets};
+#[cfg(target_arch = "wasm32")]
+use foundation_runtime::{AudioClipId, AudioRequest};
 use foundation_runtime::{
     DrawCommand, FrameOutput, PadDirection, PlayerInputSnapshot, Rect, RgbaImage, RuntimeConfig,
-    RuntimeError, RuntimeHost, TextureId,
+    RuntimeError, RuntimeHost, TextureId, TextureRegistrar,
 };
 use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs;
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -38,9 +46,9 @@ pub struct FighterAssetInfo {
     pub frames: usize,
 }
 
-/// SDL3 frontend for the two-player deterministic game core.
-pub struct NativeFightHost {
-    host: Sdl3Host,
+/// Backend-neutral presentation and fixed-step host for the two-player game core.
+pub struct FightPresentationHost<H: RuntimeHost + TextureRegistrar> {
+    host: H,
     clock: FixedTimestepClock,
     input: [InputSampler; 2],
     last_host_time: Duration,
@@ -55,62 +63,49 @@ pub struct NativeFightHost {
     camera_max_x: i32,
     damage_level: f64,
     diagnostics: Vec<String>,
+    #[cfg(not(target_arch = "wasm32"))]
     audio: FoundationAudioOutput,
+    #[cfg(not(target_arch = "wasm32"))]
     audio_layout: Option<PascalAudioLayout>,
+    #[cfg(target_arch = "wasm32")]
+    web_effect_clips: HashMap<u16, AudioClipId>,
+    #[cfg(target_arch = "wasm32")]
+    web_effect_bank_len: usize,
+    #[cfg(target_arch = "wasm32")]
+    web_music: Option<AudioClipId>,
 }
 
-impl NativeFightHost {
+/// Native public host name retained for existing consumers.
+#[cfg(not(target_arch = "wasm32"))]
+pub type NativeFightHost = FightPresentationHost<Sdl3Host>;
+
+/// Browser public host name for the same presentation/simulation bridge.
+#[cfg(target_arch = "wasm32")]
+pub type WebFightHost = FightPresentationHost<Canvas2dHost>;
+
+#[cfg(not(target_arch = "wasm32"))]
+impl FightPresentationHost<Sdl3Host> {
     pub fn new(config: RuntimeConfig) -> Result<Self, RuntimeError> {
-        if config.width == 0 || config.height == 0 {
-            return Err(RuntimeError::InvalidConfig(
-                "logical dimensions must be non-zero",
-            ));
-        }
         let host = Sdl3Host::new(config.clone())?;
-        let now = host.now();
-        Ok(Self {
-            host,
-            clock: FixedTimestepClock::new(),
-            input: std::array::from_fn(|_| InputSampler::default()),
-            last_host_time: now,
-            quit_requested: false,
-            logical_width: config.width,
-            logical_height: config.height,
-            sprite_frames: HashMap::new(),
-            sprite_heights: [0; 2],
-            fighter_names: ["PLAYER 1".to_owned(), "PLAYER 2".to_owned()],
-            stage_texture: None,
-            stage_size: (config.width.saturating_mul(2), config.height),
-            camera_max_x: config.width as i32,
-            damage_level: 0.9,
-            diagnostics: Vec::new(),
-            audio: FoundationAudioOutput::new(),
-            audio_layout: None,
-        })
+        Self::with_host(host, config)
     }
+}
 
-    pub fn should_quit(&self) -> bool {
-        self.quit_requested
-    }
-
-    pub fn diagnostics(&self) -> &[String] {
-        &self.diagnostics
-    }
-
-    pub fn take_diagnostics(&mut self) -> Vec<String> {
-        std::mem::take(&mut self.diagnostics)
-    }
-
+#[cfg(not(target_arch = "wasm32"))]
+impl FightPresentationHost<Sdl3Host> {
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_bmp_texture(&mut self, path: impl AsRef<Path>) -> Result<TextureId, RuntimeError> {
         let image = Sdl3Host::load_bmp(path)?;
         self.host.register_texture(&image)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_png_texture(&mut self, path: impl AsRef<Path>) -> Result<TextureId, RuntimeError> {
         let image = Sdl3Host::load_png(path)?;
         self.host.register_texture(&image)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_original_stage(
         &mut self,
         game_root: impl AsRef<Path>,
@@ -132,6 +127,7 @@ impl NativeFightHost {
     }
 
     /// Loads a fighter's local Pascal sprite strip and its source INI pivot metadata.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_original_fighter(
         &mut self,
         game_root: impl AsRef<Path>,
@@ -230,6 +226,7 @@ impl NativeFightHost {
         })
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_original_game_settings(&mut self, game_root: impl AsRef<Path>) {
         let ini = IniDocument::read(&game_root.as_ref().join("Dados/Jogo.ini"));
         self.damage_level = ini
@@ -240,6 +237,7 @@ impl NativeFightHost {
             .clamp(0.3, 2.0);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_pascal_audio(&mut self, game_root: impl AsRef<Path>) -> PascalAudioLayout {
         let layout = self.audio.load_pascal_resources(&mut self.host, game_root);
         self.audio_layout = Some(layout.clone());
@@ -247,6 +245,7 @@ impl NativeFightHost {
     }
 
     /// Loads original local assets after character select. Missing assets stay diagnostics.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_original_game(
         &mut self,
         game_root: impl AsRef<Path>,
@@ -297,6 +296,275 @@ impl NativeFightHost {
         self.diagnostics.extend(messages.iter().cloned());
         messages
     }
+}
+
+impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
+    /// Construct the shared game host around any Foundation runtime adapter.
+    pub fn with_host(host: H, config: RuntimeConfig) -> Result<Self, RuntimeError> {
+        if config.width == 0 || config.height == 0 {
+            return Err(RuntimeError::InvalidConfig(
+                "logical dimensions must be non-zero",
+            ));
+        }
+        let now = host.now();
+        Ok(Self {
+            host,
+            clock: FixedTimestepClock::new(),
+            input: std::array::from_fn(|_| InputSampler::default()),
+            last_host_time: now,
+            quit_requested: false,
+            logical_width: config.width,
+            logical_height: config.height,
+            sprite_frames: HashMap::new(),
+            sprite_heights: [0; 2],
+            fighter_names: ["PLAYER 1".to_owned(), "PLAYER 2".to_owned()],
+            stage_texture: None,
+            stage_size: (config.width.saturating_mul(2), config.height),
+            camera_max_x: config.width as i32,
+            damage_level: 0.9,
+            diagnostics: Vec::new(),
+            #[cfg(not(target_arch = "wasm32"))]
+            audio: FoundationAudioOutput::new(),
+            #[cfg(not(target_arch = "wasm32"))]
+            audio_layout: None,
+            #[cfg(target_arch = "wasm32")]
+            web_effect_clips: HashMap::new(),
+            #[cfg(target_arch = "wasm32")]
+            web_effect_bank_len: 0,
+            #[cfg(target_arch = "wasm32")]
+            web_music: None,
+        })
+    }
+
+    pub fn host(&self) -> &H {
+        &self.host
+    }
+
+    pub fn host_mut(&mut self) -> &mut H {
+        &mut self.host
+    }
+
+    /// Rebase the fixed-step clock after a browser visibility/background pause.
+    ///
+    /// A hidden tab must not turn minutes of suspended wall time into thousands of
+    /// catch-up simulation ticks. Fractional accumulated time is intentionally reset.
+    pub fn reset_after_suspend(&mut self) {
+        self.clock = FixedTimestepClock::new();
+        self.last_host_time = self.host.now();
+        self.host.reset_input_after_pause();
+    }
+
+    pub fn should_quit(&self) -> bool {
+        self.quit_requested
+    }
+
+    pub fn diagnostics(&self) -> &[String] {
+        &self.diagnostics
+    }
+
+    pub fn take_diagnostics(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.diagnostics)
+    }
+
+    /// Register images, INI metadata, and audio clips from the exported web package.
+    ///
+    /// Manifest IDs expected by the first web runtime:
+    /// - stage_XX: stage image (for example stage_01)
+    /// - fighter_XX: fighter sprite strip
+    /// - fighter_ini_XX: fighter metadata INI bytes
+    /// - game_settings: optional game settings INI bytes
+    /// - effect_slot_NNN: clip placed at the matching Pascal sound-bank slot
+    /// - fight_music: optional looping fight track
+    #[cfg(target_arch = "wasm32")]
+    pub fn load_web_resources(
+        &mut self,
+        assets: &LoadedWebAssets,
+        stage_number: u8,
+        character_ids: [u8; 2],
+        fight: &mut FightSimulation,
+    ) -> Vec<String> {
+        let mut messages = Vec::new();
+        self.sprite_frames.clear();
+        self.sprite_heights = [0; 2];
+        self.stage_texture = None;
+
+        let stage_key = format!("stage_{stage_number:02}");
+        if let Some(source) = assets.images.get(&stage_key) {
+            let mut image = source.clone();
+            apply_white_color_key(&mut image);
+            match self.host.register_texture(&image) {
+                Ok(texture) => {
+                    self.stage_texture = Some(texture);
+                    self.stage_size = (image.width, image.height);
+                    self.camera_max_x = image.width.saturating_sub(self.logical_width) as i32;
+                    messages.push(format!("loaded web stage {stage_number}"));
+                }
+                Err(error) => messages.push(format!("stage {stage_number}: {error}")),
+            }
+        } else {
+            messages.push(format!(
+                "web asset {stage_key} is missing; using training stage"
+            ));
+        }
+
+        if let Some(bytes) = assets.data.get("game_settings") {
+            if let Ok(text) = std::str::from_utf8(bytes) {
+                let ini = IniDocument::parse(text);
+                self.damage_level = ini
+                    .get("Jogo", "NivelDano")
+                    .and_then(|value| value.parse::<f64>().ok())
+                    .filter(|value| value.is_finite())
+                    .unwrap_or(0.9)
+                    .clamp(0.3, 2.0);
+            } else {
+                messages.push("game_settings is not UTF-8; using default damage level".to_owned());
+            }
+        }
+
+        for player in 0..2 {
+            let character_id = character_ids[player];
+            let sheet_key = format!("fighter_{character_id:02}");
+            let ini_key = format!("fighter_ini_{character_id:02}");
+            let Some(sheet) = assets.images.get(&sheet_key) else {
+                messages.push(format!(
+                    "web asset {sheet_key} is missing; P{} uses vector fallback",
+                    player + 1
+                ));
+                continue;
+            };
+
+            let fighter_ini = assets
+                .data
+                .get(&ini_key)
+                .and_then(|bytes| std::str::from_utf8(bytes).ok())
+                .map(IniDocument::parse)
+                .unwrap_or_default();
+            let sprite_height = fighter_ini
+                .get("Geral", "AlturaSprite")
+                .and_then(|value| value.parse::<i32>().ok())
+                .filter(|value| *value > 0)
+                .unwrap_or(160);
+            let walk_speed = fighter_ini
+                .get("Geral", "Velocidade")
+                .and_then(|value| value.parse::<f64>().ok())
+                .filter(|value| value.is_finite() && *value > 0.0)
+                .unwrap_or(8.0);
+            if !assets.data.contains_key(&ini_key) {
+                messages.push(format!(
+                    "web asset {ini_key} is missing; using default fighter pivots and movement"
+                ));
+            }
+
+            let centers = fighter_ini
+                .section("CentroX")
+                .into_iter()
+                .filter_map(|(key, value)| {
+                    Some((key.parse::<i32>().ok()?, value.parse::<i32>().ok()?))
+                })
+                .collect::<HashMap<_, _>>();
+            let frame_slices = match split_pascal_sprite_sheet(sheet) {
+                Ok(frames) if !frames.is_empty() => frames,
+                Ok(_) => {
+                    messages.push(format!("{sheet_key} contains no delimited frames"));
+                    continue;
+                }
+                Err(error) => {
+                    messages.push(format!("{sheet_key}: {error}"));
+                    continue;
+                }
+            };
+
+            // Register one color-keyed atlas per fighter, then select each frame through
+            // source rectangles. This avoids allocating one browser texture per animation frame.
+            let mut atlas = sheet.clone();
+            apply_white_color_key(&mut atlas);
+            let texture = match self.host.register_texture(&atlas) {
+                Ok(texture) => texture,
+                Err(error) => {
+                    messages.push(format!("{sheet_key}: {error}"));
+                    continue;
+                }
+            };
+
+            let list_offset = if player == 0 { 0 } else { 50 };
+            for (index, (start_x, frame_width)) in frame_slices.iter().copied().enumerate() {
+                let frame_number = match i32::try_from(index + 1) {
+                    Ok(number) => number,
+                    Err(_) => {
+                        messages.push(format!("{sheet_key} has too many frames"));
+                        break;
+                    }
+                };
+                self.sprite_frames.insert(
+                    (character_id, list_offset + frame_number),
+                    SpriteFrameMapping {
+                        texture,
+                        source: Rect::new(start_x as i32, 0, frame_width, atlas.height),
+                        width: frame_width,
+                        height: atlas.height,
+                        center_x: centers.get(&frame_number).copied().unwrap_or(0),
+                        sprite_height,
+                    },
+                );
+            }
+
+            self.sprite_heights[player] = sprite_height;
+            self.fighter_names[player] = fighter_display_name(character_id).to_owned();
+            let fighter = &mut fight.state.fighters[player];
+            fighter.speed = walk_speed;
+            if fighter.sprite_frame == 0 {
+                fighter.sprite_frame = list_offset + 1;
+            }
+            if player == 1 {
+                fighter.facing = SIDE_LEFT;
+            }
+            messages.push(format!(
+                "P{} loaded web C{:02}: {} frames, height {}, speed {:.1}",
+                player + 1,
+                character_id,
+                frame_slices.len(),
+                sprite_height,
+                walk_speed
+            ));
+        }
+
+        self.web_effect_clips.clear();
+        self.web_effect_bank_len = 0;
+        for slot in 0_u16..=255 {
+            let key = format!("effect_slot_{slot:03}");
+            if let Some(clip) = assets.audio_clips.get(&key).copied() {
+                self.web_effect_clips.insert(slot, clip);
+                self.web_effect_bank_len = usize::from(slot) + 1;
+            }
+        }
+        self.web_music = assets.audio_clips.get("fight_music").copied();
+        if self.web_music.is_some() {
+            messages.push("loaded web fight music".to_owned());
+        }
+
+        self.diagnostics.extend(messages.iter().cloned());
+        messages
+    }
+
+    /// Start the configured web fight track after the host AudioContext is resumed.
+    #[cfg(target_arch = "wasm32")]
+    pub fn play_web_music(&mut self) -> Result<bool, RuntimeError> {
+        let Some(clip) = self.web_music else {
+            return Ok(false);
+        };
+        self.host
+            .audio(&AudioRequest::PlayClip { clip, looped: true })?;
+        Ok(true)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn stop_web_music(&mut self) -> Result<bool, RuntimeError> {
+        let Some(clip) = self.web_music else {
+            return Ok(false);
+        };
+        self.host.audio(&AudioRequest::StopClip { clip })?;
+        Ok(true)
+    }
 
     /// Poll Foundation once and return the input sample for each due 28 ms tick.
     pub fn poll_input_ticks(&mut self) -> Result<(TickBatch, Vec<[InputFrame; 2]>), RuntimeError> {
@@ -325,10 +593,25 @@ impl NativeFightHost {
                 self.diagnostics.push(format!("melee resolution: {error}"));
             }
         }
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(layout) = self.audio_layout.as_ref() {
             let _ = self
                 .audio
                 .play_pending_fight_sound(&mut self.host, layout, fight);
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        if let Some(sound_id) = fight.state.pending_sound.filter(|id| *id != 0) {
+            let slot = sound_id;
+            if usize::from(slot) < self.web_effect_bank_len {
+                let _ = fight.take_pending_sound();
+                if let Some(clip) = self.web_effect_clips.get(&slot).copied() {
+                    let _ = self.host.audio(&AudioRequest::PlayClip {
+                        clip,
+                        looped: false,
+                    });
+                }
+            }
         }
     }
 
@@ -1071,6 +1354,7 @@ fn crop_rgba(source: &RgbaImage, x: u32, width: u32) -> Result<RgbaImage, Runtim
     RgbaImage::new(width, source.height, pixels)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn rooted_path(root: &Path, name: &str) -> PathBuf {
     let path = Path::new(name);
     if path.is_absolute() {
@@ -1080,6 +1364,7 @@ fn rooted_path(root: &Path, name: &str) -> PathBuf {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn numbered_path(pattern: &str, number: usize) -> String {
     let Some(start) = pattern.find('#') else {
         return pattern.to_owned();
@@ -1095,6 +1380,7 @@ struct IniDocument {
 }
 
 impl IniDocument {
+    #[cfg(not(target_arch = "wasm32"))]
     fn read(path: &Path) -> Self {
         fs::read_to_string(path)
             .map(|contents| Self::parse(&contents))

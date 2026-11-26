@@ -24,7 +24,7 @@ The Pascal backend is not SDL_mixer. ChavesSom.pas implements its own callback m
 - Voices are summed, then saturated to the signed 16-bit range.
 - No audio device is a presentation-host failure, not a simulation failure. The caller can continue running the game silently.
 
-The pure mixer lives in src/audio.rs and has device-free regression tests. The native adapter in src/audio_sdl.rs owns the SDL3 stream, decodes WAV files, converts them with SDL's AudioStream, and manages sample banks. The wasm32 build does not compile or link the SDL adapter.
+The pure mixer lives in src/audio.rs and has device-free regression tests. The native Foundation adapter owns the SDL3 stream, decodes WAV files, converts them with SDL's AudioStream, and manages sample banks. The browser Foundation adapter uses WebAudio `decodeAudioData()` for browser-supported exported formats, then dispatches clips through `AudioBufferSourceNode` and `GainNode`. The wasm32 build does not compile or link SDL.
 
 ## Pascal bank indexing
 
@@ -66,4 +66,4 @@ The host may call play_victory_voice for the Pascal-computed victory index and u
 
 ## Remaining work
 
-This PR provides actual native WAV playback/mixing and Pascal resource-bank loading. It does not yet add the game window, renderer, sprite extraction/atlas mapping, keyboard/gamepad host loop, browser WebAudio, or audio-device hotplug recovery. Those belong to later presentation-host slices.
+PR #36 established the native WAV/mixer and Pascal resource-bank contract. Later presentation-host work adds the game window, renderer, sprite extraction/atlas mapping and keyboard host loop. The current WASM integration supplies browser WebAudio and packaged browser assets; browser gamepad input, AudioWorklet PCM mixing and native audio-device hotplug recovery remain future work.
