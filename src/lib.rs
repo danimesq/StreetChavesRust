@@ -10,6 +10,9 @@ use std::fmt;
 /// Source-preserving lexer and parser for the pinned Pascal ROT dialect.
 pub mod rot_runtime;
 
+/// Platform-neutral custom-character package validation and opt-in activation.
+pub mod custom_character;
+
 /// Parse and conservatively reconcile concrete Pascal JSONL traces with static symbolic sites.
 pub mod trace_join;
 
