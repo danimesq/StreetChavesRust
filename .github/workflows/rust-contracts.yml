@@ -26,7 +26,11 @@ jobs:
         uses: actions/checkout@v4
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@stable
+      - name: Install WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
       - name: Check Rust formatting
         run: cargo fmt --all -- --check
       - name: Run contract tests
         run: cargo test --all-targets
+      - name: Check WebAssembly build
+        run: cargo check --target wasm32-unknown-unknown

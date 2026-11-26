@@ -1,26 +1,47 @@
-# Chapolin custom-character package example
+# Chapolin Colorado (C16) custom-character example
 
-This folder is a package-manifest example for the custom-character system. It contains no compiled executable and intentionally does not redistribute the Chapolin sprite/audio assets.
+This folder is a copyable, data-only custom character package for StreetChavesRust.
 
-## Contents
+## What is included
 
-- character.json: stable package ID, observed C16 attributes, and the five named special moves.
-- assets/: add cleared artwork here when you have the rights to distribute it.
+- `character.json`: complete declarative C16 runtime definition.
+- 50 sprite-centre offsets from C16.ini.
+- 50 body/hurtbox rows from C16.ini.
+- 20 ordered attack-box rows from C16.ini.
+- Five specials with source-derived durations, sprite-frame timelines, movement windows, invulnerability rules, sounds/effect requests and on-hit recoil.
+- Runtime ID 16. The built-in C01-C15 roster identifiers are unchanged.
 
-## Native host
+## Install
 
-Copy this entire folder to the game's user data directory:
+Copy this whole directory into the game's user data directory:
 
 ```text
 <GameData>/custom-characters/chapolin/
 ```
 
-The native host can discover it with the custom-character directory loader, install it in the registry, and let the player enable/disable it. The package manager does not require rebuilding the executable.
+The native host loads it with `load_directory("custom-characters/chapolin")`. A browser host selects the folder and passes each file's relative path and bytes to the same Rust/WASM package parser. Both then register it with `FightSimulation` and select `chapolin` into a player slot.
 
-## Web host
+Map the host's special-move controls to:
 
-Select this folder through the browser's package-folder picker. The host passes each relative file path and its bytes to the WASM package bridge. The same manifest and validation rules are used; package files are not compiled into the WASM module.
+- `special_1`: Corneta Paralisadora
+- `special_2`: Marreta Biônica
+- `special_3`: Chipote Voador
+- `special_4`: Pílulas de Nanicolina
+- `special_final`: Sigam-me os Bons!
 
-## Current limitation
+Use `queue_custom_character_move(slot, move_id, 1)` for weak and `queue_custom_character_move(slot, move_id, 2)` for strong.
 
-This example proves package identity, metadata, and cross-platform package ingestion/activation. It is not yet a playable Chapolin fighter: the current simulation still has fixed built-in fighter state and does not yet interpret arbitrary custom fighter moves, animations, collision boxes, AI, and effect behavior. Add the cleared fighter artwork and complete the runtime integration before presenting this package as playable.
+## Art and audio
+
+The package intentionally does not include the original C16 bitmap/PNG sprite sheet or audio recordings. Their existence in the Pascal fork does not establish redistribution permission. The manifest has an empty `assets` map; a host can add a cleared sprite under `assets/chapolin.png` and point an asset ID to it.
+
+The headless combat runtime can execute the C16 frame, hitbox and move data without art. A graphical host must supply and register an actual sprite asset to draw the character.
+
+## Provenance and security
+
+C16 is a Chapolin extension in the OpenStreetChaves Pascal fork, not part of the original C01-C15 roster. This example translates its behavior into a bounded JSON schema. It does not include or execute `C16.rot`.
+
+Sources:
+
+- https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C16.ini
+- https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C16.rot
