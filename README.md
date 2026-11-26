@@ -86,7 +86,7 @@ Unverified behavior stays documented as an open question rather than being fille
 
 At this stage, the most useful contributions are reproducible observations, source references, test cases, and corrections to the research documents. Please distinguish direct source observations from interpretations and original-game claims.
 
-Run the current contract suite with `cargo test`. There is not yet a playable runtime or SDL3 frontend, so no game launch command is available.
+Run the platform-neutral contracts with `cargo test`. The optional native executable is available with `cargo run --features native-foundation --bin street-chaves-native`.
 
 ---
 
@@ -96,3 +96,13 @@ Run the current contract suite with `cargo test`. There is not yet a playable ru
 ## Native host integration
 
 The opt-in native-foundation feature consumes the shared SDL3 host from RustMultiConsoleFoundation. It centralizes the native window, keyboard events, textures, WAV decoding and PCM mixer while StreetChavesRust retains its two-player 28 ms simulation clock and Pascal sound-bank indexing. See docs/foundation-native-host-pr37.md. Sprite-sheet source rectangles and pivots must be registered from audited local metadata; the runtime does not guess that P.Quadro is an atlas cell.
+
+
+## Native startup and fight executable
+
+```sh
+cargo run --features native-foundation --bin street-chaves-native
+cargo run --features native-foundation --bin street-chaves-native -- --game-root "/path/to/OpenStreetChaves" --stage 1 --p1 1 --p2 4
+```
+
+The executable starts with a vector opening, title/Start screen and two-player character selection before entering the fight. With `--game-root`, it loads local stage/fighter BMPs, INI pivots and WAV banks. See [the native playable loop guide](docs/native-playable-loop-pr38.md). Original game art/audio are not redistributed.

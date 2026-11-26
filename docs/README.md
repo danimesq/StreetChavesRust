@@ -90,3 +90,5 @@ These repositories are independent projects, not a parent/child chain. For the R
 - [Custom character packages](custom-character-packages.md): implemented native/WASM package ingestion, validation, activation API, browser file handoff, and current gameplay integration boundaries.
 
 - [Foundation native host integration (PR #37)](foundation-native-host-pr37.md): actual SDL3 host consumption, two-player 28 ms input/tick bridge, explicit sprite-frame mappings and Pascal audio banks delegated to Foundation.
+
+- [First native playable loop (PR #41)](native-playable-loop-pr38.md): boot intro, title/Start, two-player fighter selection, Foundation SDL3 host, Pascal sprite-sheet loader, HUD and current full-game gaps.

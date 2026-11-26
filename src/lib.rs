@@ -18,6 +18,9 @@ pub mod audio_foundation;
 #[cfg(all(feature = "native-foundation", not(target_arch = "wasm32")))]
 pub mod native_foundation;
 
+/// Platform-neutral opening, title and fighter-selection state machine.
+pub mod startup_flow;
+
 /// Source-preserving lexer and parser for the pinned Pascal ROT dialect.
 pub mod rot_runtime;
 
