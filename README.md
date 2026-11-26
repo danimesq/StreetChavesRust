@@ -110,7 +110,7 @@ cargo install wasm-pack
 wasm-pack build --target web --features web-foundation --out-dir pkg
 ```
 
-The standalone Construct-style HTML5 export harness and asset manifest example are in [web/](web/README.md). The manifest packages sprites, audio encodings and INI/data files beside the exported page. Native filesystem paths are never converted into browser URLs.
+The standalone Foundation Web/WASM export harness and manifest example are in [web/](web/README.md). The manifest packages sprites, audio encodings and INI/data files beside the exported page. Native filesystem paths are never converted into browser URLs.
 
 See [WebAssembly host and exported assets](docs/webassembly-host-and-assets.md) for the full resource ID convention, browser host API, deployment instructions and current limitations.
 
