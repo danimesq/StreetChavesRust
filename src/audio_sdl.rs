@@ -417,7 +417,7 @@ impl SdlAudioOutput {
         );
         let mut converter = self
             ._audio
-            .new_stream(&source_spec, &mixer_spec)
+            .new_stream(Some(&source_spec), Some(&mixer_spec))
             .map_err(|error| AudioHostError::Sdl(error.to_string()))?;
         converter
             .put_data(wav.buffer())
