@@ -1634,10 +1634,12 @@ impl FightSimulation {
         self.state.fighters[fighter_index].speed = definition.walk_speed;
         if let Some(movement) = definition.move_by_action(action_id).cloned() {
             if movement.action_id == ACTION_SPECIAL_FINAL && action_frame == 0 {
-                report.custom_character_events.push(CustomCharacterEvent::ScreenFlash {
-                    fighter_index,
-                    duration: 22,
-                });
+                report
+                    .custom_character_events
+                    .push(CustomCharacterEvent::ScreenFlash {
+                        fighter_index,
+                        duration: 22,
+                    });
             }
             let timeline = if force_strength == 1 {
                 &movement.sprite_frames_weak
