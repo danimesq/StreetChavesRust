@@ -34,7 +34,7 @@ jobs:
         run: rustup target add wasm32-unknown-unknown
       - name: Check Rust formatting
         run: cargo fmt --all -- --check
-      - name: Run contract tests
-        run: cargo test --all-targets
+      - name: Run contract tests with the Foundation native host
+        run: cargo test --all-targets --features native-foundation
       - name: Check WebAssembly build
         run: cargo check --target wasm32-unknown-unknown

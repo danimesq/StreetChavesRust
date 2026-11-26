@@ -11,11 +11,15 @@ name = "street_chaves"
 path = "src/lib.rs"
 crate-type = ["rlib", "cdylib"]
 
+[features]
+default = []
+native-foundation = ["dep:foundation-runtime"]
+
 [dependencies]
 serde_json = "1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-sdl3 = { version = "0.22.1", features = ["build-from-source", "build-from-source-unix-console"] }
+foundation-runtime = { git = "https://github.com/danimesq/RustMultiConsoleFoundation", branch = "feat/practical-native-sdl3-host", package = "foundation-runtime", optional = true, features = ["native-sdl3"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"

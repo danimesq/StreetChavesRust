@@ -88,3 +88,5 @@ These repositories are independent projects, not a parent/child chain. For the R
 - [Custom character packages](custom-character-packages.md): platform-neutral package validation and opt-in activation, native directory loading, and browser/WASM file handoff.
 
 - [Custom character packages](custom-character-packages.md): implemented native/WASM package ingestion, validation, activation API, browser file handoff, and current gameplay integration boundaries.
+
+- [Foundation native host integration (PR #37)](foundation-native-host-pr37.md): actual SDL3 host consumption, two-player 28 ms input/tick bridge, explicit sprite-frame mappings and Pascal audio banks delegated to Foundation.
