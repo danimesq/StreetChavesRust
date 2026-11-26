@@ -55,6 +55,8 @@ fn fighter_from_snapshot(value: &Value) -> FighterState {
         attack_box: None,
         is_kick: false,
         recoil: 0,
+        hitstun: 0,
+        rotation_step: 0,
         vertical_velocity: required_i32(value, "velocity_y") as i8,
         in_air: value["in_air"].as_bool().expect("snapshot in_air"),
         x: required_f64(value, "x"),
