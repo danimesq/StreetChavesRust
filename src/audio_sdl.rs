@@ -364,8 +364,9 @@ impl SdlAudioOutput {
         fight: &mut FightSimulation,
     ) -> bool {
         let sound_id = match fight.state.pending_sound {
-            Some(sound_id) => usize::from(sound_id),
-            None => return false,
+            Some(sound_id) if sound_id != 0 => usize::from(sound_id),
+            // Pascal uses zero as the empty SomPendente sentinel, not bank slot zero.
+            _ => return false,
         };
         if self
             .bank_len(layout.effects)

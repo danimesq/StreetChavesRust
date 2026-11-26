@@ -893,7 +893,8 @@ impl FightSimulation {
     /// calls this method once after the simulation tick, preventing a pending sound from
     /// being replayed once per presentation frame.
     pub fn take_pending_sound(&mut self) -> Option<u16> {
-        self.state.pending_sound.take()
+        // Pascal reserves zero as the "no sound pending" sentinel.
+        self.state.pending_sound.take().filter(|sound_id| *sound_id != 0)
     }
 
     pub fn last_report(&self) -> &FightTickReport {
@@ -2266,6 +2267,10 @@ mod rot_runtime_integration_tests {
         assert_eq!(fight.take_pending_sound(), Some(10));
         assert_eq!(fight.state.pending_sound, None);
         assert_eq!(fight.take_pending_sound(), None);
+
+        fight.state.pending_sound = Some(0);
+        assert_eq!(fight.take_pending_sound(), None);
+        assert_eq!(fight.state.pending_sound, None);
     }
 
     #[test]
