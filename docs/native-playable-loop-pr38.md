@@ -41,6 +41,10 @@ The sprite loader implements the original dark-column separator test (top and bo
 
 Foundation owns SDL3, its window, input events, texture registration, WAV decoding and PCM mixer. StreetChavesRust owns the startup state machine, local resource parsing, 28 ms clock, combat simulation, presentation and HUD.
 
+## Original state and fidelity boundary
+
+The original project separates the flow into `CHS_ABERTURA`, `CHS_CONFIG`, `CHS_TECLAS`, `CHS_SELECAO`, `CHS_ADVERSARIOS`, `CHS_PREPARALUTA` and `CHS_LUTA`. StreetChavesRust currently has a new vector opening (not pixel-perfect), a first functional fighter selection, fight preparation folded into the transition, and a first executable fight loop. Configuration, key remapping, opponent campaign order, credits, attract mode and CPU adversary AI remain incomplete. The authoritative per-screen matrix and source links live in [CHS-SCREEN-STATUS.md](CHS-SCREEN-STATUS.md).
+
 ## Current fidelity boundary
 
 The opening art is a new vector scene, not a pixel-identical reconstruction of the original Pascal intro. The title and selection screens are a first application flow, not the entire original menu system. Options/key-binding screens, attract demo, full game flow, stage animations and destructible objects, effect renderer/collision, round transitions, records, continue/final screens, complete physics/knockback and CPU AI remain future work.
