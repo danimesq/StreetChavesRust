@@ -468,6 +468,18 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                 }
             };
 
+            // Register one color-keyed atlas per fighter, then select each frame through
+            // source rectangles. This avoids allocating one browser texture per animation frame.
+            let mut atlas = sheet.clone();
+            apply_white_color_key(&mut atlas);
+            let texture = match self.host.register_texture(&atlas) {
+                Ok(texture) => texture,
+                Err(error) => {
+                    messages.push(format!("{sheet_key}: {error}"));
+                    continue;
+                }
+            };
+
             let list_offset = if player == 0 { 0 } else { 50 };
             for (index, (start_x, frame_width)) in frame_slices.iter().copied().enumerate() {
                 let frame_number = match i32::try_from(index + 1) {
@@ -477,32 +489,22 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                         break;
                     }
                 };
-                let mut pixels = match crop_rgba(sheet, start_x, frame_width) {
-                    Ok(image) => image,
-                    Err(error) => {
-                        messages.push(format!("{sheet_key} frame {frame_number}: {error}"));
-                        continue;
-                    }
-                };
-                apply_white_color_key(&mut pixels);
-                match self.host.register_texture(&pixels) {
-                    Ok(texture) => {
-                        self.sprite_frames.insert(
-                            (character_id, list_offset + frame_number),
-                            SpriteFrameMapping {
-                                texture,
-                                source: Rect::new(0, 0, pixels.width, pixels.height),
-                                width: pixels.width,
-                                height: pixels.height,
-                                center_x: centers.get(&frame_number).copied().unwrap_or(0),
-                                sprite_height,
-                            },
-                        );
-                    }
-                    Err(error) => messages.push(format!(
-                        "{sheet_key} frame {frame_number}: {error}"
-                    )),
-                }
+                self.sprite_frames.insert(
+                    (character_id, list_offset + frame_number),
+                    SpriteFrameMapping {
+                        texture,
+                        source: Rect::new(
+                            start_x as i32,
+                            0,
+                            frame_width,
+                            atlas.height,
+                        ),
+                        width: frame_width,
+                        height: atlas.height,
+                        center_x: centers.get(&frame_number).copied().unwrap_or(0),
+                        sprite_height,
+                    },
+                );
             }
 
             self.sprite_heights[player] = sprite_height;
