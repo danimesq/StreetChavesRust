@@ -123,7 +123,7 @@ The runtime expects these resource IDs:
 
 Include the chosen fighter's sprite strip and INI file for every character selectable in the shipped build. The example above includes only Chaves and Quico as a compact demonstration; a full roster manifest should enumerate all 15 original fighters and any custom packages it supports.
 
-Audio entries may provide alternate encodings using `fallbacks`. The Foundation tries each path until the browser fetches and decodes one successfully. Use formats appropriate to the deployment browsers, for example OGG plus M4A/MP3 alternatives. The decoder is the browser's native `decodeAudioData()`; supported codecs vary by browser.
+Audio entries may provide alternate encodings using `fallbacks` and a per-resource `volume_percent` (0–400, default 100), preserving the original sound-bank volume configuration in the browser package. The Foundation tries each path until the browser fetches and decodes one successfully. Use formats appropriate to the deployment browsers, for example OGG plus M4A/MP3 alternatives. The decoder is the browser's native `decodeAudioData()`; supported codecs vary by browser.
 
 ## HTML entry point
 
