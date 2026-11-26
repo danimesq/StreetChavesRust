@@ -187,7 +187,7 @@ mod tests {
     #[test]
     fn intro_advances_to_title_on_its_own_clock() {
         let mut flow = StartupFlow::default();
-        for _ in 0..StartupFlow::INTRO_TICKS - 1 {
+        for _ in 0..StartupFlow::INTRO_TICKS {
             assert_eq!(flow.tick([InputFrame::default(); 2]), StartupEvent::None);
         }
         assert_eq!(flow.phase(), StartupPhase::Title);
