@@ -132,6 +132,19 @@ impl StreetChavesWebRuntime {
         Ok(())
     }
 
+    /// Resize the browser canvas backing store for a CSS viewport and device-pixel ratio.
+    pub fn resize_canvas(
+        &mut self,
+        css_width: u32,
+        css_height: u32,
+        device_pixel_ratio: f64,
+    ) -> Result<(), JsValue> {
+        self.host
+            .host_mut()
+            .resize_backing_store(css_width, css_height, device_pixel_ratio)
+            .map_err(js_error)
+    }
+
     /// Report whether Escape was pressed.
     pub fn should_quit(&self) -> bool {
         self.host.should_quit()
