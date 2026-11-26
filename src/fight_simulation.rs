@@ -3336,7 +3336,8 @@ mod rot_runtime_integration_tests {
         fight.state.fighters[0].character_id = 8;
         fight.frame_boxes[0] = Some(load_fighter_frame_boxes(8).unwrap());
         fight.state.fighters[0].action_id = ACTION_SPECIAL_FINAL;
-        fight.state.fighters[0].action_frame = 0;
+        // Odd frames avoid C08's effect-spawn branch; the invulnerability write is unconditional.
+        fight.state.fighters[0].action_frame = 1;
         fight.state.fighters[1].invulnerable = true;
         let mut report = FightTickReport::default();
 
