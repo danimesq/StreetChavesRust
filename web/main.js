@@ -11,6 +11,15 @@ try {
   await init();
 
   const game = new StreetChavesWebRuntime("street-chaves");
+  const preferencesKey = "street-chaves-arcade-preferences-v1";
+  try {
+    const savedPreferences = window.localStorage.getItem(preferencesKey);
+    if (savedPreferences) {
+      game.load_preferences(savedPreferences);
+    }
+  } catch (error) {
+    report(`Could not restore arcade preferences: ${error}`);
+  }
   await game.load_assets("./web-export.json");
 
   audioButton.addEventListener("click", async () => {
@@ -53,6 +62,14 @@ try {
   function frame() {
     try {
       game.frame();
+      const updatedPreferences = game.take_preferences_json();
+      if (updatedPreferences) {
+        try {
+          window.localStorage.setItem(preferencesKey, updatedPreferences);
+        } catch (error) {
+          report(`Could not save arcade preferences: ${error}`);
+        }
+      }
       const messages = game.take_diagnostics();
       if (messages.length > 0) {
         diagnostics.textContent = messages.join("\n");

@@ -4,6 +4,7 @@
 //! simulation, startup flow, fixed timestep, presentation composition and audio
 //! events remain in Rust; Foundation owns Canvas 2D, input and WebAudio.
 
+use crate::arcade::ArcadePreferences;
 use crate::chaves_specials::ChavesSpecialContext;
 use crate::combat_runtime::{
     BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_IDLE, SIDE_LEFT, SIDE_RIGHT,
@@ -28,6 +29,7 @@ pub struct StreetChavesWebRuntime {
     startup: StartupFlow,
     assets: Option<LoadedWebAssets>,
     diagnostics: Vec<String>,
+    preferences_dirty: bool,
 }
 
 #[wasm_bindgen]
@@ -51,8 +53,9 @@ impl StreetChavesWebRuntime {
             assets: None,
             diagnostics: vec![
                 "WebAssembly runtime initialized".to_owned(),
-                "Opening -> Start -> Character Select -> Fight".to_owned(),
+                "Opening -> Title -> Config/Remap -> Character Select -> Fight".to_owned(),
             ],
+            preferences_dirty: false,
         })
     }
 
@@ -70,6 +73,28 @@ impl StreetChavesWebRuntime {
         self.diagnostics
             .push(format!("loaded {count} web package resources"));
         Ok(count as u32)
+    }
+
+    /// Restore saved arcade preferences from browser localStorage.
+    pub fn load_preferences(&mut self, source: &str) {
+        if let Some(preferences) = ArcadePreferences::from_json(source) {
+            self.host.set_player_one_key_map(preferences.player_one_keys);
+            self.host.set_damage_level(preferences.settings.damage_level);
+            self.startup.set_preferences(preferences);
+            self.diagnostics.push("restored arcade preferences".to_owned());
+        } else {
+            self.diagnostics.push("saved arcade preferences were invalid; using defaults".to_owned());
+        }
+    }
+
+    /// Return updated preferences once after an F1/F2 change, for browser storage.
+    pub fn take_preferences_json(&mut self) -> String {
+        if self.preferences_dirty {
+            self.preferences_dirty = false;
+            self.startup.preferences().to_json()
+        } else {
+            String::new()
+        }
     }
 
     /// Resume browser audio. Call this directly from a Start button click/tap.
@@ -93,8 +118,10 @@ impl StreetChavesWebRuntime {
         let (_batch, tick_inputs) = self.host.poll_input_ticks().map_err(js_error)?;
         for inputs in tick_inputs {
             match self.startup.tick(inputs) {
-                StartupEvent::StartFight { characters } => {
+                StartupEvent::StartFight { characters, cpu_opponent } => {
+                    let settings = self.startup.settings();
                     self.fight = build_fight(characters, DEFAULT_SEED);
+                    configure_fight(&mut self.fight, cpu_opponent, settings.difficulty, settings.power_mode);
                     if let Some(assets) = self.assets.as_ref() {
                         let messages = self
                             .host
@@ -111,11 +138,27 @@ impl StreetChavesWebRuntime {
                                 .to_owned(),
                         );
                     }
+                    self.host.set_damage_level(settings.damage_level);
+                    self.host.set_player_one_key_map(self.startup.preferences().player_one_keys);
+                }
+                StartupEvent::JoinPlayer { player: 2 } => {
+                    self.fight.configure_cpu_opponent(false, self.startup.settings().difficulty);
+                    self.diagnostics.push("Player 2 joined; CPU disabled".to_owned());
+                }
+                StartupEvent::PreferencesChanged => {
+                    let preferences = self.startup.preferences();
+                    self.host.set_player_one_key_map(preferences.player_one_keys);
+                    self.host.set_damage_level(preferences.settings.damage_level);
+                    self.preferences_dirty = true;
+                    self.diagnostics.push("arcade preferences updated".to_owned());
                 }
                 StartupEvent::None if self.startup.phase() == StartupPhase::Fighting => {
                     self.host.tick_fight(&mut self.fight, inputs);
                 }
                 StartupEvent::None => {}
+                StartupEvent::JoinPlayer { player } => {
+                    self.diagnostics.push(format!("unsupported player slot join event: {player}"));
+                }
             }
         }
 
@@ -178,6 +221,24 @@ impl StreetChavesWebRuntime {
     /// Return a shallow asset status useful to the surrounding HTML host.
     pub fn assets_loaded(&self) -> bool {
         self.assets.is_some()
+    }
+}
+
+fn configure_fight(
+    fight: &mut FightSimulation,
+    cpu_opponent: bool,
+    difficulty: u8,
+    power_mode: u8,
+) {
+    fight.configure_cpu_opponent(cpu_opponent, difficulty);
+    for player in 0..2 {
+        let receives_max_power = match power_mode {
+            2 => player == 0,
+            3 => player == 1,
+            4 => true,
+            _ => false,
+        };
+        fight.state.fighters[player].power = if receives_max_power { 3 } else { 0 };
     }
 }
 

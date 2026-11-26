@@ -11,6 +11,7 @@ use crate::combat_runtime::{
     ACTION_CROUCH_WEAK_PUNCH, ACTION_DEFENDING, ACTION_IDLE, ACTION_JUMPING, ACTION_LOW_DEFENDING,
     ACTION_POSE, ACTION_SPECIAL1, ACTION_SPECIAL2, ACTION_SPECIAL3, ACTION_SPECIAL4,
     ACTION_SPECIAL_FINAL, ACTION_STRONG_KICK, ACTION_STRONG_PUNCH, ACTION_VICTORY, ACTION_WALKING,
+    AiTickInputs,
     ACTION_WEAK_KICK, ACTION_WEAK_PUNCH, SIDE_LEFT,
 };
 use crate::command_recognition::{AttackButton, CommandRecognizer};
@@ -602,6 +603,10 @@ pub struct FightSimulation {
     custom_character_registry: CustomCharacterRegistry,
     custom_character_definitions: BTreeMap<u8, CustomCharacterDefinition>,
     last_report: FightTickReport,
+    /// Whether the inactive second cabinet slot is controlled by the Common.rot AI.
+    cpu_opponent_enabled: bool,
+    /// Tunable probability factor derived from the selected arcade difficulty.
+    ai_difficulty_factor: f64,
 }
 
 impl FightSimulation {
@@ -636,7 +641,23 @@ impl FightSimulation {
             custom_character_registry: CustomCharacterRegistry::default(),
             custom_character_definitions: BTreeMap::new(),
             last_report: FightTickReport::default(),
+            cpu_opponent_enabled: false,
+            ai_difficulty_factor: 1.2,
         }
+    }
+
+    /// Enable/disable the CPU in player-two's slot and select its arcade difficulty.
+    /// Higher arcade levels lower the Common.rot probability divisor, making the CPU
+    /// choose movement/attacks more frequently. This is a first tuning curve, not a
+    /// claim that the Pascal UI's undocumented Fator formula has been recovered.
+    pub fn configure_cpu_opponent(&mut self, enabled: bool, difficulty: u8) {
+        self.cpu_opponent_enabled = enabled;
+        let level = difficulty.clamp(1, 8);
+        self.ai_difficulty_factor = (2.0 - f64::from(level - 1) * 0.2).clamp(0.6, 2.0);
+    }
+
+    pub fn cpu_opponent_enabled(&self) -> bool {
+        self.cpu_opponent_enabled
     }
 
     /// Install and activate a validated data-only custom fighter package.
@@ -2142,12 +2163,33 @@ impl FightSimulation {
             ..FightTickReport::default()
         };
 
+        // When the second slot is a CPU, ignore physical P2 keyboard samples so
+        // unjoined inputs cannot hijack the cabinet's computer-controlled fighter.
+        let mut effective_inputs = inputs;
+        if self.cpu_opponent_enabled {
+            effective_inputs[1] = InputFrame::default();
+        }
+
         // L7_Entrada is gated by hit-stop and screen flash. Sequence tracking still
         // runs afterwards, matching sequenciagolpe's placement in the Pascal loop.
         if !self.state.clock_stopped && self.state.screen_flash == 0 {
-            self.dispatch_input_commands(inputs, &mut report);
+            self.dispatch_input_commands(effective_inputs, &mut report);
+            if self.cpu_opponent_enabled {
+                let distance = (self.state.fighters[0].x - self.state.fighters[1].x).abs() as i32;
+                let opponent_y = (self.state.fighters[0].y - self.state.fighters[1].y).abs() as i32;
+                let ai_input = AiTickInputs {
+                    distance,
+                    projectile_distance: i32::MAX,
+                    opponent_y,
+                    threat: 0,
+                    difficulty_factor: self.ai_difficulty_factor,
+                };
+                if let Err(error) = self.state.tick_common_ai(ai_input, &mut self.rng) {
+                    report.errors.push(format!("Common.rot [IA] player 2: {error}"));
+                }
+            }
         }
-        self.update_command_sequences(inputs, &mut report);
+        self.update_command_sequences(effective_inputs, &mut report);
 
         if !self.state.clock_stopped {
             for (fighter_index, command) in std::mem::take(&mut self.pending_specials) {

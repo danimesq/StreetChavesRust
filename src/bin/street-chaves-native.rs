@@ -6,6 +6,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use foundation_runtime::RuntimeConfig;
+use street_chaves::arcade::ArcadePreferences;
 use street_chaves::chaves_specials::ChavesSpecialContext;
 use street_chaves::combat_runtime::{
     BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_IDLE, SIDE_LEFT, SIDE_RIGHT,
@@ -32,8 +33,13 @@ fn main() {
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let options = parse_args()?;
+    let preferences_path = PathBuf::from("StreetChavesRust.settings.json");
+    let preferences = std::fs::read_to_string(&preferences_path)
+        .ok()
+        .and_then(|contents| ArcadePreferences::from_json(&contents))
+        .unwrap_or_default();
     let mut fight = build_fight(options.players, options.seed);
-    let mut startup = StartupFlow::new(options.players);
+    let mut startup = StartupFlow::with_preferences(options.players, preferences);
 
     let mut host = NativeFightHost::new(RuntimeConfig {
         title: "Street Chaves Rust".to_owned(),
@@ -41,8 +47,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         height: 300,
         pixel_art: true,
     })?;
+    host.set_player_one_key_map(startup.preferences().player_one_keys);
+    host.set_damage_level(startup.settings().damage_level);
 
-    eprintln!("[boot] Opening -> Start -> Character Select -> Fight");
+    eprintln!("[boot] Opening -> Title -> F1 Config / F2 Remap -> Character Select -> Fight");
+    eprintln!("[arcade] 5 inserts a credit; 1 starts P1; 2 starts or joins P2");
     eprintln!("[controls] P1 arrows + Z/X/C/V; P2 WASD + R/T/Y/U; ESC quits");
 
     let mut previous_frame = Instant::now();
@@ -50,9 +59,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         let (_batch, samples) = host.poll_input_ticks()?;
         for inputs in samples {
             match startup.tick(inputs) {
-                StartupEvent::StartFight { characters } => {
-                    eprintln!("[select] P1={} P2={}", characters[0], characters[1]);
+                StartupEvent::StartFight { characters, cpu_opponent } => {
+                    let settings = startup.settings();
+                    eprintln!("[select] P1={} P2={} CPU={}", characters[0], characters[1], cpu_opponent);
                     fight = build_fight(characters, options.seed);
+                    configure_fight(&mut fight, cpu_opponent, settings.difficulty, settings.power_mode);
                     if let Some(root) = options.game_root.as_ref() {
                         for line in host.load_original_game(
                             root,
@@ -66,11 +77,29 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     } else {
                         eprintln!("[assets] no --game-root: procedural training stage and fighter fallbacks");
                     }
+                    host.set_damage_level(settings.damage_level);
+                    host.set_player_one_key_map(startup.preferences().player_one_keys);
+                }
+                StartupEvent::JoinPlayer { player: 2 } => {
+                    fight.configure_cpu_opponent(false, startup.settings().difficulty);
+                    eprintln!("[arcade] Player 2 joined; CPU disabled");
+                }
+                StartupEvent::PreferencesChanged => {
+                    let preferences = startup.preferences();
+                    if let Err(error) = std::fs::write(&preferences_path, preferences.to_json()) {
+                        eprintln!("[settings] could not save {}: {error}", preferences_path.display());
+                    }
+                    host.set_player_one_key_map(preferences.player_one_keys);
+                    host.set_damage_level(preferences.settings.damage_level);
+                    eprintln!("[settings] preferences saved");
                 }
                 StartupEvent::None if startup.phase() == StartupPhase::Fighting => {
                     host.tick_fight(&mut fight, inputs);
                 }
                 StartupEvent::None => {}
+                StartupEvent::JoinPlayer { player } => {
+                    eprintln!("[arcade] unsupported player slot join event: {player}");
+                }
             }
         }
 
@@ -127,6 +156,24 @@ fn build_fight(players: [u8; 2], seed: i32) -> FightSimulation {
         },
         seed,
     )
+}
+
+fn configure_fight(
+    fight: &mut FightSimulation,
+    cpu_opponent: bool,
+    difficulty: u8,
+    power_mode: u8,
+) {
+    fight.configure_cpu_opponent(cpu_opponent, difficulty);
+    for player in 0..2 {
+        let receives_max_power = match power_mode {
+            2 => player == 0,
+            3 => player == 1,
+            4 => true,
+            _ => false,
+        };
+        fight.state.fighters[player].power = if receives_max_power { 3 } else { 0 };
+    }
 }
 
 fn make_fighter(
