@@ -38,9 +38,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     if args.len() != 7 {
         eprintln!("{USAGE}");
-        return Err(
-            io::Error::new(io::ErrorKind::InvalidInput, "expected seven arguments").into(),
-        );
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "expected seven arguments").into());
     }
 
     let manifest_path = PathBuf::from(&args[0]);
