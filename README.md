@@ -4,7 +4,7 @@
 
 An independent Rust reimplementation project inspired by **Street Chaves — O Lutador da Vila**. The goal is to understand the game’s behavior, compare existing reconstructions, and build a clean Rust implementation with a testable game core and a separate SDL3 presentation layer.
 
-> **Project status: deterministic Pascal runtime evidence, a native Foundation/SDL3 host integration path, and foundational Rust contracts.**
+> **Project status: first runnable native SDL3 loop through RustMultiConsoleFoundation, source-derived simulation slices, and deterministic Pascal evidence.**
 > The repository contains Rust contracts for ordered combat timelines, Pascal/FPC 3.2.2 MTwist RNG compatibility, strict AABB geometry, and source-specific hitbox/hurtbox lifecycle behavior. The static .rot normalizer covers all 15 fighters: 5,091 symbolic events, 1,749 guard groups, 255 unique RNG sites (465 fighter-timeline occurrences), plus 71 Pascal .pas/.inc RNG references. Separately, an experimental Pascal schema-v2 runtime exporter now captures concrete ticks, nested script invocations, actual branch/loop outcomes and SortearValor draws. Two fixed-seed 3,000-step runs compiled with FPC 3.2.2 and produced byte-identical traces and logica.txt checkpoints. The Rust joiner reconciled 8,841 draws: 8,415 unique .rot matches, 0 ambiguous, 0 unmatched, and 426 non-.rot contexts (422 direct wrapper calls, 4 Pascal helpers). The Pascal exporter remains on a research branch; Rust simulation/replay and original-executable parity remain incomplete. The game is not yet playable.
 
 ## Project goals
@@ -96,3 +96,16 @@ Run the current contract suite with `cargo test`. There is not yet a playable ru
 ## Native host integration
 
 The opt-in native-foundation feature consumes the shared SDL3 host from RustMultiConsoleFoundation. It centralizes the native window, keyboard events, textures, WAV decoding and PCM mixer while StreetChavesRust retains its two-player 28 ms simulation clock and Pascal sound-bank indexing. See docs/foundation-native-host-pr37.md. Sprite-sheet source rectangles and pivots must be registered from audited local metadata; the runtime does not guess that P.Quadro is an atlas cell.
+
+
+## Native executable
+
+A first runnable native loop is available through the optional Foundation host:
+
+    cargo run --features native-foundation --bin street-chaves-native
+
+Run with local OpenStreetChaves assets for original stage/fighter sheets/audio:
+
+    cargo run --features native-foundation --bin street-chaves-native -- --game-root "/path/to/OpenStreetChaves" --stage 1 --p1 1 --p2 4
+
+Without a game folder it opens a procedural training stage with animated vector fighters. See [the native runnable loop guide](docs/native-playable-loop-pr38.md). Original game BMP/WAV assets are not redistributed.
