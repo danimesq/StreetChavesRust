@@ -1,5 +1,8 @@
 //! First concrete, renderer-free fight orchestrator.
 use crate::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome};
+use crate::custom_character::{CustomCharacterPackage, CustomCharacterRegistry};
+use crate::custom_character_runtime::{CustomCharacterDefinition, CustomMoveDefinition};
+use std::collections::BTreeMap;
 use crate::combat_resolution::{
     resolve_melee_contact, resolve_melee_contact_after_guard_break, CombatResolution,
     CombatResolutionContext,
@@ -497,6 +500,17 @@ pub struct UnhandledCommand {
 }
 
 /// One headless simulation tick's observable work.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CustomCharacterEvent {
+    SpawnEffect {
+        fighter_index: usize,
+        effect_id: u8,
+        variant: Option<char>,
+        x: f64,
+        y: f64,
+    },
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct FightTickReport {
     pub tick_index: u64,
@@ -516,6 +530,10 @@ pub struct FightTickReport {
     pub box_updates: Vec<usize>,
     pub c01_frames: Vec<(usize, C01FrameResult)>,
     pub effects: EffectTickResult,
+    /// Declarative effects requested by user-installed character timelines.
+    pub custom_character_events: Vec<CustomCharacterEvent>,
+    /// Custom fighter IDs whose [Quadro]-equivalent timeline ran this tick.
+    pub custom_character_frame_executions: Vec<(usize, u8)>,
     pub errors: Vec<String>,
 }
 
@@ -531,6 +549,9 @@ pub struct FightSimulation {
     command_data_errors: Vec<String>,
     /// INI frame/box rows, loaded once per fighter and kept in source order.
     frame_boxes: [Option<FighterFrameBoxes>; 2],
+    /// Installed user packages and their validated, bounded runtime definitions.
+    custom_character_registry: CustomCharacterRegistry,
+    custom_character_definitions: BTreeMap<u8, CustomCharacterDefinition>,
     last_report: FightTickReport,
 }
 
@@ -542,14 +563,16 @@ impl FightSimulation {
         let mut command_data_errors = Vec::new();
         for fighter_index in 0..2 {
             let character_id = state.fighters[fighter_index].character_id;
-            match embedded_character_command_rules(character_id) {
-                Ok(rules) => command_rules[fighter_index] = Some(rules),
-                Err(error) => command_data_errors.push(error.to_string()),
-            }
-            match load_fighter_frame_boxes(character_id) {
-                Ok(tables) => frame_boxes[fighter_index] = Some(tables),
-                Err(error) => command_data_errors
-                    .push(format!("fighter {fighter_index} frame tables: {error}")),
+            if character_id < 16 {
+                match embedded_character_command_rules(character_id) {
+                    Ok(rules) => command_rules[fighter_index] = Some(rules),
+                    Err(error) => command_data_errors.push(error.to_string()),
+                }
+                match load_fighter_frame_boxes(character_id) {
+                    Ok(tables) => frame_boxes[fighter_index] = Some(tables),
+                    Err(error) => command_data_errors
+                        .push(format!("fighter {fighter_index} frame tables: {error}")),
+                }
             }
         }
         Self {
@@ -561,8 +584,206 @@ impl FightSimulation {
             command_recognizers: [CommandRecognizer::default(); 2],
             command_data_errors,
             frame_boxes,
+            custom_character_registry: CustomCharacterRegistry::default(),
+            custom_character_definitions: BTreeMap::new(),
             last_report: FightTickReport::default(),
         }
+    }
+
+    /// Install and activate a validated data-only custom fighter package.
+    ///
+    /// The package cannot execute code. Its declarative frame/move tables are
+    /// interpreted by this runtime and can be used by native and WASM hosts.
+    pub fn register_custom_character_package(
+        &mut self,
+        package: CustomCharacterPackage,
+    ) -> Result<u8, String> {
+        let definition = CustomCharacterDefinition::from_package(&package)?;
+        if self.custom_character_definitions.contains_key(&definition.runtime_id) {
+            return Err(format!(
+                "custom runtime ID {} is already registered",
+                definition.runtime_id
+            ));
+        }
+        let package_id = definition.package_id.clone();
+        let runtime_id = definition.runtime_id;
+        self.custom_character_registry
+            .install(package)
+            .map_err(|error| error.to_string())?;
+        self.custom_character_registry
+            .enable(&package_id)
+            .map_err(|error| error.to_string())?;
+        for fighter_index in 0..2 {
+            if self.state.fighters[fighter_index].character_id == runtime_id {
+                self.frame_boxes[fighter_index] = Some(definition.frame_boxes.clone());
+                self.state.fighters[fighter_index].speed = definition.walk_speed;
+            }
+        }
+        self.custom_character_definitions
+            .insert(runtime_id, definition);
+        Ok(runtime_id)
+    }
+
+    /// Select an installed custom fighter for one of the two fight slots.
+    pub fn select_custom_character(
+        &mut self,
+        fighter_index: usize,
+        package_id: &str,
+    ) -> Result<u8, String> {
+        if fighter_index >= 2 {
+            return Err("fighter index must be 0 or 1".to_owned());
+        }
+        let package = self
+            .custom_character_registry
+            .get(package_id)
+            .ok_or_else(|| format!("custom character {package_id:?} is not installed"))?;
+        let runtime_id = self
+            .custom_character_definitions
+            .values()
+            .find(|definition| definition.package_id == package.manifest.id)
+            .map(|definition| definition.runtime_id)
+            .ok_or_else(|| format!("custom character {package_id:?} has no runtime definition"))?;
+        let definition = self
+            .custom_character_definitions
+            .get(&runtime_id)
+            .cloned()
+            .ok_or_else(|| "custom character definition disappeared".to_owned())?;
+
+        self.state.fighters[fighter_index].character_id = runtime_id;
+        self.state.fighters[fighter_index].action_id = ACTION_IDLE;
+        self.state.fighters[fighter_index].action_frame = 0;
+        self.state.fighters[fighter_index].action_duration = 99;
+        self.state.fighters[fighter_index].sprite_frame =
+            (fighter_index as i32) * 50 + 1;
+        self.state.fighters[fighter_index].speed = definition.walk_speed;
+        self.state.fighters[fighter_index].attack_active = false;
+        self.state.fighters[fighter_index].attack_box = None;
+        self.state.fighters[fighter_index].invulnerable = false;
+        self.frame_boxes[fighter_index] = Some(definition.frame_boxes);
+        Ok(runtime_id)
+    }
+
+    /// Start a named special move using its validated weak/strong timeline.
+    /// Hosts on both native and WASM call this same engine API after sampling input.
+    pub fn queue_custom_character_move(
+        &mut self,
+        fighter_index: usize,
+        move_id: &str,
+        force_strength: u8,
+    ) -> Result<(), String> {
+        if fighter_index >= 2 {
+            return Err("fighter index must be 0 or 1".to_owned());
+        }
+        if !matches!(force_strength, 1 | 2) {
+            return Err("custom move force must be weak (1) or strong (2)".to_owned());
+        }
+        let runtime_id = self.state.fighters[fighter_index].character_id;
+        let definition = self
+            .custom_character_definitions
+            .get(&runtime_id)
+            .cloned()
+            .ok_or_else(|| format!("fighter {fighter_index} is not a registered custom fighter"))?;
+        let movement = definition
+            .move_by_id(move_id)
+            .cloned()
+            .ok_or_else(|| format!("custom move {move_id:?} does not exist"))?;
+
+        let current_action = self.state.fighters[fighter_index].action_id;
+        let allowed = match movement.action_id {
+            ACTION_SPECIAL1 | ACTION_SPECIAL2 | ACTION_SPECIAL4 => matches!(
+                current_action,
+                ACTION_IDLE | ACTION_WALKING | ACTION_DEFENDING | ACTION_LOW_DEFENDING
+            ),
+            ACTION_SPECIAL3 => matches!(
+                current_action,
+                ACTION_IDLE | ACTION_WALKING | ACTION_JUMPING | ACTION_LOW_DEFENDING | ACTION_SPECIAL2
+            ),
+            ACTION_SPECIAL_FINAL => matches!(
+                current_action,
+                ACTION_IDLE
+                    | ACTION_WALKING
+                    | ACTION_STRONG_PUNCH
+                    | ACTION_CROUCHING
+                    | ACTION_DEFENDING
+                    | ACTION_LOW_DEFENDING
+            ),
+            _ => false,
+        };
+        if !allowed {
+            return Err(format!(
+                "custom move {:?} cannot start from action {current_action}",
+                movement.id
+            ));
+        }
+        if movement.requires_low_health_or_power
+            && self.state.fighters[fighter_index].health > 15.0
+            && self.state.fighters[fighter_index].power == 0
+        {
+            return Err("final special requires health <= 15 or available power".to_owned());
+        }
+        if movement.action_id == ACTION_SPECIAL3
+            && self.config.special.ground_y - 90.0 > self.state.fighters[fighter_index].y
+        {
+            return Err("Chipote Voador can only start close to the ground".to_owned());
+        }
+
+        let duration = if force_strength == 1 {
+            movement.duration_weak
+        } else {
+            movement.duration_strong
+        };
+        let sprite_frame = if force_strength == 1 {
+            movement.sprite_frames_weak[0]
+        } else {
+            movement.sprite_frames_strong[0]
+        };
+        let fighter = &mut self.state.fighters[fighter_index];
+        if movement.charge_multiplier > 0.0
+            && fighter.charge_power < self.config.special.charge_max
+        {
+            fighter.charge_power += movement.charge_multiplier * self.config.special.charge_gain;
+        }
+        if movement.requires_low_health_or_power {
+            if fighter.power == 3 {
+                fighter.charge_power = 0.0;
+            }
+            fighter.power = fighter.power.wrapping_sub(1);
+        }
+        if movement.action_id == ACTION_SPECIAL3 {
+            fighter.y = self.config.special.ground_y;
+            fighter.in_air = false;
+            fighter.vertical_velocity = 0;
+            fighter.jump_direction = 0;
+            fighter.low_time = 0;
+            fighter.sequence_state = 0;
+        }
+        fighter.action_id = movement.action_id;
+        fighter.action_frame = 0;
+        fighter.action_duration = duration;
+        fighter.force_strength = if movement.action_id == ACTION_SPECIAL_FINAL {
+            3
+        } else {
+            force_strength
+        };
+        fighter.sprite_frame = (fighter_index as i32) * 50 + i32::from(sprite_frame);
+        fighter.defending = false;
+        fighter.attack_active = false;
+        fighter.attack_box = None;
+        fighter.is_kick = movement.is_kick;
+        Ok(())
+    }
+
+    /// Retrieve a package asset by the fighter's runtime ID and logical asset ID.
+    /// Native renderers and browser hosts use the same lookup after selecting a fighter.
+    pub fn custom_character_asset(
+        &self,
+        runtime_id: u8,
+        asset_id: &str,
+    ) -> Option<&[u8]> {
+        let definition = self.custom_character_definitions.get(&runtime_id)?;
+        self.custom_character_registry
+            .get(&definition.package_id)?
+            .asset_bytes(asset_id)
     }
 
     /// Queue an explicit C01 command for the next non-stopped simulation tick.
@@ -1395,9 +1616,16 @@ impl FightSimulation {
         Vec<crate::melee_collision::MeleeCollision>,
         crate::melee_collision::CollisionGeometryError,
     > {
+        let mut effective_heights = sprite_heights;
+        for fighter_index in 0..2 {
+            let character_id = self.state.fighters[fighter_index].character_id;
+            if let Some(definition) = self.custom_character_definitions.get(&character_id) {
+                effective_heights[fighter_index] = definition.sprite_height;
+            }
+        }
         crate::melee_collision::detect_fight_melee_contacts(
             [&self.state.fighters[0], &self.state.fighters[1]],
-            sprite_heights,
+            effective_heights,
             self.state.clock_stopped,
             self.state.screen_flash != 0,
         )
@@ -1537,7 +1765,16 @@ impl FightSimulation {
     /// Run the actual pinned character [Acerto] section against the live fighters.
     /// Missing sections are valid source data and execute as no-ops.
     fn execute_character_acerto(&mut self, fighter_index: usize) -> Result<(), String> {
-        let (filename, source) = match self.state.fighters[fighter_index].character_id {
+        let runtime_id = self.state.fighters[fighter_index].character_id;
+        if let Some(definition) = self.custom_character_definitions.get(&runtime_id) {
+            let action_id = self.state.fighters[fighter_index].action_id;
+            let force_strength = self.state.fighters[fighter_index].force_strength;
+            if let Some(recoil) = definition.opponent_recoil(action_id, force_strength) {
+                self.state.fighters[1 - fighter_index].recoil = recoil;
+            }
+            return Ok(());
+        }
+        let (filename, source) = match runtime_id {
             1 => ("C01.rot", include_str!("../research/pascal-rot/C01.rot")),
             2 => ("C02.rot", include_str!("../research/pascal-rot/C02.rot")),
             3 => ("C03.rot", include_str!("../research/pascal-rot/C03.rot")),
