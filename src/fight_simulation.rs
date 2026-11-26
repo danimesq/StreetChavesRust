@@ -661,6 +661,8 @@ impl FightSimulation {
             .ok_or_else(|| "custom character definition disappeared".to_owned())?;
 
         self.state.fighters[fighter_index].character_id = runtime_id;
+        self.command_rules[fighter_index] = None;
+        self.command_recognizers[fighter_index] = CommandRecognizer::default();
         self.state.fighters[fighter_index].action_id = ACTION_IDLE;
         self.state.fighters[fighter_index].action_frame = 0;
         self.state.fighters[fighter_index].action_duration = 99;
