@@ -10,15 +10,37 @@ use std::io;
 use std::path::PathBuf;
 use std::process;
 
+const USAGE: &str = r#"Usage:
+  cargo run --bin street-chaves-web-export -- \
+    <manifest.json> <wasm-js> <wasm-module> <assets-root> \
+    <index.html> <main.js> <output-dir>
+
+Example:
+  cargo run --bin street-chaves-web-export -- \
+    web/web-export.example.json pkg/street_chaves_rust.js \
+    pkg/street_chaves_rust_bg.wasm web web/index.html web/main.js \
+    dist/street-chaves-web"#;
+
 fn main() {
     if let Err(error) = run() {
-        eprintln!(
-            "Usage:\\n  cargo run --bin street-chaves-web-export -- \\\n             <manifest.json> <wasm-js> <wasm-module> <assets-root> \\\n             <index.html> <main.js> <output-dir>\\n\\nExample:\\n  cargo run --bin street-chaves-web-export -- \\\n             web/web-export.example.json pkg/street_chaves_rust.js \\\n             pkg/street_chaves_rust_bg.wasm web web/index.html web/main.js \\\n             dist/street-chaves-web"
-        );
-        if args.len() != 7 {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "expected seven arguments").into());
-        }
+        eprintln!("street-chaves-web-export: {error}");
+        process::exit(1);
+    }
+}
+
+fn run() -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = env::args().skip(1).collect();
+
+    if args.len() == 1 && (args[0] == "--help" || args[0] == "-h") {
+        println!("{USAGE}");
         return Ok(());
+    }
+
+    if args.len() != 7 {
+        eprintln!("{USAGE}");
+        return Err(
+            io::Error::new(io::ErrorKind::InvalidInput, "expected seven arguments").into(),
+        );
     }
 
     let manifest_path = PathBuf::from(&args[0]);
@@ -38,7 +60,7 @@ fn main() {
     let javascript_destination = manifest.wasm.javascript_glue.clone();
     let wasm_destination = manifest.wasm.wasm_module.clone();
 
-    // Register the WASM bundle using the destinations declared by the manifest.
+    // Register the generated JavaScript/WASM bundle at the manifest's destinations.
     let mut builder = WebExportBuilder::new(application_id, application_name).wasm_bundle_files(
         javascript_source,
         wasm_source,
@@ -46,19 +68,19 @@ fn main() {
         wasm_destination,
     );
 
-    // Register every primary asset and each explicitly declared fallback.
+    // Register every primary asset and every explicitly declared fallback source.
     for asset in manifest.assets {
-        let source = assets_root.join(&asset.path);
-        let fallbacks = asset.fallbacks.clone();
-        builder = builder.asset_file(asset, source);
+        let primary_source = assets_root.join(&asset.path);
+        let fallback_paths = asset.fallbacks.clone();
+        builder = builder.asset_file(asset, primary_source);
 
-        for fallback in fallbacks {
+        for fallback in fallback_paths {
             let fallback_source = assets_root.join(&fallback);
             builder = builder.package_file(fallback_source, fallback);
         }
     }
 
-    // The HTML shell and browser entry point are regular files in the package.
+    // Stage the HTML shell and browser entry point alongside the runtime and assets.
     builder = builder
         .package_file(html_source, "index.html")
         .package_file(main_javascript_source, "main.js");
@@ -73,5 +95,6 @@ fn main() {
         output_dir.display(),
         written.assets.len()
     );
+
     Ok(())
 }
