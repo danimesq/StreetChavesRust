@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "assets": [
+    {
+      "id": "stage_01",
+      "path": "stages/stage-01.bmp",
+      "kind": "image"
+    },
+    {
+      "id": "fighter_01",
+      "path": "fighters/C01.bmp",
+      "kind": "image"
+    },
+    {
+      "id": "fighter_ini_01",
+      "path": "data/C01.ini",
+      "kind": "data"
+    },
+    {
+      "id": "fighter_04",
+      "path": "fighters/C04.bmp",
+      "kind": "image"
+    },
+    {
+      "id": "fighter_ini_04",
+      "path": "data/C04.ini",
+      "kind": "data"
+    },
+    {
+      "id": "game_settings",
+      "path": "data/Jogo.ini",
+      "kind": "data"
+    },
+    {
+      "id": "effect_slot_001",
+      "path": "audio/Som-02.ogg",
+      "fallbacks": ["audio/Som-02.m4a", "audio/Som-02.wav"],
+      "kind": "audio"
+    },
+    {
+      "id": "fight_music",
+      "path": "audio/Musica-01.ogg",
+      "fallbacks": ["audio/Musica-01.m4a", "audio/Musica-01.mp3"],
+      "kind": "audio"
+    }
+  ]
+}
