@@ -145,6 +145,11 @@ impl StreetChavesWebRuntime {
             .map_err(js_error)
     }
 
+    /// Call when the browser tab becomes visible again after suspension.
+    pub fn reset_after_suspend(&mut self) {
+        self.host.reset_after_suspend();
+    }
+
     /// Report whether Escape was pressed.
     pub fn should_quit(&self) -> bool {
         self.host.should_quit()
