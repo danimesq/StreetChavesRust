@@ -23,7 +23,7 @@ chapolin/
     └── chapolin.png        # optional art supplied/cleared by the package author
 ```
 
-The example at `examples/custom-characters/chapolin/` contains the complete source-derived C16 logic tables and move timelines. It intentionally has an empty `assets` map because the source art is not redistributed.
+The example at `examples/custom-characters/chapolin/` contains the complete source-derived C16 logic tables and move timelines. The original source repository also provides [the C16 sprite sheet](https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C16.bmp) and [its fighter metadata](https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C16.ini). The active browser build currently includes C01–C15; C16 remains an optional roster extension and can be added to the Foundation asset configuration when that roster decision is made.
 
 ## Native installation and use
 
