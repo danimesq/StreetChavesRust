@@ -1689,6 +1689,8 @@ mod rot_runtime_integration_tests {
             attack_box: None,
             is_kick: false,
             recoil: 0,
+            hitstun: 0,
+            rotation_step: 0,
             vertical_velocity: 0,
             in_air: false,
             x: 100.0,
