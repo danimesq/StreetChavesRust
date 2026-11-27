@@ -846,3 +846,1251 @@ source = "LICENSE"
 path = "licenses/OpenStreetChaves-GPL-3.0.txt"
 kind = "data"
 source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/LICENSE"
+
+[[assets]]
+id = "stage_02"
+source = "Cenarios/Cenario-02.bmp"
+path = "assets/images/stages/Cenario-02.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Cenarios/Cenario-02.bmp"
+
+[[assets]]
+id = "stage_ini_02"
+source = "Dados/Cenarios/Cenario-02.ini"
+path = "assets/data/stages/Cenario-02.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Cenarios/Cenario-02.ini"
+
+[[assets]]
+id = "stage_03"
+source = "Cenarios/Cenario-03.bmp"
+path = "assets/images/stages/Cenario-03.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Cenarios/Cenario-03.bmp"
+
+[[assets]]
+id = "stage_ini_03"
+source = "Dados/Cenarios/Cenario-03.ini"
+path = "assets/data/stages/Cenario-03.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Cenarios/Cenario-03.ini"
+
+[[assets]]
+id = "stage_04"
+source = "Cenarios/Cenario-04.bmp"
+path = "assets/images/stages/Cenario-04.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Cenarios/Cenario-04.bmp"
+
+[[assets]]
+id = "stage_ini_04"
+source = "Dados/Cenarios/Cenario-04.ini"
+path = "assets/data/stages/Cenario-04.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Cenarios/Cenario-04.ini"
+
+[[assets]]
+id = "stage_05"
+source = "Cenarios/Cenario-05.bmp"
+path = "assets/images/stages/Cenario-05.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Cenarios/Cenario-05.bmp"
+
+[[assets]]
+id = "stage_ini_05"
+source = "Dados/Cenarios/Cenario-05.ini"
+path = "assets/data/stages/Cenario-05.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Cenarios/Cenario-05.ini"
+
+[[assets]]
+id = "stage_06"
+source = "Cenarios/Cenario-06.bmp"
+path = "assets/images/stages/Cenario-06.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Cenarios/Cenario-06.bmp"
+
+[[assets]]
+id = "stage_ini_06"
+source = "Dados/Cenarios/Cenario-06.ini"
+path = "assets/data/stages/Cenario-06.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Cenarios/Cenario-06.ini"
+
+[[assets]]
+id = "stage_07"
+source = "Cenarios/Cenario-07.bmp"
+path = "assets/images/stages/Cenario-07.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Cenarios/Cenario-07.bmp"
+
+[[assets]]
+id = "stage_ini_07"
+source = "Dados/Cenarios/Cenario-07.ini"
+path = "assets/data/stages/Cenario-07.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Cenarios/Cenario-07.ini"
+
+[[assets]]
+id = "stage_08"
+source = "Cenarios/Cenario-08.bmp"
+path = "assets/images/stages/Cenario-08.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Cenarios/Cenario-08.bmp"
+
+[[assets]]
+id = "stage_ini_08"
+source = "Dados/Cenarios/Cenario-08.ini"
+path = "assets/data/stages/Cenario-08.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Cenarios/Cenario-08.ini"
+
+[[assets]]
+id = "stage_09"
+source = "Cenarios/Cenario-09.bmp"
+path = "assets/images/stages/Cenario-09.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Cenarios/Cenario-09.bmp"
+
+[[assets]]
+id = "stage_ini_09"
+source = "Dados/Cenarios/Cenario-09.ini"
+path = "assets/data/stages/Cenario-09.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Cenarios/Cenario-09.ini"
+
+[[assets]]
+id = "stage_10"
+source = "Cenarios/Cenario-10.bmp"
+path = "assets/images/stages/Cenario-10.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Cenarios/Cenario-10.bmp"
+
+[[assets]]
+id = "stage_ini_10"
+source = "Dados/Cenarios/Cenario-10.ini"
+path = "assets/data/stages/Cenario-10.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Cenarios/Cenario-10.ini"
+
+[[assets]]
+id = "stage_11"
+source = "Cenarios/Cenario-11.bmp"
+path = "assets/images/stages/Cenario-11.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Cenarios/Cenario-11.bmp"
+
+[[assets]]
+id = "stage_ini_11"
+source = "Dados/Cenarios/Cenario-11.ini"
+path = "assets/data/stages/Cenario-11.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Cenarios/Cenario-11.ini"
+
+[[assets]]
+id = "stage_12"
+source = "Cenarios/Cenario-12.bmp"
+path = "assets/images/stages/Cenario-12.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Cenarios/Cenario-12.bmp"
+
+[[assets]]
+id = "stage_ini_12"
+source = "Dados/Cenarios/Cenario-12.ini"
+path = "assets/data/stages/Cenario-12.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Cenarios/Cenario-12.ini"
+
+[[assets]]
+id = "stage_13"
+source = "Cenarios/Cenario-13.bmp"
+path = "assets/images/stages/Cenario-13.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Cenarios/Cenario-13.bmp"
+
+[[assets]]
+id = "stage_ini_13"
+source = "Dados/Cenarios/Cenario-13.ini"
+path = "assets/data/stages/Cenario-13.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Cenarios/Cenario-13.ini"
+
+[[assets]]
+id = "effect_catalog"
+source = "Dados/Efeitos.ini"
+path = "assets/data/Efeitos.ini"
+kind = "data"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Efeitos.ini"
+
+[[assets]]
+id = "effect_sprite_001"
+source = "Efeitos/Efeito-001.bmp"
+path = "assets/images/effects/Efeito-001.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-001.bmp"
+
+[[assets]]
+id = "effect_sprite_002"
+source = "Efeitos/Efeito-002.bmp"
+path = "assets/images/effects/Efeito-002.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-002.bmp"
+
+[[assets]]
+id = "effect_sprite_003"
+source = "Efeitos/Efeito-003.bmp"
+path = "assets/images/effects/Efeito-003.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-003.bmp"
+
+[[assets]]
+id = "effect_sprite_004"
+source = "Efeitos/Efeito-004.bmp"
+path = "assets/images/effects/Efeito-004.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-004.bmp"
+
+[[assets]]
+id = "effect_sprite_005"
+source = "Efeitos/Efeito-005.bmp"
+path = "assets/images/effects/Efeito-005.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-005.bmp"
+
+[[assets]]
+id = "effect_sprite_006"
+source = "Efeitos/Efeito-006.bmp"
+path = "assets/images/effects/Efeito-006.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-006.bmp"
+
+[[assets]]
+id = "effect_sprite_007"
+source = "Efeitos/Efeito-007.bmp"
+path = "assets/images/effects/Efeito-007.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-007.bmp"
+
+[[assets]]
+id = "effect_sprite_008"
+source = "Efeitos/Efeito-008.bmp"
+path = "assets/images/effects/Efeito-008.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-008.bmp"
+
+[[assets]]
+id = "effect_sprite_009"
+source = "Efeitos/Efeito-009.bmp"
+path = "assets/images/effects/Efeito-009.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-009.bmp"
+
+[[assets]]
+id = "effect_sprite_010"
+source = "Efeitos/Efeito-010.bmp"
+path = "assets/images/effects/Efeito-010.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-010.bmp"
+
+[[assets]]
+id = "effect_sprite_011"
+source = "Efeitos/Efeito-011.bmp"
+path = "assets/images/effects/Efeito-011.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-011.bmp"
+
+[[assets]]
+id = "effect_sprite_012"
+source = "Efeitos/Efeito-012.bmp"
+path = "assets/images/effects/Efeito-012.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-012.bmp"
+
+[[assets]]
+id = "effect_sprite_013"
+source = "Efeitos/Efeito-013.bmp"
+path = "assets/images/effects/Efeito-013.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-013.bmp"
+
+[[assets]]
+id = "effect_sprite_014"
+source = "Efeitos/Efeito-014.bmp"
+path = "assets/images/effects/Efeito-014.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-014.bmp"
+
+[[assets]]
+id = "effect_sprite_015"
+source = "Efeitos/Efeito-015.bmp"
+path = "assets/images/effects/Efeito-015.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-015.bmp"
+
+[[assets]]
+id = "effect_sprite_016"
+source = "Efeitos/Efeito-016.bmp"
+path = "assets/images/effects/Efeito-016.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-016.bmp"
+
+[[assets]]
+id = "effect_sprite_017"
+source = "Efeitos/Efeito-017.bmp"
+path = "assets/images/effects/Efeito-017.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-017.bmp"
+
+[[assets]]
+id = "effect_sprite_018"
+source = "Efeitos/Efeito-018.bmp"
+path = "assets/images/effects/Efeito-018.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-018.bmp"
+
+[[assets]]
+id = "effect_sprite_019"
+source = "Efeitos/Efeito-019.bmp"
+path = "assets/images/effects/Efeito-019.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-019.bmp"
+
+[[assets]]
+id = "effect_sprite_020"
+source = "Efeitos/Efeito-020.bmp"
+path = "assets/images/effects/Efeito-020.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-020.bmp"
+
+[[assets]]
+id = "effect_sprite_021"
+source = "Efeitos/Efeito-021.bmp"
+path = "assets/images/effects/Efeito-021.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-021.bmp"
+
+[[assets]]
+id = "effect_sprite_022"
+source = "Efeitos/Efeito-022.bmp"
+path = "assets/images/effects/Efeito-022.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-022.bmp"
+
+[[assets]]
+id = "effect_sprite_023"
+source = "Efeitos/Efeito-023.bmp"
+path = "assets/images/effects/Efeito-023.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-023.bmp"
+
+[[assets]]
+id = "effect_sprite_024"
+source = "Efeitos/Efeito-024.bmp"
+path = "assets/images/effects/Efeito-024.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-024.bmp"
+
+[[assets]]
+id = "effect_sprite_025"
+source = "Efeitos/Efeito-025.bmp"
+path = "assets/images/effects/Efeito-025.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-025.bmp"
+
+[[assets]]
+id = "effect_sprite_026"
+source = "Efeitos/Efeito-026.bmp"
+path = "assets/images/effects/Efeito-026.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-026.bmp"
+
+[[assets]]
+id = "effect_sprite_027"
+source = "Efeitos/Efeito-027.bmp"
+path = "assets/images/effects/Efeito-027.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-027.bmp"
+
+[[assets]]
+id = "effect_sprite_028"
+source = "Efeitos/Efeito-028.bmp"
+path = "assets/images/effects/Efeito-028.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-028.bmp"
+
+[[assets]]
+id = "effect_sprite_029"
+source = "Efeitos/Efeito-029.bmp"
+path = "assets/images/effects/Efeito-029.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-029.bmp"
+
+[[assets]]
+id = "effect_sprite_030"
+source = "Efeitos/Efeito-030.bmp"
+path = "assets/images/effects/Efeito-030.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-030.bmp"
+
+[[assets]]
+id = "effect_sprite_031"
+source = "Efeitos/Efeito-031.bmp"
+path = "assets/images/effects/Efeito-031.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-031.bmp"
+
+[[assets]]
+id = "effect_sprite_032"
+source = "Efeitos/Efeito-032.bmp"
+path = "assets/images/effects/Efeito-032.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-032.bmp"
+
+[[assets]]
+id = "effect_sprite_033"
+source = "Efeitos/Efeito-033.bmp"
+path = "assets/images/effects/Efeito-033.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-033.bmp"
+
+[[assets]]
+id = "effect_sprite_034"
+source = "Efeitos/Efeito-034.bmp"
+path = "assets/images/effects/Efeito-034.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-034.bmp"
+
+[[assets]]
+id = "effect_sprite_035"
+source = "Efeitos/Efeito-035.bmp"
+path = "assets/images/effects/Efeito-035.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-035.bmp"
+
+[[assets]]
+id = "effect_sprite_036"
+source = "Efeitos/Efeito-036.bmp"
+path = "assets/images/effects/Efeito-036.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-036.bmp"
+
+[[assets]]
+id = "effect_sprite_037"
+source = "Efeitos/Efeito-037.bmp"
+path = "assets/images/effects/Efeito-037.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-037.bmp"
+
+[[assets]]
+id = "effect_sprite_038"
+source = "Efeitos/Efeito-038.bmp"
+path = "assets/images/effects/Efeito-038.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-038.bmp"
+
+[[assets]]
+id = "effect_sprite_039"
+source = "Efeitos/Efeito-039.bmp"
+path = "assets/images/effects/Efeito-039.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-039.bmp"
+
+[[assets]]
+id = "effect_sprite_040"
+source = "Efeitos/Efeito-040.bmp"
+path = "assets/images/effects/Efeito-040.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-040.bmp"
+
+[[assets]]
+id = "effect_sprite_041"
+source = "Efeitos/Efeito-041.bmp"
+path = "assets/images/effects/Efeito-041.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-041.bmp"
+
+[[assets]]
+id = "effect_sprite_042"
+source = "Efeitos/Efeito-042.bmp"
+path = "assets/images/effects/Efeito-042.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-042.bmp"
+
+[[assets]]
+id = "effect_sprite_043"
+source = "Efeitos/Efeito-043.bmp"
+path = "assets/images/effects/Efeito-043.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-043.bmp"
+
+[[assets]]
+id = "effect_sprite_044"
+source = "Efeitos/Efeito-044.bmp"
+path = "assets/images/effects/Efeito-044.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-044.bmp"
+
+[[assets]]
+id = "effect_sprite_045"
+source = "Efeitos/Efeito-045.bmp"
+path = "assets/images/effects/Efeito-045.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-045.bmp"
+
+[[assets]]
+id = "effect_sprite_046"
+source = "Efeitos/Efeito-046.bmp"
+path = "assets/images/effects/Efeito-046.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-046.bmp"
+
+[[assets]]
+id = "effect_sprite_047"
+source = "Efeitos/Efeito-047.bmp"
+path = "assets/images/effects/Efeito-047.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-047.bmp"
+
+[[assets]]
+id = "effect_sprite_048"
+source = "Efeitos/Efeito-048.bmp"
+path = "assets/images/effects/Efeito-048.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-048.bmp"
+
+[[assets]]
+id = "effect_sprite_049"
+source = "Efeitos/Efeito-049.bmp"
+path = "assets/images/effects/Efeito-049.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-049.bmp"
+
+[[assets]]
+id = "effect_sprite_050"
+source = "Efeitos/Efeito-050.bmp"
+path = "assets/images/effects/Efeito-050.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-050.bmp"
+
+[[assets]]
+id = "effect_sprite_051"
+source = "Efeitos/Efeito-051.bmp"
+path = "assets/images/effects/Efeito-051.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-051.bmp"
+
+[[assets]]
+id = "effect_sprite_052"
+source = "Efeitos/Efeito-052.bmp"
+path = "assets/images/effects/Efeito-052.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-052.bmp"
+
+[[assets]]
+id = "effect_sprite_053"
+source = "Efeitos/Efeito-053.bmp"
+path = "assets/images/effects/Efeito-053.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-053.bmp"
+
+[[assets]]
+id = "effect_sprite_054"
+source = "Efeitos/Efeito-054.bmp"
+path = "assets/images/effects/Efeito-054.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-054.bmp"
+
+[[assets]]
+id = "effect_sprite_055"
+source = "Efeitos/Efeito-055.bmp"
+path = "assets/images/effects/Efeito-055.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-055.bmp"
+
+[[assets]]
+id = "effect_sprite_056"
+source = "Efeitos/Efeito-056.bmp"
+path = "assets/images/effects/Efeito-056.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-056.bmp"
+
+[[assets]]
+id = "effect_sprite_057"
+source = "Efeitos/Efeito-057.bmp"
+path = "assets/images/effects/Efeito-057.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-057.bmp"
+
+[[assets]]
+id = "effect_sprite_058"
+source = "Efeitos/Efeito-058.bmp"
+path = "assets/images/effects/Efeito-058.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-058.bmp"
+
+[[assets]]
+id = "effect_sprite_059"
+source = "Efeitos/Efeito-059.bmp"
+path = "assets/images/effects/Efeito-059.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-059.bmp"
+
+[[assets]]
+id = "effect_sprite_060"
+source = "Efeitos/Efeito-060.bmp"
+path = "assets/images/effects/Efeito-060.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-060.bmp"
+
+[[assets]]
+id = "effect_sprite_061"
+source = "Efeitos/Efeito-061.bmp"
+path = "assets/images/effects/Efeito-061.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-061.bmp"
+
+[[assets]]
+id = "effect_sprite_062"
+source = "Efeitos/Efeito-062.bmp"
+path = "assets/images/effects/Efeito-062.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-062.bmp"
+
+[[assets]]
+id = "effect_sprite_063"
+source = "Efeitos/Efeito-063.bmp"
+path = "assets/images/effects/Efeito-063.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-063.bmp"
+
+[[assets]]
+id = "effect_sprite_064"
+source = "Efeitos/Efeito-064.bmp"
+path = "assets/images/effects/Efeito-064.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-064.bmp"
+
+[[assets]]
+id = "effect_sprite_065"
+source = "Efeitos/Efeito-065.bmp"
+path = "assets/images/effects/Efeito-065.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-065.bmp"
+
+[[assets]]
+id = "effect_sprite_066"
+source = "Efeitos/Efeito-066.bmp"
+path = "assets/images/effects/Efeito-066.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-066.bmp"
+
+[[assets]]
+id = "effect_sprite_067"
+source = "Efeitos/Efeito-067.bmp"
+path = "assets/images/effects/Efeito-067.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-067.bmp"
+
+[[assets]]
+id = "effect_sprite_068"
+source = "Efeitos/Efeito-068.bmp"
+path = "assets/images/effects/Efeito-068.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-068.bmp"
+
+[[assets]]
+id = "effect_sprite_069"
+source = "Efeitos/Efeito-069.bmp"
+path = "assets/images/effects/Efeito-069.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-069.bmp"
+
+[[assets]]
+id = "effect_sprite_070"
+source = "Efeitos/Efeito-070.bmp"
+path = "assets/images/effects/Efeito-070.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-070.bmp"
+
+[[assets]]
+id = "effect_sprite_071"
+source = "Efeitos/Efeito-071.bmp"
+path = "assets/images/effects/Efeito-071.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-071.bmp"
+
+[[assets]]
+id = "effect_sprite_072"
+source = "Efeitos/Efeito-072.bmp"
+path = "assets/images/effects/Efeito-072.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-072.bmp"
+
+[[assets]]
+id = "effect_sprite_073"
+source = "Efeitos/Efeito-073.bmp"
+path = "assets/images/effects/Efeito-073.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-073.bmp"
+
+[[assets]]
+id = "effect_sprite_074"
+source = "Efeitos/Efeito-074.bmp"
+path = "assets/images/effects/Efeito-074.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-074.bmp"
+
+[[assets]]
+id = "effect_sprite_075"
+source = "Efeitos/Efeito-075.bmp"
+path = "assets/images/effects/Efeito-075.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-075.bmp"
+
+[[assets]]
+id = "effect_sprite_076"
+source = "Efeitos/Efeito-076.bmp"
+path = "assets/images/effects/Efeito-076.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-076.bmp"
+
+[[assets]]
+id = "effect_sprite_077"
+source = "Efeitos/Efeito-077.bmp"
+path = "assets/images/effects/Efeito-077.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-077.bmp"
+
+[[assets]]
+id = "effect_sprite_078"
+source = "Efeitos/Efeito-078.bmp"
+path = "assets/images/effects/Efeito-078.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-078.bmp"
+
+[[assets]]
+id = "effect_sprite_079"
+source = "Efeitos/Efeito-079.bmp"
+path = "assets/images/effects/Efeito-079.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-079.bmp"
+
+[[assets]]
+id = "effect_sprite_080"
+source = "Efeitos/Efeito-080.bmp"
+path = "assets/images/effects/Efeito-080.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-080.bmp"
+
+[[assets]]
+id = "effect_sprite_081"
+source = "Efeitos/Efeito-081.bmp"
+path = "assets/images/effects/Efeito-081.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-081.bmp"
+
+[[assets]]
+id = "effect_sprite_082"
+source = "Efeitos/Efeito-082.bmp"
+path = "assets/images/effects/Efeito-082.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-082.bmp"
+
+[[assets]]
+id = "effect_sprite_083"
+source = "Efeitos/Efeito-083.bmp"
+path = "assets/images/effects/Efeito-083.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-083.bmp"
+
+[[assets]]
+id = "effect_sprite_084"
+source = "Efeitos/Efeito-084.bmp"
+path = "assets/images/effects/Efeito-084.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-084.bmp"
+
+[[assets]]
+id = "effect_sprite_085"
+source = "Efeitos/Efeito-085.bmp"
+path = "assets/images/effects/Efeito-085.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-085.bmp"
+
+[[assets]]
+id = "effect_sprite_086"
+source = "Efeitos/Efeito-086.bmp"
+path = "assets/images/effects/Efeito-086.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-086.bmp"
+
+[[assets]]
+id = "effect_sprite_087"
+source = "Efeitos/Efeito-087.bmp"
+path = "assets/images/effects/Efeito-087.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-087.bmp"
+
+[[assets]]
+id = "effect_sprite_088"
+source = "Efeitos/Efeito-088.bmp"
+path = "assets/images/effects/Efeito-088.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-088.bmp"
+
+[[assets]]
+id = "effect_sprite_089"
+source = "Efeitos/Efeito-089.bmp"
+path = "assets/images/effects/Efeito-089.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-089.bmp"
+
+[[assets]]
+id = "effect_sprite_090"
+source = "Efeitos/Efeito-090.bmp"
+path = "assets/images/effects/Efeito-090.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-090.bmp"
+
+[[assets]]
+id = "effect_sprite_091"
+source = "Efeitos/Efeito-091.bmp"
+path = "assets/images/effects/Efeito-091.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-091.bmp"
+
+[[assets]]
+id = "effect_sprite_092"
+source = "Efeitos/Efeito-092.bmp"
+path = "assets/images/effects/Efeito-092.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-092.bmp"
+
+[[assets]]
+id = "effect_sprite_093"
+source = "Efeitos/Efeito-093.bmp"
+path = "assets/images/effects/Efeito-093.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-093.bmp"
+
+[[assets]]
+id = "effect_sprite_094"
+source = "Efeitos/Efeito-094.bmp"
+path = "assets/images/effects/Efeito-094.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-094.bmp"
+
+[[assets]]
+id = "effect_sprite_095"
+source = "Efeitos/Efeito-095.bmp"
+path = "assets/images/effects/Efeito-095.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-095.bmp"
+
+[[assets]]
+id = "effect_sprite_096"
+source = "Efeitos/Efeito-096.bmp"
+path = "assets/images/effects/Efeito-096.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-096.bmp"
+
+[[assets]]
+id = "effect_sprite_097"
+source = "Efeitos/Efeito-097.bmp"
+path = "assets/images/effects/Efeito-097.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-097.bmp"
+
+[[assets]]
+id = "effect_sprite_098"
+source = "Efeitos/Efeito-098.bmp"
+path = "assets/images/effects/Efeito-098.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-098.bmp"
+
+[[assets]]
+id = "effect_sprite_099"
+source = "Efeitos/Efeito-099.bmp"
+path = "assets/images/effects/Efeito-099.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-099.bmp"
+
+[[assets]]
+id = "effect_sprite_100"
+source = "Efeitos/Efeito-100.bmp"
+path = "assets/images/effects/Efeito-100.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-100.bmp"
+
+[[assets]]
+id = "effect_sprite_101"
+source = "Efeitos/Efeito-101.bmp"
+path = "assets/images/effects/Efeito-101.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-101.bmp"
+
+[[assets]]
+id = "effect_sprite_102"
+source = "Efeitos/Efeito-102.bmp"
+path = "assets/images/effects/Efeito-102.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-102.bmp"
+
+[[assets]]
+id = "effect_sprite_103"
+source = "Efeitos/Efeito-103.bmp"
+path = "assets/images/effects/Efeito-103.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-103.bmp"
+
+[[assets]]
+id = "effect_sprite_104"
+source = "Efeitos/Efeito-104.bmp"
+path = "assets/images/effects/Efeito-104.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-104.bmp"
+
+[[assets]]
+id = "effect_sprite_105"
+source = "Efeitos/Efeito-105.bmp"
+path = "assets/images/effects/Efeito-105.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-105.bmp"
+
+[[assets]]
+id = "effect_sprite_106"
+source = "Efeitos/Efeito-106.bmp"
+path = "assets/images/effects/Efeito-106.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-106.bmp"
+
+[[assets]]
+id = "effect_sprite_107"
+source = "Efeitos/Efeito-107.bmp"
+path = "assets/images/effects/Efeito-107.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-107.bmp"
+
+[[assets]]
+id = "effect_sprite_108"
+source = "Efeitos/Efeito-108.bmp"
+path = "assets/images/effects/Efeito-108.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-108.bmp"
+
+[[assets]]
+id = "effect_sprite_109"
+source = "Efeitos/Efeito-109.bmp"
+path = "assets/images/effects/Efeito-109.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-109.bmp"
+
+[[assets]]
+id = "effect_sprite_110"
+source = "Efeitos/Efeito-110.bmp"
+path = "assets/images/effects/Efeito-110.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-110.bmp"
+
+[[assets]]
+id = "effect_sprite_111"
+source = "Efeitos/Efeito-111.bmp"
+path = "assets/images/effects/Efeito-111.bmp"
+kind = "image"
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-111.bmp"
+
+[[assets]]
+id = "fight_music_002"
+source = "Musicas/Musica-02.wav"
+path = "assets/audio/music/Musica-02.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Musicas/Musica-02.wav"
+
+[[assets]]
+id = "fight_music_003"
+source = "Musicas/Musica-03.wav"
+path = "assets/audio/music/Musica-03.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Musicas/Musica-03.wav"
+
+[[assets]]
+id = "fight_music_004"
+source = "Musicas/Musica-04.wav"
+path = "assets/audio/music/Musica-04.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Musicas/Musica-04.wav"
+
+[[assets]]
+id = "fight_music_005"
+source = "Musicas/Musica-05.wav"
+path = "assets/audio/music/Musica-05.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Musicas/Musica-05.wav"
+
+[[assets]]
+id = "fight_music_006"
+source = "Musicas/Musica-06.wav"
+path = "assets/audio/music/Musica-06.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Musicas/Musica-06.wav"
+
+[[assets]]
+id = "victory_voice_01_a"
+source = "Falas/Fala-01-a.wav"
+path = "assets/audio/victory/Fala-01-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-01-a.wav"
+
+[[assets]]
+id = "victory_voice_01_b"
+source = "Falas/Fala-01-b.wav"
+path = "assets/audio/victory/Fala-01-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-01-b.wav"
+
+[[assets]]
+id = "victory_voice_02_a"
+source = "Falas/Fala-02-a.wav"
+path = "assets/audio/victory/Fala-02-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-02-a.wav"
+
+[[assets]]
+id = "victory_voice_02_b"
+source = "Falas/Fala-02-b.wav"
+path = "assets/audio/victory/Fala-02-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-02-b.wav"
+
+[[assets]]
+id = "victory_voice_03_a"
+source = "Falas/Fala-03-a.wav"
+path = "assets/audio/victory/Fala-03-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-03-a.wav"
+
+[[assets]]
+id = "victory_voice_03_b"
+source = "Falas/Fala-03-b.wav"
+path = "assets/audio/victory/Fala-03-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-03-b.wav"
+
+[[assets]]
+id = "victory_voice_04_a"
+source = "Falas/Fala-04-a.wav"
+path = "assets/audio/victory/Fala-04-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-04-a.wav"
+
+[[assets]]
+id = "victory_voice_04_b"
+source = "Falas/Fala-04-b.wav"
+path = "assets/audio/victory/Fala-04-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-04-b.wav"
+
+[[assets]]
+id = "victory_voice_05_a"
+source = "Falas/Fala-05-a.wav"
+path = "assets/audio/victory/Fala-05-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-05-a.wav"
+
+[[assets]]
+id = "victory_voice_05_b"
+source = "Falas/Fala-05-b.wav"
+path = "assets/audio/victory/Fala-05-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-05-b.wav"
+
+[[assets]]
+id = "victory_voice_06_a"
+source = "Falas/Fala-06-a.wav"
+path = "assets/audio/victory/Fala-06-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-06-a.wav"
+
+[[assets]]
+id = "victory_voice_06_b"
+source = "Falas/Fala-06-b.wav"
+path = "assets/audio/victory/Fala-06-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-06-b.wav"
+
+[[assets]]
+id = "victory_voice_07_a"
+source = "Falas/Fala-07-a.wav"
+path = "assets/audio/victory/Fala-07-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-07-a.wav"
+
+[[assets]]
+id = "victory_voice_07_b"
+source = "Falas/Fala-07-b.wav"
+path = "assets/audio/victory/Fala-07-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-07-b.wav"
+
+[[assets]]
+id = "victory_voice_08_a"
+source = "Falas/Fala-08-a.wav"
+path = "assets/audio/victory/Fala-08-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-08-a.wav"
+
+[[assets]]
+id = "victory_voice_08_b"
+source = "Falas/Fala-08-b.wav"
+path = "assets/audio/victory/Fala-08-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-08-b.wav"
+
+[[assets]]
+id = "victory_voice_09_a"
+source = "Falas/Fala-09-a.wav"
+path = "assets/audio/victory/Fala-09-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-09-a.wav"
+
+[[assets]]
+id = "victory_voice_09_b"
+source = "Falas/Fala-09-b.wav"
+path = "assets/audio/victory/Fala-09-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-09-b.wav"
+
+[[assets]]
+id = "victory_voice_10_a"
+source = "Falas/Fala-10-a.wav"
+path = "assets/audio/victory/Fala-10-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-10-a.wav"
+
+[[assets]]
+id = "victory_voice_10_b"
+source = "Falas/Fala-10-b.wav"
+path = "assets/audio/victory/Fala-10-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-10-b.wav"
+
+[[assets]]
+id = "victory_voice_11_a"
+source = "Falas/Fala-11-a.wav"
+path = "assets/audio/victory/Fala-11-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-11-a.wav"
+
+[[assets]]
+id = "victory_voice_11_b"
+source = "Falas/Fala-11-b.wav"
+path = "assets/audio/victory/Fala-11-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-11-b.wav"
+
+[[assets]]
+id = "victory_voice_12_a"
+source = "Falas/Fala-12-a.wav"
+path = "assets/audio/victory/Fala-12-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-12-a.wav"
+
+[[assets]]
+id = "victory_voice_12_b"
+source = "Falas/Fala-12-b.wav"
+path = "assets/audio/victory/Fala-12-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-12-b.wav"
+
+[[assets]]
+id = "victory_voice_13_a"
+source = "Falas/Fala-13-a.wav"
+path = "assets/audio/victory/Fala-13-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-13-a.wav"
+
+[[assets]]
+id = "victory_voice_13_b"
+source = "Falas/Fala-13-b.wav"
+path = "assets/audio/victory/Fala-13-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-13-b.wav"
+
+[[assets]]
+id = "victory_voice_14_a"
+source = "Falas/Fala-14-a.wav"
+path = "assets/audio/victory/Fala-14-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-14-a.wav"
+
+[[assets]]
+id = "victory_voice_14_b"
+source = "Falas/Fala-14-b.wav"
+path = "assets/audio/victory/Fala-14-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-14-b.wav"
+
+[[assets]]
+id = "victory_voice_15_a"
+source = "Falas/Fala-15-a.wav"
+path = "assets/audio/victory/Fala-15-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-15-a.wav"
+
+[[assets]]
+id = "victory_voice_15_b"
+source = "Falas/Fala-15-b.wav"
+path = "assets/audio/victory/Fala-15-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-15-b.wav"
+
+[[assets]]
+id = "victory_voice_16_a"
+source = "Falas/Fala-16-a.wav"
+path = "assets/audio/victory/Fala-16-a.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-16-a.wav"
+
+[[assets]]
+id = "victory_voice_16_b"
+source = "Falas/Fala-16-b.wav"
+path = "assets/audio/victory/Fala-16-b.wav"
+kind = "audio"
+volume-percent = 100
+source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Falas/Fala-16-b.wav"

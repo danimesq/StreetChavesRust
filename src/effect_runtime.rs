@@ -2,7 +2,7 @@
 //!
 //! The arena follows the Pascal effect-allocation contract: first free slot wins,
 //! type defaults are applied before the next effect tick, and a full arena is a
-//! no-op. This initial slice implements only the C01-used types 2, 7, 8 and 16.
+//! no-op. The ordered catalog below loads all 40 source-defined effect types.
 //! Rendering consumes immutable snapshots; the simulation never draws here.
 
 use crate::pascal_replay::PascalRandomSource;
@@ -81,6 +81,10 @@ pub struct EffectTickContext {
     pub hit_stop_active: bool,
     pub camera_x: f64,
     pub camera_y: f64,
+    /// World positions and original special-action state for owners 1 and 2.
+    pub owner_positions: [(f64, f64); 2],
+    pub owner_special2: [bool; 2],
+    pub owner_special5: [bool; 2],
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -97,24 +101,228 @@ pub struct EffectRenderSnapshot {
     pub bounds: EffectBounds,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EffectSpawnRequest {
+    pub effect_type: u8,
+    pub variant: Option<char>,
+    pub owner: u8,
+    pub owner_facing: u8,
+    pub x: f64,
+    pub y: f64,
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct EffectTickResult {
     /// Ordered snapshots are captured before lifetime and culling cleanup.
     pub render_snapshots: Vec<EffectRenderSnapshot>,
     pub removed_slots: Vec<usize>,
+    /// Source-ordered child effects created by the Pascal Efeito27 fan-out.
+    pub spawn_requests: Vec<EffectSpawnRequest>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EffectArena {
     slots: [Option<EffectInstance>; MAX_EFFECT_INSTANCES],
+    catalog: EffectCatalog,
 }
 
+/// Ordered, data-driven view of the original Pascal [EfeitoN] sections.
+/// Entries remain in source order because duplicate keys and Random() call order
+/// are observable parts of the original game.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct EffectCatalog {
+    definitions: std::collections::BTreeMap<u8, Vec<(String, String)>>,
+}
+impl EffectCatalog {
+    pub fn from_ini(source: &str) -> Result<Self, String> {
+        let mut catalog = Self::default();
+        let mut current: Option<u8> = None;
+        for (line_number, raw) in source.lines().enumerate() {
+            let line = raw.trim();
+            if line.is_empty() || line.starts_with(';') {
+                continue;
+            }
+            if line.starts_with('[') && line.ends_with(']') {
+                let name = line[1..line.len() - 1].trim();
+                let number = name
+                    .strip_prefix("Efeito")
+                    .or_else(|| name.strip_prefix("efeito"))
+                    .and_then(|value| value.parse::<u8>().ok());
+                let Some(number) = number else {
+                    current = None;
+                    continue;
+                };
+                if !(1..=40).contains(&number) {
+                    return Err(format!(
+                        "effect section [{name}] at line {} is outside 1..=40",
+                        line_number + 1
+                    ));
+                }
+                current = Some(number);
+                catalog.definitions.entry(number).or_default();
+                continue;
+            }
+            let Some(number) = current else {
+                continue;
+            };
+            let Some((key, value)) = line.split_once('=') else {
+                return Err(format!(
+                    "invalid effect INI entry at line {}",
+                    line_number + 1
+                ));
+            };
+            catalog
+                .definitions
+                .entry(number)
+                .or_default()
+                .push((key.trim().to_owned(), value.trim().to_owned()));
+        }
+        if catalog.definitions.len() != 40 {
+            return Err(format!(
+                "expected 40 Pascal effect definitions, found {}",
+                catalog.definitions.len()
+            ));
+        }
+        Ok(catalog)
+    }
+    pub fn definition_count(&self) -> usize {
+        self.definitions.len()
+    }
+    pub fn contains(&self, effect_type: u8) -> bool {
+        self.definitions.contains_key(&effect_type)
+    }
+    fn definition(&self, effect_type: u8) -> Option<&[(String, String)]> {
+        self.definitions.get(&effect_type).map(Vec::as_slice)
+    }
+}
 impl Default for EffectArena {
     fn default() -> Self {
+        let catalog =
+            EffectCatalog::from_ini(include_str!("../research/pascal-effects/Efeitos.ini"))
+                .expect("bundled Pascal effect catalog must contain Efeito1..Efeito40");
         Self {
             slots: std::array::from_fn(|_| None),
+            catalog,
         }
     }
+}
+
+fn eval_random_expression<R: PascalRandomSource>(
+    expression: &str,
+    rng: &mut R,
+) -> Result<i32, EffectSpawnError<R::Error>> {
+    let compact = expression.replace(' ', "");
+    if let Some((_, denominator)) = compact.split_once("em") {
+        let range = denominator.parse::<i32>().unwrap_or(1).max(1);
+        return Ok(i32::from(
+            rng.draw_longint(range).map_err(EffectSpawnError::Rng)? == 0,
+        ));
+    }
+    let mut total = 0_i32;
+    let mut index = 0_usize;
+    let bytes = compact.as_bytes();
+    while index < bytes.len() {
+        let mut sign = 1_i32;
+        if bytes[index] == b'+' {
+            index += 1;
+        } else if bytes[index] == b'-' {
+            sign = -1;
+            index += 1;
+        }
+        let start = index;
+        while index < bytes.len() && bytes[index] != b'+' && bytes[index] != b'-' {
+            index += 1;
+        }
+        let term = &compact[start..index];
+        if term.is_empty() {
+            continue;
+        }
+        let value = if let Some((coefficient, random)) = term.split_once("*R") {
+            let coefficient = coefficient.parse::<i32>().unwrap_or(1);
+            let range = random.parse::<i32>().unwrap_or(1).max(1);
+            coefficient.saturating_mul(rng.draw_longint(range).map_err(EffectSpawnError::Rng)?)
+        } else if let Some(random) = term.strip_prefix('R') {
+            let range = random.parse::<i32>().unwrap_or(1).max(1);
+            rng.draw_longint(range).map_err(EffectSpawnError::Rng)?
+        } else {
+            term.parse::<i32>()
+                .map_err(|_| EffectSpawnError::UnsupportedType(0))?
+        };
+        total = total.saturating_add(sign.saturating_mul(value));
+    }
+    Ok(total)
+}
+fn eval_condition_value(value: &str, effect: &EffectInstance) -> Option<i32> {
+    let compact = value.replace(' ', "");
+    let mut total = 0_i32;
+    let mut index = 0_usize;
+    let bytes = compact.as_bytes();
+    while index < bytes.len() {
+        let mut sign = 1_i32;
+        if bytes[index] == b'+' {
+            index += 1;
+        } else if bytes[index] == b'-' {
+            sign = -1;
+            index += 1;
+        }
+        let start = index;
+        while index < bytes.len() && bytes[index] != b'+' && bytes[index] != b'-' {
+            index += 1;
+        }
+        let term = &compact[start..index];
+        if term.is_empty() {
+            continue;
+        }
+        let part = match term {
+            "Q" => i32::from(effect.frame),
+            "C" => i32::from(effect.count),
+            "D" => i32::from(effect.duration),
+            "L" => i32::from(effect.count_limit),
+            _ => term.parse::<i32>().ok()?,
+        };
+        total = total.saturating_add(sign.saturating_mul(part));
+    }
+    Some(total)
+}
+fn effect_condition_matches(condition: &str, effect: &EffectInstance) -> bool {
+    let condition = condition.trim();
+    if condition == "*" {
+        return true;
+    }
+    for clause in condition.split('&') {
+        let clause = clause.trim();
+        let (left, operator, right) = if let Some((a, b)) = clause.split_once(">=") {
+            (a, ">=", b)
+        } else if let Some((a, b)) = clause.split_once("<=") {
+            (a, "<=", b)
+        } else if let Some((a, b)) = clause.split_once('>') {
+            (a, ">", b)
+        } else if let Some((a, b)) = clause.split_once('<') {
+            (a, "<", b)
+        } else if let Some((a, b)) = clause.split_once('=') {
+            (a, "=", b)
+        } else {
+            return false;
+        };
+        let (Some(left), Some(right)) = (
+            eval_condition_value(left, effect),
+            eval_condition_value(right, effect),
+        ) else {
+            return false;
+        };
+        let matches = match operator {
+            ">=" => left >= right,
+            "<=" => left <= right,
+            ">" => left > right,
+            "<" => left < right,
+            "=" => left == right,
+            _ => false,
+        };
+        if !matches {
+            return false;
+        }
+    }
+    true
 }
 
 impl EffectArena {
@@ -171,6 +379,9 @@ impl EffectArena {
             return Err(EffectSpawnError::InvalidOwner(owner));
         }
 
+        if owner > 2 {
+            return Err(EffectSpawnError::InvalidOwner(owner));
+        }
         let mut effect = EffectInstance {
             effect_type,
             source_variant,
@@ -196,160 +407,92 @@ impl EffectArena {
             reflect: false,
             gravity: false,
         };
-
-        match effect_type {
-            // Dados/Efeitos.ini [Efeito2]: dust/cloud effect used by C01 Esp2 and C12 victory.
-            2 => {
-                if source_variant.is_some() {
-                    return Err(EffectSpawnError::InvalidVariant { effect_type });
-                }
-                effect.duration = 15;
-                effect.bottom_anchor = true; // Flag51
-            }
-            // [Efeito7]: C01 Esp1 weak/strong projectile.
-            7 => {
-                let variant = source_variant
-                    .filter(|value| *value == 'A' || *value == 'B')
-                    .ok_or(EffectSpawnError::InvalidVariant { effect_type })?;
-                if owner == 0 {
-                    return Err(EffectSpawnError::InvalidOwner(owner));
-                }
-                if !matches!(owner_facing, EFFECT_SIDE_RIGHT | EFFECT_SIDE_LEFT) {
-                    return Err(EffectSpawnError::InvalidFacing(owner_facing));
-                }
-                effect.duration = 5;
-                effect.can_hit = true;
-                effect.bottom_anchor = true;
-                effect.variant_flag = rng.draw_longint(5).map_err(EffectSpawnError::Rng)? == 0;
-                effect.facing = owner_facing;
-                effect.horizontal_velocity = if variant == 'A' { 8 } else { 11 };
-                effect.damage = 12;
-                effect.guard_damage = 3;
-                effect.bounds = EffectBounds {
-                    left: -25,
-                    top: -38,
-                    right: 25,
-                    bottom: 0,
-                };
-            }
-            // [Efeito13]/[Efeito15]: source-defined weak/strong fighter projectiles.
-            // Both share the same RNG and damage contract; only their hitboxes/sprites differ.
-            13 | 15 => {
-                let variant = source_variant
-                    .filter(|value| *value == 'A' || *value == 'B')
-                    .ok_or(EffectSpawnError::InvalidVariant { effect_type })?;
-                if owner == 0 {
-                    return Err(EffectSpawnError::InvalidOwner(owner));
-                }
-                if !matches!(owner_facing, EFFECT_SIDE_RIGHT | EFFECT_SIDE_LEFT) {
-                    return Err(EffectSpawnError::InvalidFacing(owner_facing));
-                }
-                effect.duration = 5;
-                effect.can_hit = true;
-                effect.variant_flag = rng.draw_longint(5).map_err(EffectSpawnError::Rng)? == 0;
-                effect.facing = owner_facing;
-                effect.horizontal_velocity = if variant == 'A' { 8 } else { 11 };
-                effect.damage = 12;
-                effect.guard_damage = 3;
-                effect.bounds = if effect_type == 13 {
-                    EffectBounds {
-                        left: -25,
-                        top: -10,
-                        right: 25,
-                        bottom: 80,
-                    }
-                } else {
-                    EffectBounds {
-                        left: -25,
-                        top: -25,
-                        right: 25,
-                        bottom: 37,
-                    }
-                };
-            }
-            // [Efeito18]/[Efeito19]: source-defined Bruxa projectile variants.
-            18 | 19 => {
-                let variant = source_variant
-                    .filter(|value| *value == 'A' || *value == 'B')
-                    .ok_or(EffectSpawnError::InvalidVariant { effect_type })?;
-                if owner == 0 {
-                    return Err(EffectSpawnError::InvalidOwner(owner));
-                }
-                if !matches!(owner_facing, EFFECT_SIDE_RIGHT | EFFECT_SIDE_LEFT) {
-                    return Err(EffectSpawnError::InvalidFacing(owner_facing));
-                }
-                effect.duration = 5;
-                effect.can_hit = true;
-                effect.variant_flag = rng.draw_longint(5).map_err(EffectSpawnError::Rng)? == 0;
-                effect.facing = owner_facing;
-                effect.horizontal_velocity = match (effect_type, variant) {
-                    (18, 'A') => 8,
-                    (18, 'B') => 11,
-                    (19, 'A') => 5,
-                    (19, 'B') => 7,
-                    _ => unreachable!(),
-                };
-                effect.damage = 12;
-                effect.guard_damage = 3;
-                effect.bounds = if effect_type == 18 {
-                    EffectBounds {
-                        left: -30,
-                        top: -10,
-                        right: 30,
-                        bottom: 80,
-                    }
-                } else {
-                    EffectBounds {
-                        left: -12,
-                        top: -10,
-                        right: 12,
-                        bottom: 20,
-                    }
-                };
-            }
-            // [Efeito8]: C01 final special. The type is terminating and damage-active.
-            8 => {
-                if source_variant.is_some() {
-                    return Err(EffectSpawnError::InvalidVariant { effect_type });
-                }
-                if owner == 0 {
-                    return Err(EffectSpawnError::InvalidOwner(owner));
-                }
-                if !matches!(owner_facing, EFFECT_SIDE_RIGHT | EFFECT_SIDE_LEFT) {
-                    return Err(EffectSpawnError::InvalidFacing(owner_facing));
-                }
-                effect.duration = 23;
-                effect.can_hit = true;
-                effect.bottom_anchor = true;
-                effect.damage = 40;
-                effect.guard_damage = 3;
-                effect.variant_flag = true;
-                effect.terminating = true;
-                effect.facing = owner_facing;
-                effect.bounds = EffectBounds {
-                    left: -30,
-                    top: -50,
-                    right: 30,
-                    bottom: 0,
-                };
-            }
-            // [Efeito16]: short-lived C01 Esp2 trail.
-            16 => {
-                if source_variant.is_some() {
-                    return Err(EffectSpawnError::InvalidVariant { effect_type });
-                }
-                if owner == 0 {
-                    return Err(EffectSpawnError::InvalidOwner(owner));
-                }
-                if !matches!(owner_facing, EFFECT_SIDE_RIGHT | EFFECT_SIDE_LEFT) {
-                    return Err(EffectSpawnError::InvalidFacing(owner_facing));
-                }
-                effect.duration = 3;
-                effect.facing = owner_facing;
-            }
-            _ => return Err(EffectSpawnError::UnsupportedType(effect_type)),
+        let Some(definition) = self.catalog.definition(effect_type) else {
+            return Err(EffectSpawnError::UnsupportedType(effect_type));
+        };
+        let has_variant_fields = definition
+            .iter()
+            .any(|(key, _)| key.ends_with(".A") || key.ends_with(".B"));
+        if has_variant_fields && !matches!(source_variant, Some('A' | 'B')) {
+            return Err(EffectSpawnError::InvalidVariant { effect_type });
         }
-
+        // Some Pascal CriaEfeito calls pass a variant marker even when that
+        // effect's INI has no .A/.B fields (notably Efeito27 -> Efeito28).
+        for (raw_key, value) in definition {
+            if raw_key.starts_with("Anim") {
+                continue;
+            }
+            let mut key = raw_key.as_str();
+            if let Some((base, variant)) = key.rsplit_once('.') {
+                if variant == "A" || variant == "B" {
+                    if Some(variant.chars().next().unwrap()) != source_variant {
+                        continue;
+                    }
+                    key = base;
+                }
+            }
+            let key = key.split('#').next().unwrap_or(key);
+            match key {
+                "Duracao" => {
+                    effect.duration = eval_random_expression(value, rng)?.clamp(0, 255) as u8
+                }
+                "Vel" => {
+                    effect.horizontal_velocity =
+                        eval_random_expression(value, rng)?.clamp(-32768, 32767) as i16
+                }
+                "VelY" => {
+                    effect.vertical_velocity =
+                        eval_random_expression(value, rng)?.clamp(-32768, 32767) as i16
+                }
+                "Dano" => effect.damage = eval_random_expression(value, rng)?.clamp(0, 255) as u8,
+                "DanoDefesa" => {
+                    effect.guard_damage = eval_random_expression(value, rng)?.clamp(0, 255) as u8
+                }
+                "Sprite" => effect.sprite = eval_random_expression(value, rng)?.clamp(0, 255) as u8,
+                "LimiteContagem" => {
+                    effect.count_limit = eval_random_expression(value, rng)?.clamp(0, 255) as u8
+                }
+                "Lado" => {
+                    if value.eq_ignore_ascii_case("dono") {
+                        if !matches!(owner_facing, EFFECT_SIDE_RIGHT | EFFECT_SIDE_LEFT) {
+                            return Err(EffectSpawnError::InvalidFacing(owner_facing));
+                        }
+                        effect.facing = owner_facing;
+                    } else {
+                        let side = eval_random_expression(value, rng)?;
+                        if side != i32::from(EFFECT_SIDE_RIGHT)
+                            && side != i32::from(EFFECT_SIDE_LEFT)
+                        {
+                            return Err(EffectSpawnError::InvalidFacing(side.clamp(0, 255) as u8));
+                        }
+                        effect.facing = side as u8;
+                    }
+                }
+                "Caixa" => {
+                    let values = value
+                        .split(',')
+                        .map(|part| part.trim().parse::<i16>())
+                        .collect::<Result<Vec<_>, _>>()
+                        .map_err(|_| EffectSpawnError::UnsupportedType(effect_type))?;
+                    if values.len() != 4 {
+                        return Err(EffectSpawnError::UnsupportedType(effect_type));
+                    }
+                    effect.bounds = EffectBounds {
+                        left: values[0],
+                        top: values[1],
+                        right: values[2],
+                        bottom: values[3],
+                    };
+                }
+                "PodeAcertar" => effect.can_hit = value == "1",
+                "Terminando" => effect.terminating = value == "1",
+                "Flag50" => effect.reflect = value == "1",
+                "Flag51" => effect.bottom_anchor = value == "1",
+                "Flag52" => effect.gravity = value == "1",
+                "Variante" => effect.variant_flag = eval_random_expression(value, rng)? != 0,
+                _ => {}
+            }
+        }
         self.slots[slot] = Some(effect);
         Ok(Some(slot))
     }
@@ -361,6 +504,7 @@ impl EffectArena {
     /// collision consequences remain a later combat-system integration.
     pub fn advance(&mut self, context: EffectTickContext) -> EffectTickResult {
         let frozen = context.flash_active || context.hit_stop_active;
+        let catalog = &self.catalog;
         let mut result = EffectTickResult::default();
 
         for slot in 0..MAX_EFFECT_INSTANCES {
@@ -374,92 +518,115 @@ impl EffectArena {
                     continue;
                 };
 
-                match effect.effect_type {
-                    2 => {
-                        match effect.frame {
-                            0 => effect.sprite = 4,
-                            3 => effect.sprite = 5,
-                            6 => effect.sprite = 6,
-                            9 => effect.sprite = 7,
-                            12 => effect.sprite = 8,
-                            _ => {}
-                        }
-                        // Anim6=*:SOBE; this motion is gated by flash/hit-stop.
-                        if !frozen {
-                            effect.y -= 1.0;
-                        }
+                let Some(definition) = catalog.definition(effect.effect_type) else {
+                    continue;
+                };
+                for (key, instruction) in definition {
+                    if !key.starts_with("Anim") {
+                        continue;
                     }
-                    7 => match effect.frame {
-                        0 | 1 => effect.sprite = 13,
-                        2 => effect.sprite = 14,
-                        3 => effect.frame = 0, // Anim4=Q0, before lifetime advancement.
-                        _ => {}
-                    },
-                    18 => match effect.frame {
-                        0 | 1 => effect.sprite = 47,
-                        2 => effect.sprite = 48,
-                        3 => effect.frame = 0,
-                        _ => {}
-                    },
-                    19 => match effect.frame {
-                        0 | 1 => effect.sprite = 49,
-                        2 => effect.sprite = 50,
-                        3 => effect.frame = 0,
-                        _ => {}
-                    },
-                    13 => match effect.frame {
-                        0 | 1 => effect.sprite = 34,
-                        2 => effect.sprite = 35,
-                        3 => effect.frame = 0,
-                        _ => {}
-                    },
-                    15 => match effect.frame {
-                        0 | 1 => effect.sprite = 39,
-                        2 => effect.sprite = 40,
-                        3 => effect.frame = 0,
-                        _ => {}
-                    },
-                    8 => {
-                        match effect.frame {
-                            0 => effect.sprite = 15,
-                            2 => {
-                                effect.sprite = 16;
-                                effect.bounds = EffectBounds {
-                                    left: -45,
-                                    top: -150,
-                                    right: 45,
-                                    bottom: 0,
-                                };
+                    let Some((condition, action)) = instruction.split_once(':') else {
+                        continue;
+                    };
+                    if !effect_condition_matches(condition, effect) {
+                        continue;
+                    }
+                    match action.trim() {
+                        "Q0" => effect.frame = 0,
+                        "E1" => effect.stage = true,
+                        "SOBE" if !frozen => effect.y -= 1.0,
+                        sprite if sprite.starts_with('S') => {
+                            if let Ok(number) = sprite[1..].parse::<u8>() {
+                                effect.sprite = number;
                             }
-                            5 => {
-                                effect.sprite = 17;
-                                effect.stage = true;
-                                effect.bounds = EffectBounds {
-                                    left: -45,
-                                    top: -220,
-                                    right: 45,
-                                    bottom: 0,
-                                };
-                            }
-                            _ => {}
                         }
-                        // These source writes are not pause-gated and precede the draw.
+                        _ => {}
+                    }
+                }
+
+                match effect.effect_type {
+                    // Source Comum_Sprites.inc: the two-frame projectile hitbox transition.
+                    8 => {
+                        if effect.frame == 2 {
+                            effect.bounds = EffectBounds {
+                                left: -45,
+                                top: -150,
+                                right: 45,
+                                bottom: 0,
+                            };
+                        } else if effect.frame == 5 {
+                            effect.bounds = EffectBounds {
+                                left: -45,
+                                top: -220,
+                                right: 45,
+                                bottom: 0,
+                            };
+                            effect.stage = true;
+                        }
                         if effect.frame == 6 || effect.frame == 12 {
                             effect.can_hit = true;
                             effect.frame = effect.frame.saturating_add(1);
                         }
                     }
-                    16 => match effect.frame {
-                        0 => effect.sprite = 41,
-                        2 => effect.sprite = 42,
-                        4 => effect.sprite = 43,
-                        _ => {}
-                    },
-                    _ => continue,
+                    // Source uses a three-step pulse cadence for this repeated hitbox.
+                    28 => {
+                        if matches!(effect.count, 3 | 6 | 9) {
+                            effect.can_hit = true;
+                        }
+                        if !frozen {
+                            effect.count = effect.count.saturating_add(1);
+                        }
+                    }
+                    // Effects 30-32 are owned by special-action state, not by a timer.
+                    30 => {
+                        let owner_index = usize::from(effect.owner.saturating_sub(1));
+                        if effect.owner == 0 || !context.owner_special2[owner_index.min(1)] {
+                            remove = true;
+                        }
+                    }
+                    31 | 32 => {
+                        let owner_index = usize::from(effect.owner.saturating_sub(1)).min(1);
+                        if effect.owner == 0 {
+                            remove = true;
+                        } else {
+                            if effect.count % 10 == 0 {
+                                if !context.owner_special5[owner_index] {
+                                    remove = true;
+                                }
+                                effect.can_hit = true;
+                                effect.count = effect.count.saturating_add(1);
+                            }
+                            let (owner_x, owner_y) = context.owner_positions[owner_index];
+                            let orbit = (f64::from(effect.count) / 3.0).cos() * 70.0;
+                            let offset = orbit.round();
+                            effect.x = if effect.effect_type == 31 {
+                                owner_x + offset
+                            } else {
+                                owner_x - offset
+                            };
+                            effect.y = offset + owner_y - 80.0;
+                        }
+                    }
+                    // Source animation 24 drifts while its frame-specific sprite animates.
+                    24 if !frozen => {
+                        effect.x += (f64::from(effect.frame) / 2.0).cos() * 2.0;
+                        effect.y -= 1.0;
+                    }
+                    19 if !frozen => {
+                        effect.y += f64::from(effect.horizontal_velocity);
+                    }
+                    34 if effect.frame >= 14 => {
+                        effect.can_hit = false;
+                    }
+                    _ => {}
                 }
 
                 // Generic horizontal movement follows animation and precedes the draw snapshot.
                 if !frozen {
+                    effect.y += f64::from(effect.vertical_velocity);
+                    if effect.gravity {
+                        effect.vertical_velocity = effect.vertical_velocity.saturating_add(4);
+                    }
                     match effect.facing {
                         EFFECT_SIDE_RIGHT => {
                             effect.x += f64::from(effect.horizontal_velocity);
@@ -471,22 +638,63 @@ impl EffectArena {
                     }
                 }
 
-                result.render_snapshots.push(EffectRenderSnapshot {
-                    slot,
-                    effect_type: effect.effect_type,
-                    sprite: effect.sprite,
-                    x: effect.x,
-                    y: effect.y,
-                    facing: effect.facing,
-                    stage: effect.stage,
-                    bottom_anchor: effect.bottom_anchor,
-                    bounds: effect.bounds,
-                });
+                if !remove {
+                    result.render_snapshots.push(EffectRenderSnapshot {
+                        slot,
+                        effect_type: effect.effect_type,
+                        sprite: effect.sprite,
+                        x: effect.x,
+                        y: effect.y,
+                        facing: effect.facing,
+                        stage: effect.stage,
+                        bottom_anchor: effect.bottom_anchor,
+                        bounds: effect.bounds,
+                    });
+                }
 
                 if !frozen && effect.duration != 99 {
                     effect.frame = effect.frame.saturating_add(1);
                     if effect.frame > effect.duration {
                         remove = true;
+                    }
+                }
+                // The Pascal count timer advances after drawing/lifetime. Efeito27
+                // emits its three Efeito28 children in source order at its limit.
+                if !frozen && effect.count_limit > 0 {
+                    effect.count = effect.count.saturating_add(1);
+                    if effect.effect_type == 27 {
+                        if effect.count >= effect.count_limit.saturating_sub(2) {
+                            effect.can_hit = true;
+                        }
+                        if effect.count >= effect.count_limit {
+                            result.spawn_requests.extend([
+                                EffectSpawnRequest {
+                                    effect_type: 28,
+                                    variant: Some('A'),
+                                    owner: effect.owner,
+                                    owner_facing: effect.facing,
+                                    x: effect.x - 30.0,
+                                    y: effect.y + 20.0,
+                                },
+                                EffectSpawnRequest {
+                                    effect_type: 28,
+                                    variant: Some('A'),
+                                    owner: effect.owner,
+                                    owner_facing: effect.facing,
+                                    x: effect.x + 30.0,
+                                    y: effect.y + 20.0,
+                                },
+                                EffectSpawnRequest {
+                                    effect_type: 28,
+                                    variant: Some('A'),
+                                    owner: effect.owner,
+                                    owner_facing: effect.facing,
+                                    x: effect.x,
+                                    y: effect.y - 40.0,
+                                },
+                            ]);
+                            remove = true;
+                        }
                     }
                 }
                 // Pascal culls after drawing and lifetime checks, so the current snapshot survives.
@@ -505,5 +713,103 @@ impl EffectArena {
         }
 
         result
+    }
+}
+
+#[cfg(test)]
+mod catalog_tests {
+    use super::*;
+
+    struct ZeroRng;
+    impl PascalRandomSource for ZeroRng {
+        type Error = &'static str;
+        fn draw_longint(&mut self, _range: i32) -> Result<i32, Self::Error> {
+            Ok(0)
+        }
+        fn draw_int64(&mut self, _range: i64) -> Result<i64, Self::Error> {
+            Ok(0)
+        }
+    }
+
+    #[test]
+    fn bundled_ini_loads_all_forty_original_effect_sections() {
+        let arena = EffectArena::default();
+        assert_eq!(arena.catalog.definition_count(), 40);
+        for effect_type in 1..=40 {
+            assert!(arena.catalog.contains(effect_type));
+        }
+    }
+
+    #[test]
+    fn all_forty_effects_accept_source_configuration_and_allocate() {
+        let mut arena = EffectArena::default();
+        let mut rng = ZeroRng;
+        for effect_type in 1..=40 {
+            let definition = arena.catalog.definition(effect_type).unwrap();
+            let has_a = definition.iter().any(|(key, _)| key.ends_with(".A"));
+            let has_b = definition.iter().any(|(key, _)| key.ends_with(".B"));
+            let variant = if has_a {
+                Some('A')
+            } else if has_b {
+                Some('B')
+            } else {
+                None
+            };
+            let slot = arena
+                .spawn(
+                    effect_type,
+                    variant,
+                    1,
+                    EFFECT_SIDE_RIGHT,
+                    100.0,
+                    100.0,
+                    &mut rng,
+                )
+                .unwrap_or_else(|error| panic!("Efeito{effect_type}: {error}"));
+            assert!(slot.is_some());
+            arena.remove(slot.unwrap());
+        }
+    }
+
+    #[test]
+    fn type27_emits_three_type28_children_in_pascal_order_at_its_count_limit() {
+        let mut arena = EffectArena::default();
+        let mut rng = ZeroRng;
+        arena
+            .spawn(27, Some('A'), 1, EFFECT_SIDE_RIGHT, 100.0, 200.0, &mut rng)
+            .unwrap();
+        let mut result = EffectTickResult::default();
+        for _ in 0..22 {
+            result = arena.advance(EffectTickContext::default());
+        }
+        assert_eq!(result.spawn_requests.len(), 3);
+        assert_eq!(result.spawn_requests[0].effect_type, 28);
+        assert_eq!(result.spawn_requests[0].x, 136.0);
+        assert_eq!(result.spawn_requests[0].y, 220.0);
+        assert_eq!(result.spawn_requests[1].x, 196.0);
+        assert_eq!(result.spawn_requests[2].x, 166.0);
+        assert_eq!(result.spawn_requests[2].y, 160.0);
+        assert_eq!(
+            result
+                .spawn_requests
+                .iter()
+                .map(|request| request.variant)
+                .collect::<Vec<_>>(),
+            vec![Some('A'); 3]
+        );
+        assert_eq!(arena.active_count(), 0);
+    }
+
+    #[test]
+    fn animation_rules_follow_pascal_ini_order_and_frame_conditions() {
+        let mut arena = EffectArena::default();
+        let mut rng = ZeroRng;
+        arena
+            .spawn(1, None, 0, EFFECT_SIDE_RIGHT, 100.0, 100.0, &mut rng)
+            .unwrap();
+        let first = arena.advance(EffectTickContext::default());
+        assert_eq!(first.render_snapshots[0].sprite, 1);
+        let second = arena.advance(EffectTickContext::default());
+        assert_eq!(second.render_snapshots[0].sprite, 2);
     }
 }

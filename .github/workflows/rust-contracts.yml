@@ -8,6 +8,9 @@ on:
       - "tests/**"
       - "FoundationWebBuild.toml"
       - "web/**"
+      - "scripts/**"
+      - "research/pascal-effects/**"
+      - "docs/web-custom-character-manifest.md"
       - "docs/CHS-SCREEN-STATUS.md"
       - ".github/workflows/rust-contracts.yml"
   pull_request:
@@ -17,6 +20,9 @@ on:
       - "tests/**"
       - "FoundationWebBuild.toml"
       - "web/**"
+      - "scripts/**"
+      - "research/pascal-effects/**"
+      - "docs/web-custom-character-manifest.md"
       - "docs/CHS-SCREEN-STATUS.md"
       - ".github/workflows/rust-contracts.yml"
 
@@ -30,6 +36,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
       - name: Install SDL build tools
         run: |
           sudo apt-get update
@@ -42,10 +51,11 @@ jobs:
         run: |
           git clone --depth 1 --filter=blob:none --no-checkout https://github.com/danimesq/OpenStreetChaves.git ../OpenStreetChaves
           git -C ../OpenStreetChaves sparse-checkout init --no-cone
-          git -C ../OpenStreetChaves sparse-checkout set /Cenarios/ /Lutadores/ /Dados/ /Sons/ /Musicas/ /Embutidos/Musica.wav /LICENSE
+          git -C ../OpenStreetChaves sparse-checkout set /Cenarios/ /Lutadores/ /Dados/ /Sons/ /Musicas/ /Falas/ /Efeitos/ /Embutidos/Musica.wav /LICENSE
           git -C ../OpenStreetChaves checkout
       - name: Validate Foundation Web build manifest and source files
         run: |
+          bash -n scripts/build-web.sh
           python3 - <<'PY'
           import tomllib
           from pathlib import Path
@@ -62,7 +72,16 @@ jobs:
               if not (source_root / asset["source"]).is_file()
           ]
           assert not missing, "missing OpenStreetChaves source assets: " + ", ".join(missing)
-          assert len(assets) == 107, f"expected 107 configured resources, found {len(assets)}"
+          assert len(assets) == 280, f"expected 280 configured resources, found {len(assets)}"
+          ids_set = set(ids)
+          assert "effect_catalog" in ids_set
+          assert all(f"effect_sprite_{slot:03}" in ids_set for slot in range(1, 112))
+          assert all(f"fight_music_{slot:03}" in ids_set for slot in range(2, 7))
+          assert all(
+              f"victory_voice_{fighter:02}_{variant}" in ids_set
+              for fighter in range(1, 17)
+              for variant in ("a", "b")
+          )
           print(f"Validated {len(assets)} source assets from {source_root}")
           PY
       - name: Check Rust formatting
@@ -73,15 +92,12 @@ jobs:
         run: cargo check --target wasm32-unknown-unknown --features web-foundation
       - name: Check the Foundation source-to-Web publish pipeline
         run: |
-          git clone --depth 1 --branch foundation-web-build-pipeline https://github.com/danimesq/RustMultiConsoleFoundation.git ../RustMultiConsoleFoundation
+          git clone --depth 1 --branch audio-worklet-deterministic-pcm-mixer https://github.com/danimesq/RustMultiConsoleFoundation.git ../RustMultiConsoleFoundation
+          node --test ../RustMultiConsoleFoundation/crates/foundation-runtime/tests/audio_worklet.test.mjs
           wasm_bindgen_version="$(cargo tree -p street-chaves-rust --target wasm32-unknown-unknown --prefix none -i wasm-bindgen | sed -n 's/^wasm-bindgen v//p' | head -n 1)"
           test -n "$wasm_bindgen_version"
           cargo install wasm-bindgen-cli --version "$wasm_bindgen_version" --locked
-          cargo run \
-            --manifest-path ../RustMultiConsoleFoundation/Cargo.toml \
-            -p foundation-packaging \
-            --bin foundation-web-build -- \
-            --config FoundationWebBuild.toml
+          bash scripts/build-web.sh
           test -f dist/street-chaves-web/index.html
           test -f dist/street-chaves-web/main.js
           test -f dist/street-chaves-web/web-export.json

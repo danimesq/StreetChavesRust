@@ -273,6 +273,172 @@ impl AdversariesPresentation {
     }
 }
 
+/// Parse campaign eligibility and boss metadata from the original fighter INI.
+impl CampaignProfile {
+    pub fn from_ini(selected_character: u8, source: &str) -> Result<Self, String> {
+        let boss_character = campaign_ini_value(source, "Geral", "Chefe")
+            .and_then(|value| value.parse::<u8>().ok())
+            .filter(|value| (1..=16).contains(value))
+            .ok_or_else(|| "fighter INI has no valid [Geral] Chefe (1..=16)".to_owned())?;
+        let never_face = campaign_ini_value(source, "Geral", "NaoEnfrenta")
+            .unwrap_or("")
+            .split(',')
+            .filter_map(|value| value.trim().parse::<u8>().ok())
+            .filter(|value| (1..=16).contains(value))
+            .collect();
+        Ok(Self {
+            selected_character,
+            boss_character,
+            never_face,
+        })
+    }
+}
+impl CampaignStageProfile {
+    /// Read the primary, alternative and rare stage IDs from a fighter INI.
+    pub fn from_ini(source: &str) -> Result<Self, String> {
+        let primary_stage = campaign_ini_value(source, "Geral", "Cenario")
+            .and_then(|value| value.parse::<u8>().ok())
+            .filter(|value| *value > 0)
+            .ok_or_else(|| "fighter INI has no valid [Geral] Cenario".to_owned())?;
+        let alternative_stage = campaign_ini_value(source, "Geral", "CenarioAlternativo")
+            .and_then(|value| value.parse::<u8>().ok())
+            .unwrap_or(0);
+        let rare_stage = campaign_ini_value(source, "Geral", "CenarioRaro")
+            .and_then(|value| value.parse::<u8>().ok())
+            .unwrap_or(0);
+        Ok(Self {
+            primary_stage,
+            alternative_stage,
+            rare_stage,
+        })
+    }
+}
+fn campaign_ini_value<'a>(
+    source: &'a str,
+    wanted_section: &str,
+    wanted_key: &str,
+) -> Option<&'a str> {
+    let mut section = "";
+    for raw_line in source.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with(';') {
+            continue;
+        }
+        if line.starts_with('[') && line.ends_with(']') {
+            section = line[1..line.len() - 1].trim();
+            continue;
+        }
+        if !section.eq_ignore_ascii_case(wanted_section) {
+            continue;
+        }
+        if let Some((key, value)) = line.split_once('=') {
+            if key.trim().eq_ignore_ascii_case(wanted_key) {
+                return Some(value.trim());
+            }
+        }
+    }
+    None
+}
+
+/// Visible host phase for the original CHS_ADVERSARIOS -> CHS_PREPARALUTA flow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CampaignRuntimeState {
+    Adversaries,
+    Fighting,
+    Completed,
+    Defeated,
+}
+
+/// Shared native/Web campaign controller. FightSimulation still owns Pascal RNG,
+/// CPU configuration and opponent loading; this type owns campaign progression.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CampaignRuntime {
+    plan: CampaignPlan,
+    progress: CampaignProgress,
+    presentation: AdversariesPresentation,
+    state: CampaignRuntimeState,
+    stage: Option<CampaignStageChoice>,
+}
+impl CampaignRuntime {
+    pub fn new(plan: CampaignPlan) -> Self {
+        Self {
+            plan,
+            progress: CampaignProgress::new(),
+            presentation: AdversariesPresentation::default(),
+            state: CampaignRuntimeState::Adversaries,
+            stage: None,
+        }
+    }
+    pub fn plan(&self) -> &CampaignPlan {
+        &self.plan
+    }
+    pub fn progress(&self) -> CampaignProgress {
+        self.progress
+    }
+    pub fn state(&self) -> CampaignRuntimeState {
+        self.state
+    }
+    pub fn current_phase(&self) -> Option<u8> {
+        self.progress.phase()
+    }
+    pub fn current_opponent(&self) -> Option<u8> {
+        self.progress
+            .phase()
+            .and_then(|phase| self.plan.opponent(phase))
+    }
+    pub fn presentation_ticks(&self) -> u16 {
+        self.presentation.elapsed_ticks()
+    }
+    pub fn stage_choice(&self) -> Option<CampaignStageChoice> {
+        self.stage
+    }
+    pub fn tick_adversaries(&mut self, player_skipped: bool) -> bool {
+        if self.state != CampaignRuntimeState::Adversaries {
+            return false;
+        }
+        self.presentation.tick(player_skipped)
+    }
+    pub fn begin_fight(&mut self, stage: CampaignStageChoice) -> Result<u8, String> {
+        if self.state != CampaignRuntimeState::Adversaries
+            || !self.presentation.is_ready_for_preparation()
+        {
+            return Err("campaign is not ready for CHS_PREPARALUTA".to_owned());
+        }
+        let opponent = self
+            .current_opponent()
+            .ok_or_else(|| "campaign has no active opponent".to_owned())?;
+        self.stage = Some(stage);
+        self.state = CampaignRuntimeState::Fighting;
+        Ok(opponent)
+    }
+    pub fn record_victory(&mut self) -> CampaignAdvance {
+        if self.state != CampaignRuntimeState::Fighting {
+            return CampaignAdvance::Inactive;
+        }
+        let advance = self.progress.record_victory();
+        match advance {
+            CampaignAdvance::NextPhase(_) => {
+                self.presentation = AdversariesPresentation::default();
+                self.stage = None;
+                self.state = CampaignRuntimeState::Adversaries;
+            }
+            CampaignAdvance::Completed => self.state = CampaignRuntimeState::Completed,
+            _ => {}
+        }
+        advance
+    }
+    pub fn record_defeat(&mut self) -> CampaignAdvance {
+        if self.state != CampaignRuntimeState::Fighting {
+            return CampaignAdvance::Inactive;
+        }
+        let advance = self.progress.record_defeat();
+        if advance == CampaignAdvance::Defeated {
+            self.state = CampaignRuntimeState::Defeated;
+        }
+        advance
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -310,6 +476,70 @@ mod tests {
                 i64::from(value).rem_euclid(range)
             })
         }
+    }
+
+    #[test]
+    fn fighter_ini_metadata_drives_campaign_and_stage_profiles() {
+        let ini = "[geral]\nChefe=2\nNaoEnfrenta=3, 9, invalid\nCenario=4\nCenarioAlternativo=5\nCenarioRaro=6\n";
+        let profile = CampaignProfile::from_ini(1, ini).unwrap();
+        assert_eq!(profile.boss_character, 2);
+        assert_eq!(profile.never_face, vec![3, 9]);
+        assert_eq!(
+            CampaignStageProfile::from_ini(ini).unwrap(),
+            CampaignStageProfile {
+                primary_stage: 4,
+                alternative_stage: 5,
+                rare_stage: 6
+            }
+        );
+    }
+
+    #[test]
+    fn campaign_runtime_transitions_through_eight_fights_and_final_boss() {
+        let plan = CampaignPlan {
+            selected_character: 1,
+            opponents: [2, 3, 4, 5, 6, 7, 8, 9],
+        };
+        let mut run = CampaignRuntime::new(plan);
+        for phase in 1..=8 {
+            for _ in 0..151 {
+                run.tick_adversaries(false);
+            }
+            assert_eq!(
+                run.begin_fight(CampaignStageChoice {
+                    stage: 1,
+                    source: CampaignStageSource::Primary
+                })
+                .unwrap(),
+                phase + 1
+            );
+            let advance = run.record_victory();
+            if phase < 8 {
+                assert_eq!(advance, CampaignAdvance::NextPhase(phase + 1));
+            } else {
+                assert_eq!(advance, CampaignAdvance::Completed);
+            }
+        }
+        assert_eq!(run.state(), CampaignRuntimeState::Completed);
+    }
+
+    #[test]
+    fn campaign_defeat_is_terminal() {
+        let plan = CampaignPlan {
+            selected_character: 1,
+            opponents: [2; 8],
+        };
+        let mut run = CampaignRuntime::new(plan);
+        for _ in 0..151 {
+            run.tick_adversaries(false);
+        }
+        run.begin_fight(CampaignStageChoice {
+            stage: 1,
+            source: CampaignStageSource::Primary,
+        })
+        .unwrap();
+        assert_eq!(run.record_defeat(), CampaignAdvance::Defeated);
+        assert_eq!(run.state(), CampaignRuntimeState::Defeated);
     }
 
     #[test]

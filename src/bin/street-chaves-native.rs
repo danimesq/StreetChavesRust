@@ -6,12 +6,16 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use foundation_runtime::RuntimeConfig;
-use street_chaves::arcade::ArcadePreferences;
+use street_chaves::arcade::{ArcadePreferences, ArcadeRoundProgress, RoundAdvance};
+use street_chaves::campaign::{
+    CampaignAdvance, CampaignProfile, CampaignRuntime, CampaignRuntimeState, CampaignStageProfile,
+};
 use street_chaves::chaves_specials::ChavesSpecialContext;
 use street_chaves::combat_runtime::{
     BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_IDLE, SIDE_LEFT, SIDE_RIGHT,
 };
 use street_chaves::fight_simulation::{FightSimulation, FightSimulationConfig};
+use street_chaves::input::Button;
 use street_chaves::native_foundation::NativeFightHost;
 use street_chaves::startup_flow::{StartupEvent, StartupFlow, StartupPhase};
 
@@ -50,6 +54,21 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     host.set_player_one_key_map(startup.preferences().player_one_keys);
     host.set_damage_level(startup.settings().damage_level);
 
+    if !options.no_audio {
+        if let Some(root) = options.game_root.as_ref() {
+            if host.start_menu_audio(root) {
+                eprintln!("[audio] original menu music ready");
+            }
+        }
+    }
+
+    let mut campaign: Option<CampaignRuntime> = None;
+    let mut rounds: Option<ArcadeRoundProgress> = None;
+    let mut cpu_opponent_active = false;
+    let mut standalone_winner: Option<usize> = None;
+    let mut player_character = options.players[0];
+    let mut match_settings = startup.settings();
+
     eprintln!("[boot] Opening -> Title -> F1 Config / F2 Remap -> Character Select -> Fight");
     eprintln!("[arcade] 5 inserts a credit; 1 starts P1; 2 starts or joins P2");
     eprintln!("[controls] P1 arrows + Z/X/C/V; P2 WASD + R/T/Y/U; ESC quits");
@@ -64,6 +83,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     cpu_opponent,
                 } => {
                     let settings = startup.settings();
+                    host.set_arcade_settings(settings);
+                    host.set_credits(startup.credits());
+                    match_settings = settings;
+                    player_character = characters[0];
+                    cpu_opponent_active = cpu_opponent;
+                    campaign = None;
+                    standalone_winner = None;
+                    rounds = Some(ArcadeRoundProgress::new(settings));
                     eprintln!(
                         "[select] P1={} P2={} CPU={}",
                         characters[0], characters[1], cpu_opponent
@@ -85,30 +112,293 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         ) {
                             eprintln!("[assets] {line}");
                         }
+                        if cpu_opponent {
+                            let path =
+                                root.join(format!("Dados/Lutadores/C{:02}.ini", characters[0]));
+                            match std::fs::read_to_string(&path)
+                                .map_err(|error| format!("{}: {error}", path.display()))
+                                .and_then(|ini| CampaignProfile::from_ini(characters[0], &ini))
+                                .and_then(|profile| fight.generate_campaign_plan(&profile, 15))
+                            {
+                                Ok(plan) => {
+                                    campaign = Some(CampaignRuntime::new(plan));
+                                    eprintln!(
+                                        "[campaign] eight-phase route generated from {}",
+                                        path.display()
+                                    );
+                                }
+                                Err(error) => {
+                                    eprintln!("[campaign] unavailable; using single fight: {error}")
+                                }
+                            }
+                        }
                     } else {
                         eprintln!("[assets] no --game-root: procedural training stage and fighter fallbacks");
+                    }
+                    if !options.no_audio && options.game_root.is_some() {
+                        let _ = host.stop_menu_audio();
+                        if campaign.is_none() {
+                            let _ =
+                                host.play_selected_fight_music(usize::from(settings.music_track));
+                        }
                     }
                     host.set_damage_level(settings.damage_level);
                     host.set_player_one_key_map(startup.preferences().player_one_keys);
                 }
                 StartupEvent::JoinPlayer { player: 2 } => {
+                    campaign = None;
+                    cpu_opponent_active = false;
                     fight.configure_cpu_opponent(false, startup.settings().difficulty);
                     eprintln!("[arcade] Player 2 joined; CPU disabled");
                 }
                 StartupEvent::PreferencesChanged => {
                     let preferences = startup.preferences();
+                    host.set_arcade_settings(preferences.settings);
+                    host.set_credits(startup.credits());
+                    if !options.no_audio {
+                        if startup.phase() == StartupPhase::Config {
+                            let _ = host.stop_menu_audio();
+                            if preferences.settings.sound_test > 0 {
+                                let _ = host.play_sound_test(preferences.settings.sound_test);
+                            }
+                            let _ = host.play_selected_fight_music(usize::from(
+                                preferences.settings.music_track,
+                            ));
+                        } else if let Some(root) = options.game_root.as_ref() {
+                            let _ = host.start_menu_audio(root);
+                        }
+                    }
                     if let Err(error) = std::fs::write(&preferences_path, preferences.to_json()) {
                         eprintln!(
                             "[settings] could not save {}: {error}",
                             preferences_path.display()
                         );
                     }
+                    match_settings = preferences.settings;
                     host.set_player_one_key_map(preferences.player_one_keys);
                     host.set_damage_level(preferences.settings.damage_level);
                     eprintln!("[settings] preferences saved");
                 }
                 StartupEvent::None if startup.phase() == StartupPhase::Fighting => {
-                    host.tick_fight(&mut fight, inputs);
+                    if let Some(run) = campaign.as_mut() {
+                        match run.state() {
+                            CampaignRuntimeState::Adversaries => {
+                                if run.tick_adversaries(inputs[0].was_pressed(Button(0))) {
+                                    let phase = run.current_phase().unwrap_or(1);
+                                    let opponent = run.current_opponent().unwrap_or(1);
+                                    let path = options.game_root.as_ref().map(|root| {
+                                        root.join(format!("Dados/Lutadores/C{opponent:02}.ini"))
+                                    });
+                                    let stage = path
+                                        .as_ref()
+                                        .ok_or_else(|| "campaign requires --game-root".to_owned())
+                                        .and_then(|path| {
+                                            std::fs::read_to_string(path).map_err(|error| {
+                                                format!("{}: {error}", path.display())
+                                            })
+                                        })
+                                        .and_then(|ini| CampaignStageProfile::from_ini(&ini))
+                                        .and_then(|profile| {
+                                            fight.choose_campaign_stage(profile, phase, 13, None)
+                                        });
+                                    match stage {
+                                        Ok(stage) => {
+                                            if let Err(error) = fight
+                                                .load_campaign_opponent(run.plan(), &run.progress())
+                                            {
+                                                eprintln!("[campaign] opponent load: {error}");
+                                            } else {
+                                                fight.reset_for_campaign_fight();
+                                                configure_fight(
+                                                    &mut fight,
+                                                    true,
+                                                    match_settings.difficulty,
+                                                    match_settings.power_mode,
+                                                );
+                                                if let Some(root) = options.game_root.as_ref() {
+                                                    for line in host.load_original_game(
+                                                        root,
+                                                        stage.stage,
+                                                        [player_character, opponent],
+                                                        &mut fight,
+                                                        !options.no_audio,
+                                                    ) {
+                                                        eprintln!("[campaign] {line}");
+                                                    }
+                                                }
+                                                if !options.no_audio {
+                                                    let _ = host.stop_menu_audio();
+                                                    let _ = host.play_selected_fight_music(
+                                                        usize::from(match_settings.music_track),
+                                                    );
+                                                }
+                                                match run.begin_fight(stage) {
+                                                    Ok(_) => {
+                                                        rounds = Some(ArcadeRoundProgress::new(
+                                                            match_settings,
+                                                        ));
+                                                        eprintln!("[campaign] phase {phase}/8, C{opponent:02}, stage {}", stage.stage);
+                                                    }
+                                                    Err(error) => {
+                                                        eprintln!("[campaign] transition: {error}")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        Err(error) => {
+                                            eprintln!("[campaign] stage selection: {error}")
+                                        }
+                                    }
+                                }
+                            }
+                            CampaignRuntimeState::Fighting => {
+                                host.tick_fight(&mut fight, inputs);
+                                let timeout =
+                                    rounds.as_mut().is_some_and(ArcadeRoundProgress::tick);
+                                let p1 = fight.state.fighters[0].health;
+                                let p2 = fight.state.fighters[1].health;
+                                let winner = if p1 <= 0.0 && p2 <= 0.0 {
+                                    Some(None)
+                                } else if p2 <= 0.0 {
+                                    Some(Some(0))
+                                } else if p1 <= 0.0 {
+                                    Some(Some(1))
+                                } else if timeout {
+                                    Some(if p1 > p2 {
+                                        Some(0)
+                                    } else if p2 > p1 {
+                                        Some(1)
+                                    } else {
+                                        None
+                                    })
+                                } else {
+                                    None
+                                };
+                                if let Some(winner) = winner {
+                                    let advance =
+                                        rounds.as_mut().map(|rounds| rounds.record_result(winner));
+                                    match advance {
+                                        Some(RoundAdvance::Continue { .. })
+                                        | Some(RoundAdvance::Draw { .. }) => {
+                                            fight.reset_for_campaign_fight();
+                                            configure_fight(
+                                                &mut fight,
+                                                true,
+                                                match_settings.difficulty,
+                                                match_settings.power_mode,
+                                            );
+                                        }
+                                        Some(RoundAdvance::MatchWon { winner: 0 }) => {
+                                            let result = run.record_victory();
+                                            if result == CampaignAdvance::Completed
+                                                && !options.no_audio
+                                            {
+                                                let _ =
+                                                    host.play_victory_voice(player_character, 1);
+                                            }
+                                            match result {
+                                                CampaignAdvance::NextPhase(phase) => {
+                                                    rounds = Some(ArcadeRoundProgress::new(
+                                                        match_settings,
+                                                    ));
+                                                    eprintln!(
+                                                        "[campaign] victory; next phase {phase}/8"
+                                                    );
+                                                }
+                                                CampaignAdvance::Completed => {
+                                                    if !options.no_audio {
+                                                        let _ = host.stop_original_music();
+                                                    }
+                                                    eprintln!(
+                                                        "[campaign] completed all eight fights!"
+                                                    );
+                                                }
+                                                _ => {}
+                                            }
+                                        }
+                                        Some(RoundAdvance::MatchWon { winner: 1 }) => {
+                                            run.record_defeat();
+                                            if !options.no_audio {
+                                                let _ = host.stop_original_music();
+                                            }
+                                            eprintln!(
+                                                "[campaign] defeat in phase {}",
+                                                run.current_phase().unwrap_or(0)
+                                            );
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            CampaignRuntimeState::Completed | CampaignRuntimeState::Defeated => {}
+                        }
+                    } else if standalone_winner.is_none() {
+                        host.tick_fight(&mut fight, inputs);
+                        let timeout = rounds.as_mut().is_some_and(ArcadeRoundProgress::tick);
+                        let p1 = fight.state.fighters[0].health;
+                        let p2 = fight.state.fighters[1].health;
+                        let winner = if p1 <= 0.0 && p2 <= 0.0 {
+                            Some(None)
+                        } else if p2 <= 0.0 {
+                            Some(Some(0))
+                        } else if p1 <= 0.0 {
+                            Some(Some(1))
+                        } else if timeout {
+                            Some(if p1 > p2 {
+                                Some(0)
+                            } else if p2 > p1 {
+                                Some(1)
+                            } else {
+                                None
+                            })
+                        } else {
+                            None
+                        };
+                        if let Some(winner) = winner {
+                            let result = rounds
+                                .as_mut()
+                                .map(|progress| progress.record_result(winner));
+                            match result {
+                                Some(RoundAdvance::Continue { round, winner }) => {
+                                    fight.reset_for_campaign_fight();
+                                    configure_fight(
+                                        &mut fight,
+                                        cpu_opponent_active,
+                                        match_settings.difficulty,
+                                        match_settings.power_mode,
+                                    );
+                                    eprintln!(
+                                        "[rounds] round {round}; player {} leads",
+                                        winner + 1
+                                    );
+                                }
+                                Some(RoundAdvance::Draw { next_round }) => {
+                                    fight.reset_for_campaign_fight();
+                                    configure_fight(
+                                        &mut fight,
+                                        cpu_opponent_active,
+                                        match_settings.difficulty,
+                                        match_settings.power_mode,
+                                    );
+                                    eprintln!("[rounds] draw; round {next_round}");
+                                }
+                                Some(RoundAdvance::MatchWon { winner }) => {
+                                    standalone_winner = Some(winner);
+                                    if !options.no_audio {
+                                        let _ = host.stop_original_music();
+                                        if winner == 0 {
+                                            let _ = host.play_victory_voice(player_character, 1);
+                                        }
+                                    }
+                                    eprintln!(
+                                        "[rounds] match complete; player {} wins",
+                                        winner + 1
+                                    );
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
                 }
                 StartupEvent::None => {}
                 StartupEvent::JoinPlayer { player } => {
@@ -118,8 +408,19 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         if startup.phase() == StartupPhase::Fighting {
-            host.update_camera(&mut fight);
-            host.render_fight(&fight, &[])?;
+            if let Some(run) = campaign.as_ref() {
+                if run.state() != CampaignRuntimeState::Fighting {
+                    host.render_campaign(run, player_character)?;
+                } else {
+                    host.update_camera(&mut fight);
+                    host.render_fight(&fight, &[])?;
+                }
+            } else if let Some(winner) = standalone_winner {
+                host.render_match_result(winner)?;
+            } else {
+                host.update_camera(&mut fight);
+                host.render_fight(&fight, &[])?;
+            }
         } else {
             host.render_startup(&startup.screen())?;
         }

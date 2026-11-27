@@ -25,6 +25,7 @@ struct AudioBank {
 #[derive(Debug, Clone)]
 pub struct PascalAudioLayout {
     pub effects: AudioBankId,
+    pub menu_music: AudioBankId,
     pub music: AudioBankId,
     pub victory: AudioBankId,
     pub fight_music_count: usize,
@@ -177,15 +178,19 @@ impl FoundationAudioOutput {
             let _ = self.add_empty_slot(effects);
         }
 
-        let music = self.create_bank(true);
+        let menu_bank = self.create_bank(true);
         let menu_path = rooted_path(&root, &menu_music);
         let _ = self.add_wav(
             host,
-            music,
+            menu_bank,
             &menu_path,
             volume_for_path(&menu_path, &volumes),
             &mut warnings,
         );
+
+        // Keep fight track slot zero independent from the menu's embedded loop.
+        let music = self.create_bank(true);
+        let _ = self.add_empty_slot(music);
 
         let mut fight_music_count = 0;
         for number in 1..=255 {
@@ -222,6 +227,7 @@ impl FoundationAudioOutput {
 
         PascalAudioLayout {
             effects,
+            menu_music: menu_bank,
             music,
             victory,
             fight_music_count,
@@ -273,6 +279,14 @@ impl FoundationAudioOutput {
         }
         let _ = fight.take_pending_sound();
         self.play(host, layout.effects, slot)
+    }
+
+    pub fn play_menu_music(&self, host: &mut Sdl3Host, layout: &PascalAudioLayout) -> bool {
+        self.play(host, layout.menu_music, 0)
+    }
+
+    pub fn stop_menu_music(&self, host: &mut Sdl3Host, layout: &PascalAudioLayout) -> bool {
+        self.stop(host, layout.menu_music, 0)
     }
 
     pub fn play_music(&self, host: &mut Sdl3Host, layout: &PascalAudioLayout) -> bool {
