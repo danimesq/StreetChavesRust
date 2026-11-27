@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG="$ROOT/FoundationWebBuild.toml"
 GENERATED="$ROOT/.FoundationWebBuild.generated.toml"
-FOUNDATION_MANIFEST="\${FOUNDATION_MANIFEST:-$ROOT/../RustMultiConsoleFoundation/Cargo.toml}"
+FOUNDATION_MANIFEST="${FOUNDATION_MANIFEST:-$ROOT/../RustMultiConsoleFoundation/Cargo.toml}"
 
 cleanup() { rm -f "$GENERATED"; }
 trap cleanup EXIT
@@ -116,6 +116,8 @@ for package_dir in package_dirs:
 output_path.write_text(text, encoding="utf-8")
 print(f"Added {added} resources from {len(package_dirs)} custom character package(s).")
 PY
+
+cd "$ROOT"
 
 cargo run \
   --manifest-path "$FOUNDATION_MANIFEST" \
