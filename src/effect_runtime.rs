@@ -405,8 +405,8 @@ impl EffectArena {
 
                 // Generic horizontal movement follows animation and precedes the draw snapshot.
                 if !frozen {
+                    effect.y += f64::from(effect.vertical_velocity);
                     if effect.gravity {
-                        effect.y += f64::from(effect.vertical_velocity);
                         effect.vertical_velocity = effect.vertical_velocity.saturating_add(4);
                     }
                     if effect.count_limit > 0 {
@@ -482,9 +482,11 @@ mod catalog_tests {
         let mut arena = EffectArena::default();
         let mut rng = ZeroRng;
         for effect_type in 1..=40 {
-            let needs_ab = arena.catalog.definition(effect_type).unwrap()
-                .iter().any(|(key, _)| key.ends_with(".A") || key.ends_with(".B"));
-            let slot = arena.spawn(effect_type, needs_ab.then_some('A'), 1, EFFECT_SIDE_RIGHT, 100.0, 100.0, &mut rng)
+            let definition = arena.catalog.definition(effect_type).unwrap();
+            let has_a = definition.iter().any(|(key, _)| key.ends_with(".A"));
+            let has_b = definition.iter().any(|(key, _)| key.ends_with(".B"));
+            let variant = if has_a { Some('A') } else if has_b { Some('B') } else { None };
+            let slot = arena.spawn(effect_type, variant, 1, EFFECT_SIDE_RIGHT, 100.0, 100.0, &mut rng)
                 .unwrap_or_else(|error| panic!("Efeito{effect_type}: {error}"));
             assert!(slot.is_some());
             arena.remove(slot.unwrap());
