@@ -170,6 +170,7 @@ impl StreetChavesWebRuntime {
             .and_then(|value| u8::try_from(value).ok())
             .ok_or_else(|| JsValue::from_str("custom fighter manifest has no valid runtime_id"))?;
         self.custom_selections[player] = Some(package_id.to_owned());
+        if player == 0 { self.player_character = runtime_id; }
         if self.fight.state.fighters[player].character_id != runtime_id {
             self.fight.select_custom_character(player, package_id).map_err(js_error)?;
         }
@@ -278,6 +279,7 @@ impl StreetChavesWebRuntime {
                                 if let Err(error) = self.fight.select_custom_character(player, &package_id) {
                                     self.diagnostics.push(format!("custom fighter selection: {error}"));
                                 } else if let Some(runtime_id) = self.fight.state.fighters.get(player).map(|fighter| fighter.character_id) {
+                                    if player == 0 { self.player_character = runtime_id; }
                                     if let Err(error) = self.register_selected_custom_sprite(player, &package_id, runtime_id) {
                                         self.diagnostics.push(error.as_string().unwrap_or_else(|| "custom sprite registration failed".to_owned()));
                                     }
