@@ -2726,6 +2726,21 @@ impl FightSimulation {
             ],
         };
         report.effects = self.state.tick_effects(effect_context);
+        // Allocate source-requested child effects only after the current ordered
+        // arena traversal completes, preserving first-free-slot allocation order.
+        for request in report.effects.spawn_requests.iter().copied() {
+            if let Err(error) = self.state.spawn_effect(
+                request.effect_type,
+                request.variant,
+                request.owner,
+                request.owner_facing,
+                request.x,
+                request.y,
+                &mut self.rng,
+            ) {
+                report.errors.push(format!("Pascal effect child allocation: {error}"));
+            }
+        }
 
         self.state.tick_index = self.state.tick_index.saturating_add(1);
         self.last_report = report;
