@@ -25,6 +25,7 @@ try {
   audioButton.addEventListener("click", async () => {
     try {
       await game.resume_audio();
+      await game.play_menu_music();
       audioButton.disabled = true;
       audioButton.textContent = "Audio enabled";
     } catch (error) {
