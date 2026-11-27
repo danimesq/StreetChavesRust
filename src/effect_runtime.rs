@@ -416,9 +416,8 @@ impl EffectArena {
         if has_variant_fields && !matches!(source_variant, Some('A' | 'B')) {
             return Err(EffectSpawnError::InvalidVariant { effect_type });
         }
-        if source_variant.is_some() && !has_variant_fields {
-            return Err(EffectSpawnError::InvalidVariant { effect_type });
-        }
+        // Some Pascal CriaEfeito calls pass a variant marker even when that
+        // effect's INI has no .A/.B fields (notably Efeito27 -> Efeito28).
         for (raw_key, value) in definition {
             if raw_key.starts_with("Anim") {
                 continue;
