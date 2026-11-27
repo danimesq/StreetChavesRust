@@ -52,6 +52,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     host.set_player_one_key_map(startup.preferences().player_one_keys);
     host.set_damage_level(startup.settings().damage_level);
 
+    if !options.no_audio {
+        if let Some(root) = options.game_root.as_ref() {
+            if host.start_menu_audio(root) {
+                eprintln!("[audio] original menu music ready");
+            }
+        }
+    }
+
     let mut campaign: Option<CampaignRuntime> = None;
     let mut rounds: Option<ArcadeRoundProgress> = None;
     let mut cpu_opponent_active = false;
@@ -72,6 +80,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     cpu_opponent,
                 } => {
                     let settings = startup.settings();
+                    host.set_arcade_settings(settings);
+                    host.set_credits(startup.credits());
                     match_settings = settings;
                     player_character = characters[0];
                     cpu_opponent_active = cpu_opponent;
@@ -125,6 +135,18 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 StartupEvent::PreferencesChanged => {
                     let preferences = startup.preferences();
+                    host.set_arcade_settings(preferences.settings);
+                    host.set_credits(startup.credits());
+                    if !options.no_audio {
+                        if startup.phase() == StartupPhase::Config {
+                            if preferences.settings.sound_test > 0 {
+                                let _ = host.play_sound_test(preferences.settings.sound_test);
+                            }
+                            let _ = host.play_selected_fight_music(usize::from(preferences.settings.music_track));
+                        } else if let Some(root) = options.game_root.as_ref() {
+                            let _ = host.start_menu_audio(root);
+                        }
+                    }
                     if let Err(error) = std::fs::write(&preferences_path, preferences.to_json()) {
                         eprintln!(
                             "[settings] could not save {}: {error}",
@@ -195,6 +217,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                                         }
                                         Some(RoundAdvance::MatchWon { winner: 0 }) => {
                                             let result = run.record_victory();
+                                            if result == CampaignAdvance::Completed && !options.no_audio {
+                                                let _ = host.play_victory_voice(player_character, 1);
+                                            }
                                             match result {
                                                 CampaignAdvance::NextPhase(phase) => {
                                                     rounds = Some(ArcadeRoundProgress::new(match_settings));
