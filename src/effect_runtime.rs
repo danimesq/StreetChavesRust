@@ -775,7 +775,9 @@ mod catalog_tests {
     fn type27_emits_three_type28_children_in_pascal_order_at_its_count_limit() {
         let mut arena = EffectArena::default();
         let mut rng = ZeroRng;
-        arena.spawn(27, Some('A'), 1, EFFECT_SIDE_RIGHT, 100.0, 200.0, &mut rng).unwrap();
+        arena
+            .spawn(27, Some('A'), 1, EFFECT_SIDE_RIGHT, 100.0, 200.0, &mut rng)
+            .unwrap();
         let mut result = EffectTickResult::default();
         for _ in 0..22 {
             result = arena.advance(EffectTickContext::default());
@@ -786,7 +788,14 @@ mod catalog_tests {
         assert_eq!(result.spawn_requests[0].y, 220.0);
         assert_eq!(result.spawn_requests[1].x, 130.0);
         assert_eq!(result.spawn_requests[2].y, 160.0);
-        assert_eq!(result.spawn_requests.iter().map(|request| request.variant).collect::<Vec<_>>(), vec![Some('A'); 3]);
+        assert_eq!(
+            result
+                .spawn_requests
+                .iter()
+                .map(|request| request.variant)
+                .collect::<Vec<_>>(),
+            vec![Some('A'); 3]
+        );
         assert_eq!(arena.active_count(), 0);
     }
 
