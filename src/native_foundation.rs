@@ -76,6 +76,14 @@ pub struct FightPresentationHost<H: RuntimeHost + TextureRegistrar> {
     web_effect_bank_len: usize,
     #[cfg(target_arch = "wasm32")]
     web_music: Option<AudioClipId>,
+    #[cfg(target_arch = "wasm32")]
+    web_menu_music: Option<AudioClipId>,
+    #[cfg(target_arch = "wasm32")]
+    web_music_tracks: HashMap<u8, AudioClipId>,
+    #[cfg(target_arch = "wasm32")]
+    web_victory_clips: HashMap<(u8, u8), AudioClipId>,
+    #[cfg(target_arch = "wasm32")]
+    web_active_music: Option<AudioClipId>,
 }
 
 /// Native public host name retained for existing consumers.
@@ -410,6 +418,14 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
             web_effect_bank_len: 0,
             #[cfg(target_arch = "wasm32")]
             web_music: None,
+            #[cfg(target_arch = "wasm32")]
+            web_menu_music: None,
+            #[cfg(target_arch = "wasm32")]
+            web_music_tracks: HashMap::new(),
+            #[cfg(target_arch = "wasm32")]
+            web_victory_clips: HashMap::new(),
+            #[cfg(target_arch = "wasm32")]
+            web_active_music: None,
         })
     }
 
@@ -614,32 +630,89 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                 self.web_effect_bank_len = usize::from(slot) + 1;
             }
         }
-        self.web_music = assets.audio_clips.get("fight_music").copied();
-        if self.web_music.is_some() {
-            messages.push("loaded web fight music".to_owned());
+        self.web_menu_music = assets.audio_clips.get("menu_music").copied();
+        self.web_music_tracks.clear();
+        if let Some(track) = assets.audio_clips.get("fight_music").copied() {
+            self.web_music_tracks.insert(1, track);
         }
+        for number in 2..=6_u8 {
+            let key = format!("fight_music_{number:03}");
+            if let Some(track) = assets.audio_clips.get(&key).copied() {
+                self.web_music_tracks.insert(number, track);
+            }
+        }
+        self.web_music = self.web_music_tracks.get(&1).copied();
+        self.web_victory_clips.clear();
+        for character in 1..=16_u8 {
+            for variant in 1..=2_u8 {
+                let suffix = if variant == 1 { "a" } else { "b" };
+                let key = format!("victory_voice_{character:02}_{suffix}");
+                if let Some(clip) = assets.audio_clips.get(&key).copied() {
+                    self.web_victory_clips.insert((character, variant), clip);
+                }
+            }
+        }
+        messages.push(format!(
+            "loaded web audio: {} fight tracks, {} victory voices, menu={}",
+            self.web_music_tracks.len(),
+            self.web_victory_clips.len(),
+            self.web_menu_music.is_some()
+        ));
 
         self.diagnostics.extend(messages.iter().cloned());
         messages
     }
 
-    /// Start the configured web fight track after the host AudioContext is resumed.
+    /// Start original embedded menu music once WebAudio has been unlocked.
+    #[cfg(target_arch = "wasm32")]
+    pub fn play_web_menu_music(&mut self) -> Result<bool, RuntimeError> {
+        let Some(clip) = self.web_menu_music else { return Ok(false); };
+        self.host.audio(&AudioRequest::PlayClip { clip, looped: true })?;
+        self.web_active_music = Some(clip);
+        Ok(true)
+    }
+
+    /// Start a numbered source fight track. Zero deliberately means silence.
+    #[cfg(target_arch = "wasm32")]
+    pub fn play_web_music_track(&mut self, number: u8) -> Result<bool, RuntimeError> {
+        if let Some(active) = self.web_active_music.take() {
+            self.host.audio(&AudioRequest::StopClip { clip: active })?;
+        }
+        if number == 0 { return Ok(true); }
+        let Some(clip) = self.web_music_tracks.get(&number).copied() else { return Ok(false); };
+        self.host.audio(&AudioRequest::PlayClip { clip, looped: true })?;
+        self.web_active_music = Some(clip);
+        Ok(true)
+    }
+
+    /// Compatibility entry point: source fight track 1.
     #[cfg(target_arch = "wasm32")]
     pub fn play_web_music(&mut self) -> Result<bool, RuntimeError> {
-        let Some(clip) = self.web_music else {
-            return Ok(false);
-        };
-        self.host
-            .audio(&AudioRequest::PlayClip { clip, looped: true })?;
-        Ok(true)
+        self.play_web_music_track(1)
     }
 
     #[cfg(target_arch = "wasm32")]
     pub fn stop_web_music(&mut self) -> Result<bool, RuntimeError> {
-        let Some(clip) = self.web_music else {
+        let Some(clip) = self.web_active_music.take() else { return Ok(false); };
+        self.host.audio(&AudioRequest::StopClip { clip })?;
+        Ok(true)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn play_web_sound_effect(&mut self, one_based_slot: u8) -> Result<bool, RuntimeError> {
+        let Some(clip) = self.web_effect_clips.get(&u16::from(one_based_slot)).copied() else {
             return Ok(false);
         };
-        self.host.audio(&AudioRequest::StopClip { clip })?;
+        self.host.audio(&AudioRequest::PlayClip { clip, looped: false })?;
+        Ok(true)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn play_web_victory_voice(&mut self, character_id: u8, variant: u8) -> Result<bool, RuntimeError> {
+        let Some(clip) = self.web_victory_clips.get(&(character_id, variant)).copied() else {
+            return Ok(false);
+        };
+        self.host.audio(&AudioRequest::PlayClip { clip, looped: false })?;
         Ok(true)
     }
 
