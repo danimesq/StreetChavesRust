@@ -92,7 +92,8 @@ jobs:
         run: cargo check --target wasm32-unknown-unknown --features web-foundation
       - name: Check the Foundation source-to-Web publish pipeline
         run: |
-          git clone --depth 1 --branch foundation-web-build-pipeline https://github.com/danimesq/RustMultiConsoleFoundation.git ../RustMultiConsoleFoundation
+          git clone --depth 1 --branch audio-worklet-deterministic-pcm-mixer https://github.com/danimesq/RustMultiConsoleFoundation.git ../RustMultiConsoleFoundation
+          node --test ../RustMultiConsoleFoundation/crates/foundation-runtime/tests/audio_worklet.test.mjs
           wasm_bindgen_version="$(cargo tree -p street-chaves-rust --target wasm32-unknown-unknown --prefix none -i wasm-bindgen | sed -n 's/^wasm-bindgen v//p' | head -n 1)"
           test -n "$wasm_bindgen_version"
           cargo install wasm-bindgen-cli --version "$wasm_bindgen_version" --locked
