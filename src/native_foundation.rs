@@ -65,6 +65,8 @@ pub struct FightPresentationHost<H: RuntimeHost + TextureRegistrar> {
     stage_size: (u32, u32),
     camera_max_x: i32,
     damage_level: f64,
+    arcade_settings: ArcadeSettings,
+    credits: u8,
     diagnostics: Vec<String>,
     #[cfg(not(target_arch = "wasm32"))]
     audio: FoundationAudioOutput,
@@ -382,6 +384,19 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         }
     }
 
+    pub fn set_arcade_settings(&mut self, settings: ArcadeSettings) {
+        self.arcade_settings = settings;
+        self.damage_level = settings.damage_level.clamp(0.3, 2.0);
+    }
+
+    pub fn set_credits(&mut self, credits: u8) {
+        self.credits = credits;
+    }
+
+    pub fn arcade_settings(&self) -> ArcadeSettings {
+        self.arcade_settings
+    }
+
     /// Construct the shared game host around any Foundation runtime adapter.
     pub fn with_host(host: H, config: RuntimeConfig) -> Result<Self, RuntimeError> {
         if config.width == 0 || config.height == 0 {
@@ -407,6 +422,8 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
             stage_size: (config.width.saturating_mul(2), config.height),
             camera_max_x: config.width as i32,
             damage_level: 0.9,
+            arcade_settings: ArcadeSettings::default(),
+            credits: 0,
             diagnostics: Vec::new(),
             #[cfg(not(target_arch = "wasm32"))]
             audio: FoundationAudioOutput::new(),
@@ -795,6 +812,8 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
     }
 
     pub fn render_startup(&mut self, screen: &StartupScreen) -> Result<(), RuntimeError> {
+        self.set_arcade_settings(screen.settings);
+        self.set_credits(screen.credits);
         let mut commands = Vec::with_capacity(500);
         commands.push(DrawCommand::Clear {
             rgba: [12, 17, 32, 255],
@@ -825,7 +844,7 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                         &mut commands,
                         20,
                         y,
-                        ArcadeSettings::option_name(option),
+                        screen.settings.localized_option_name(option),
                         if screen.menu_cursor == option {
                             [255, 231, 163, 255]
                         } else {
@@ -837,7 +856,7 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                         &mut commands,
                         290,
                         y,
-                        &screen.settings.value_label(option),
+                        &screen.settings.localized_value_label(option),
                         [255, 255, 255, 255],
                         1,
                     );
@@ -1244,8 +1263,10 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
             self.logical_height,
             frame,
             &self.fighter_names,
+            self.arcade_settings,
+            self.credits,
         );
-        if frame.screen_flash > 0 {
+        if self.arcade_settings.flash && frame.screen_flash > 0 {
             commands.push(DrawCommand::Rect {
                 rect: Rect::new(0, 0, self.logical_width, self.logical_height),
                 rgba: [255, 255, 255, frame.screen_flash.saturating_mul(8)],
@@ -1480,6 +1501,8 @@ fn append_hud(
     height: u32,
     frame: &FightPresentationFrame,
     names: &[String; 2],
+    settings: ArcadeSettings,
+    credits: u8,
 ) {
     const LIFE_MAX: f64 = 125.0;
     const CHARGE_MAX: f64 = 102.0;
@@ -1531,21 +1554,26 @@ fn append_hud(
         [255, 222, 130, 255],
         1,
     );
-    draw_text(
-        commands,
-        width as i32 / 2 - 18,
-        23,
-        &format!("TICK {}", frame.tick_index),
-        [213, 219, 229, 255],
-        1,
-    );
+    if settings.show_level {
+        draw_text(
+            commands,
+            width as i32 / 2 - 20,
+            23,
+            &format!("LEVEL {}", settings.difficulty),
+            [213, 219, 229, 255],
+            1,
+        );
+    }
     commands.push(DrawCommand::Rect {
         rect: Rect::new(0, height.saturating_sub(16) as i32, width, 16),
         rgba: [10, 13, 21, 222],
     });
+    if settings.show_credits {
+        draw_text(commands, 5, height as i32 - 12, &format!("CREDITS {credits}"), [255, 224, 143, 255], 1);
+    }
     draw_text(
         commands,
-        5,
+        92,
         height as i32 - 12,
         "P1 ARROWS Z X C V   P2 WASD R T Y U   ESC QUIT",
         [225, 230, 238, 255],
