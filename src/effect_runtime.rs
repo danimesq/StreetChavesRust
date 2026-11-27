@@ -2,7 +2,7 @@
 //!
 //! The arena follows the Pascal effect-allocation contract: first free slot wins,
 //! type defaults are applied before the next effect tick, and a full arena is a
-//! no-op. This initial slice implements only the C01-used types 2, 7, 8 and 16.
+//! no-op. The ordered catalog below loads all 40 source-defined effect types.
 //! Rendering consumes immutable snapshots; the simulation never draws here.
 
 use crate::pascal_replay::PascalRandomSource;
