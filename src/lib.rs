@@ -21,6 +21,9 @@ pub mod native_foundation;
 /// Arcade credits, F1 settings and persisted P1 physical-key preferences.
 pub mod arcade;
 
+/// Source-derived CHS_ADVERSARIOS campaign order, progression and stage choice.
+pub mod campaign;
+
 /// Platform-neutral opening, title, cabinet menus and fighter-selection state machine.
 pub mod startup_flow;
 
