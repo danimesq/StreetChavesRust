@@ -47,6 +47,7 @@ fn tick_context() -> EffectTickContext {
         hit_stop_active: false,
         camera_x: 0.0,
         camera_y: 0.0,
+        ..EffectTickContext::default()
     }
 }
 
