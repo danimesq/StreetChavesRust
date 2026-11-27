@@ -237,11 +237,13 @@ where
             source: CampaignStageSource::Rare,
         };
     }
-    if let Some(secret) = secret_stage.filter(|stage| *stage != 0) {
-        choice = CampaignStageChoice {
-            stage: secret.clamp(1, stage_count),
-            source: CampaignStageSource::Secret,
-        };
+    if phase < CAMPAIGN_PHASES {
+        if let Some(secret) = secret_stage.filter(|stage| *stage != 0) {
+            choice = CampaignStageChoice {
+                stage: secret.clamp(1, stage_count),
+                source: CampaignStageSource::Secret,
+            };
+        }
     }
     Ok(choice)
 }
@@ -360,6 +362,19 @@ mod tests {
         let choice = choose_campaign_stage(profile, 4, 12, Some(99), &mut rng).unwrap();
         assert_eq!(choice.stage, 12);
         assert_eq!(choice.source, CampaignStageSource::Secret);
+    }
+
+    #[test]
+    fn secret_stage_does_not_override_the_phase_eight_boss_stage() {
+        let profile = CampaignStageProfile {
+            primary_stage: 2,
+            alternative_stage: 3,
+            rare_stage: 4,
+        };
+        let mut rng = SequenceRng::new([1, 1]);
+        let choice = choose_campaign_stage(profile, 8, 12, Some(99), &mut rng).unwrap();
+        assert_eq!(choice.stage, 2);
+        assert_eq!(choice.source, CampaignStageSource::Primary);
     }
 
     #[test]
