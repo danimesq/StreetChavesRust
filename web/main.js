@@ -34,6 +34,39 @@ try {
   });
 
   const canvas = document.querySelector("#street-chaves");
+  const customCharacters = game.list_custom_characters();
+  if (customCharacters.length > 0 && canvas.parentElement) {
+    const roster = document.createElement("div");
+    roster.setAttribute("aria-label", "Custom character roster");
+    roster.style.cssText = "display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;padding:8px;font:14px system-ui";
+    const label = document.createElement("label");
+    label.textContent = "Custom fighter";
+    const select = document.createElement("select");
+    select.style.cssText = "max-width:220px;padding:7px;border-radius:8px";
+    for (const character of customCharacters) {
+      const option = document.createElement("option");
+      option.value = character.id;
+      option.textContent = character.name + " · " + character.id;
+      select.append(option);
+    }
+    for (const [player, caption] of [[0, "Use for P1"], [1, "Use for P2"]]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = caption;
+      button.style.cssText = "padding:7px 10px;border-radius:8px";
+      button.addEventListener("click", () => {
+        try {
+          const runtimeId = game.select_custom_character(player, select.value);
+          report("Selected " + select.value + " for P" + (player + 1) + " (runtime ID " + runtimeId + ").");
+        } catch (error) {
+          report(error);
+        }
+      });
+      roster.append(button);
+    }
+    roster.prepend(label, select);
+    canvas.parentElement.append(roster);
+  }
   const resize = () => {
     const bounds = canvas.getBoundingClientRect();
     game.resize_canvas(
