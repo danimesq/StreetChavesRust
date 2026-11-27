@@ -786,7 +786,7 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
             ));
         }
 
-        self.effect_frames.clear();
+        if self.effect_frames.is_empty() {
         for sprite in 1..=111_u8 {
             let key = format!("effect_sprite_{sprite:03}");
             if let Some(source) = assets.images.get(&key) {
@@ -801,6 +801,7 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                     Err(error) => messages.push(format!("{key}: {error}")),
                 }
             }
+        }
         }
         messages.extend(self.load_web_audio_resources(assets));
 
