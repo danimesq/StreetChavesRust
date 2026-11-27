@@ -5,7 +5,7 @@
 //! events remain in Rust; Foundation owns Canvas 2D, input and WebAudio.
 
 use crate::arcade::{ArcadePreferences, ArcadeRoundProgress, RoundAdvance};
-use crate::campaign::{CampaignAdvance, CampaignProfile, CampaignRuntime, CampaignRuntimeState, CampaignStageProfile, CampaignStageSource};
+use crate::campaign::{CampaignAdvance, CampaignProfile, CampaignRuntime, CampaignRuntimeState, CampaignStageProfile};
 use crate::input::{Button, Direction, InputEvent};
 use crate::chaves_specials::ChavesSpecialContext;
 use crate::combat_runtime::{
@@ -119,6 +119,26 @@ impl StreetChavesWebRuntime {
             .map_err(js_error)
     }
 
+    /// Unlock browser audio and play the embedded original menu track.
+    pub fn play_menu_music(&mut self) -> Result<bool, JsValue> {
+        self.host.play_web_menu_music().map_err(js_error)
+    }
+
+    /// Preview one of the 32 original victory voices after audio unlock.
+    pub fn preview_victory_voice(&mut self, character_id: u8, variant: u8) -> Result<bool, JsValue> {
+        self.host.play_web_victory_voice(character_id, variant).map_err(js_error)
+    }
+
+    /// Preview an F1 sound slot (one-based, zero means no preview).
+    pub fn preview_sound_effect(&mut self, slot: u8) -> Result<bool, JsValue> {
+        self.host.play_web_sound_effect(slot).map_err(js_error)
+    }
+
+    /// Preview the F1 music selector (zero stops music).
+    pub fn preview_music_track(&mut self, track: u8) -> Result<bool, JsValue> {
+        self.host.play_web_music_track(track).map_err(js_error)
+    }
+
     /// Advance all due 28 ms simulation ticks, then render one presentation frame.
     ///
     /// The page should call this from requestAnimationFrame. The frame rate only
@@ -159,8 +179,8 @@ impl StreetChavesWebRuntime {
                             }
                         }
                         if self.campaign.is_none() {
-                            match self.host.play_web_music() {
-                                Ok(true) => self.diagnostics.push("fight music started".to_owned()),
+                            match self.host.play_web_music_track(settings.music_track) {
+                                Ok(true) => self.diagnostics.push(format!("fight music track {} started", settings.music_track)),
                                 Ok(false) => {}
                                 Err(error) => self.diagnostics.push(format!("fight music: {error}")),
                             }
@@ -172,6 +192,8 @@ impl StreetChavesWebRuntime {
                     self.host.set_player_one_key_map(self.startup.preferences().player_one_keys);
                 }
                 StartupEvent::JoinPlayer { player: 2 } => {
+                    self.campaign = None;
+                    self.cpu_opponent = false;
                     self.fight.configure_cpu_opponent(false, self.startup.settings().difficulty);
                     self.diagnostics.push("Player 2 joined; CPU disabled".to_owned());
                 }
@@ -180,6 +202,14 @@ impl StreetChavesWebRuntime {
                     self.host.set_player_one_key_map(preferences.player_one_keys);
                     self.settings = preferences.settings;
                     self.host.set_damage_level(preferences.settings.damage_level);
+                    if let Err(error) = self.host.play_web_music_track(preferences.settings.music_track) {
+                        self.diagnostics.push(format!("music preview: {error}"));
+                    }
+                    if preferences.settings.sound_test > 0 {
+                        if let Err(error) = self.host.play_web_sound_effect(preferences.settings.sound_test) {
+                            self.diagnostics.push(format!("sound preview: {error}"));
+                        }
+                    }
                     self.preferences_dirty = true;
                     self.diagnostics.push("arcade preferences updated".to_owned());
                 }
@@ -211,8 +241,9 @@ impl StreetChavesWebRuntime {
                                                 match campaign.begin_fight(stage) {
                                                     Ok(_) => {
                                                         self.rounds = Some(ArcadeRoundProgress::new(self.settings));
-                                                        match self.host.play_web_music() {
-                                                            Ok(true) => self.diagnostics.push(format!("phase {phase} fight music started")),
+                                                        let track = self.assets.as_ref().map(|assets| stage_music_number(assets, stage.stage, self.settings.music_track)).unwrap_or(self.settings.music_track);
+                                                        match self.host.play_web_music_track(track) {
+                                                            Ok(true) => self.diagnostics.push(format!("phase {phase} fight music {track} started")),
                                                             Ok(false) => {}
                                                             Err(error) => self.diagnostics.push(format!("campaign music: {error}")),
                                                         }
@@ -243,6 +274,9 @@ impl StreetChavesWebRuntime {
                                             configure_fight(&mut self.fight, self.cpu_opponent, self.settings.difficulty, self.settings.power_mode);
                                         }
                                         Some(RoundAdvance::MatchWon { winner: 0 }) => {
+                                            if self.campaign.as_ref().is_some_and(|run| run.current_phase() == Some(8)) {
+                                                let _ = self.host.play_web_victory_voice(self.player_character, 1);
+                                            }
                                             let advance = self.campaign.as_mut().map(CampaignRuntime::record_victory);
                                             if let Some(CampaignAdvance::NextPhase(phase)) = advance {
                                                 self.host.stop_web_music();
@@ -363,6 +397,26 @@ impl StreetChavesWebRuntime {
     pub fn assets_loaded(&self) -> bool {
         self.assets.is_some()
     }
+}
+
+fn stage_music_number(assets: &LoadedWebAssets, stage: u8, fallback: u8) -> u8 {
+    let key = format!("stage_ini_{stage:02}");
+    let Some(source) = assets.data.get(&key).and_then(|bytes| std::str::from_utf8(bytes).ok()) else {
+        return fallback;
+    };
+    let mut section = "";
+    for line in source.lines().map(str::trim) {
+        if line.starts_with('[') && line.ends_with(']') {
+            section = &line[1..line.len() - 1];
+        } else if section.eq_ignore_ascii_case("Geral") {
+            if let Some((key, value)) = line.split_once('=') {
+                if key.trim().eq_ignore_ascii_case("Musica") {
+                    return value.trim().parse::<u8>().unwrap_or(fallback);
+                }
+            }
+        }
+    }
+    fallback
 }
 
 fn configure_fight(
