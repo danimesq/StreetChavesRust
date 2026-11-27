@@ -1,8 +1,7 @@
 //! Arcade cabinet settings, coin accounting and shared-keyboard preferences.
 //!
 //! The menu mirrors the twelve options exposed by the original F1 screen.
-//! Settings that need a future round/HUD/audio subsystem are still persisted,
-//! but are not falsely treated as active gameplay features.
+//! Settings are shared by native and browser runtimes, including round, HUD and audio controls.
 
 use foundation_runtime::{PhysicalKey, PlayerOneKeyMap};
 
@@ -123,6 +122,54 @@ impl ArcadeSettings {
             10 => enabled(self.show_level),
             11 => enabled(self.show_credits),
             _ => String::new(),
+        }
+    }
+
+    /// Language-aware option captions used by the cabinet's original F1 page.
+    pub const fn localized_option_name(self, option: usize) -> &'static str {
+        if self.language == 2 {
+            match option {
+                0 => "NIVEL DE JUEGO", 1 => "TIEMPO DE RONDA", 2 => "PODER",
+                3 => "DANO", 4 => "SANGRE", 5 => "RONDA", 6 => "IDIOMA",
+                7 => "PROBAR SONIDO", 8 => "MUSICA", 9 => "DESTELLO",
+                10 => "MOSTRAR NIVEL", 11 => "MOSTRAR CREDITOS", _ => "",
+            }
+        } else {
+            match option {
+                0 => "NIVEL DE JOGO", 1 => "TEMPO DE ROUND", 2 => "PODER",
+                3 => "DANO", 4 => "SANGUE", 5 => "ROUNDS", 6 => "IDIOMA",
+                7 => "TESTE DE SOM", 8 => "MUSICA", 9 => "FLASH",
+                10 => "MOSTRAR NIVEL", 11 => "MOSTRAR CREDITOS", _ => "",
+            }
+        }
+    }
+
+    /// Localize value labels without mutating the stored numeric F1 settings.
+    pub fn localized_value_label(self, option: usize) -> String {
+        let enabled_label = |value| if self.language == 2 {
+            if value { "SI" } else { "NO" }
+        } else if value { "SIM" } else { "NAO" };
+        match option {
+            1 => match self.round_time {
+                1 => "30 SEG", 2 => "60 SEG", 3 => "90 SEG",
+                _ => if self.language == 2 { "ILIMITADO" } else { "ILIMITADO" },
+            }.to_owned(),
+            2 => match (self.language, self.power_mode) {
+                (_, 1) => "NORMAL", (1, 2) => "P1 MAX", (1, 3) => "P2 MAX",
+                (_, 2) => "J1 MAX", (_, 3) => "J2 MAX", _ => "AMBOS MAX",
+            }.to_owned(),
+            4 => enabled_label(self.blood).to_owned(),
+            6 => if self.language == 2 { "ESPANOL" } else { "PORTUGUES" }.to_owned(),
+            7 => if self.sound_test == 0 {
+                if self.language == 2 { "APAGADO" } else { "DESLIGADO" }.to_owned()
+            } else { self.sound_test.to_string() },
+            8 => if self.music_track == 0 {
+                if self.language == 2 { "SILENCIO" } else { "SILENCIO" }.to_owned()
+            } else { self.music_track.to_string() },
+            9 => enabled_label(self.flash).to_owned(),
+            10 => enabled_label(self.show_level).to_owned(),
+            11 => enabled_label(self.show_credits).to_owned(),
+            _ => self.value_label(option),
         }
     }
 
