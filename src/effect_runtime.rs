@@ -616,10 +616,7 @@ impl EffectArena {
                     if effect.gravity {
                         effect.vertical_velocity = effect.vertical_velocity.saturating_add(4);
                     }
-                    if effect.count_limit > 0
-                        && effect.effect_type != 28
-                        && !matches!(effect.effect_type, 31 | 32)
-                    {
+                    if effect.count_limit > 0 {
                         effect.count = effect.count.saturating_add(1);
                     }
                     match effect.facing {
