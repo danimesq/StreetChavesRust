@@ -146,6 +146,75 @@ impl ArcadeSettings {
     }
 }
 
+
+/// Result of resolving one round in a best-of-N cabinet match.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RoundAdvance {
+    Continue { round: u8, winner: usize },
+    MatchWon { winner: usize },
+    Draw { next_round: u8 },
+    Inactive,
+}
+
+/// Per-match clock and round counter shared by native and browser hosts.
+/// The authoritative simulation cadence is 28 ms, matching the Pascal timer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ArcadeRoundProgress {
+    round_limit_ticks: Option<u32>,
+    elapsed_ticks: u32,
+    rounds_to_win: u8,
+    rounds_won: [u8; 2],
+    round: u8,
+    finished: bool,
+}
+impl ArcadeRoundProgress {
+    pub fn new(settings: ArcadeSettings) -> Self {
+        let seconds = match settings.round_time { 1 => Some(30_u32), 2 => Some(60), 3 => Some(90), _ => None };
+        Self {
+            round_limit_ticks: seconds.map(|value| value.saturating_mul(1000).saturating_add(27) / 28),
+            elapsed_ticks: 0,
+            rounds_to_win: settings.rounds.clamp(1, 3) / 2 + 1,
+            rounds_won: [0; 2],
+            round: 1,
+            finished: false,
+        }
+    }
+    pub fn tick(&mut self) -> bool {
+        if self.finished { return false; }
+        self.elapsed_ticks = self.elapsed_ticks.saturating_add(1);
+        self.round_limit_ticks.is_some_and(|limit| self.elapsed_ticks >= limit)
+    }
+    pub fn elapsed_ticks(&self) -> u32 { self.elapsed_ticks }
+    pub fn round(&self) -> u8 { self.round }
+    pub fn rounds_won(&self) -> [u8; 2] { self.rounds_won }
+    pub fn rounds_to_win(&self) -> u8 { self.rounds_to_win }
+    pub fn remaining_ticks(&self) -> Option<u32> {
+        self.round_limit_ticks.map(|limit| limit.saturating_sub(self.elapsed_ticks))
+    }
+    pub fn is_finished(&self) -> bool { self.finished }
+    pub fn record_result(&mut self, winner: Option<usize>) -> RoundAdvance {
+        if self.finished { return RoundAdvance::Inactive; }
+        match winner {
+            Some(player) if player < 2 => {
+                self.rounds_won[player] = self.rounds_won[player].saturating_add(1);
+                if self.rounds_won[player] >= self.rounds_to_win {
+                    self.finished = true;
+                    RoundAdvance::MatchWon { winner: player }
+                } else {
+                    self.round = self.round.saturating_add(1);
+                    self.elapsed_ticks = 0;
+                    RoundAdvance::Continue { round: self.round, winner: player }
+                }
+            }
+            _ => {
+                self.round = self.round.saturating_add(1);
+                self.elapsed_ticks = 0;
+                RoundAdvance::Draw { next_round: self.round }
+            }
+        }
+    }
+}
+
 fn enabled(value: bool) -> String {
     if value { "ON" } else { "OFF" }.to_owned()
 }
@@ -339,6 +408,30 @@ fn parse_physical_key(label: &str) -> Option<PhysicalKey> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+
+    #[test]
+    fn round_rules_apply_timer_and_best_of_series() {
+        let mut settings = ArcadeSettings::default();
+        settings.round_time = 1;
+        settings.rounds = 3;
+        let mut progress = ArcadeRoundProgress::new(settings);
+        assert_eq!(progress.rounds_to_win(), 2);
+        for _ in 0..(30_000 / 28) { progress.tick(); }
+        assert!(progress.tick());
+        assert_eq!(progress.record_result(Some(0)), RoundAdvance::Continue { round: 2, winner: 0 });
+        assert_eq!(progress.record_result(Some(0)), RoundAdvance::MatchWon { winner: 0 });
+        assert_eq!(progress.record_result(Some(1)), RoundAdvance::Inactive);
+    }
+
+    #[test]
+    fn unlimited_round_setting_has_no_clock_deadline() {
+        let mut settings = ArcadeSettings::default();
+        settings.round_time = 4;
+        let mut progress = ArcadeRoundProgress::new(settings);
+        for _ in 0..100_000 { assert!(!progress.tick()); }
+        assert_eq!(progress.remaining_ticks(), None);
+    }
 
     #[test]
     fn original_game_defaults_are_preserved() {
