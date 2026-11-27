@@ -1,5 +1,6 @@
 //! First concrete, renderer-free fight orchestrator.
 use crate::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome};
+use crate::campaign::{CampaignPlan, CampaignProgress};
 use crate::combat_resolution::{
     resolve_melee_contact, resolve_melee_contact_after_guard_break, CombatResolution,
     CombatResolutionContext,
@@ -754,11 +755,42 @@ impl FightSimulation {
     }
 
     /// Set Pascal Fase (the campaign opponent number, 1 through 8).
-    ///
-    /// StreetChavesRust currently starts at phase 1 because the full campaign
-    /// opponent-order state is still a separate implementation slice.
+    /// The campaign host updates this when a new CHS_ADVERSARIOS entry becomes active.
     pub fn set_cpu_campaign_phase(&mut self, phase: u8) {
         self.cpu_campaign_phase = phase.clamp(1, 8);
+    }
+
+    /// Load the current campaign opponent into P2 and refresh its source-driven AI.
+    ///
+    /// The host still owns win/loss detection, player carry-over and
+    /// CHS_PREPARALUTA presentation/asset setup.
+    pub fn load_campaign_opponent(
+        &mut self,
+        plan: &CampaignPlan,
+        progress: &CampaignProgress,
+    ) -> Result<u8, String> {
+        let phase = progress
+            .phase()
+            .ok_or_else(|| "campaign is already completed or defeated".to_owned())?;
+        let character_id = plan
+            .opponent(phase)
+            .ok_or_else(|| format!("campaign has no opponent for phase {phase}"))?;
+        let (filename, source) = embedded_character_rot_source(character_id)
+            .ok_or_else(|| format!("campaign character C{character_id:02} is not in C01-C15"))?;
+        let command_rules = embedded_character_command_rules(character_id)
+            .map_err(|error| error.to_string())?;
+        let frame_boxes =
+            load_fighter_frame_boxes(character_id).map_err(|error| error.to_string())?;
+        let rot_document =
+            RotDocument::from_str(filename, source).map_err(|error| error.to_string())?;
+
+        self.state.fighters[1].character_id = character_id;
+        self.command_rules[1] = Some(command_rules);
+        self.frame_boxes[1] = Some(frame_boxes);
+        self.cpu_character_rot[1] = Some(rot_document);
+        self.command_recognizers[1] = CommandRecognizer::default();
+        self.cpu_campaign_phase = phase;
+        Ok(character_id)
     }
 
     /// Exact CpuNovo formula from Estado7_Golpes.inc.
@@ -891,6 +923,46 @@ impl FightSimulation {
             recursion_depth: 0,
         };
         host.execute_nested_action(usize::from(jog - 1), command_code)
+    }
+
+    /// Pascal defendergolpe's human branch: hold away to guard standing,
+    /// or away + down to guard low, while an enemy attack/effect can hit.
+    fn execute_human_defense(
+        &mut self,
+        fighter_index: usize,
+        input: InputFrame,
+    ) -> Result<(), String> {
+        let opponent_index = 1 - fighter_index;
+        let fighter = &self.state.fighters[fighter_index];
+        let slot_owner = (fighter_index + 1) as u8;
+        let opponent_attack_active = self.state.fighters[opponent_index].attack_active;
+        let incoming_effect = self.state.effects.instances_in_slot_order().any(|(_, effect)| {
+            effect.effect_type != 0 && effect.can_hit && effect.owner != slot_owner
+        });
+        if !opponent_attack_active && !incoming_effect {
+            return Ok(());
+        }
+
+        let holding_back = match fighter.facing {
+            crate::combat_runtime::SIDE_RIGHT => matches!(
+                input.direction,
+                Direction::Left | Direction::UpLeft | Direction::DownLeft
+            ),
+            crate::combat_runtime::SIDE_LEFT => matches!(
+                input.direction,
+                Direction::Right | Direction::UpRight | Direction::DownRight
+            ),
+            _ => false,
+        };
+        if !holding_back {
+            return Ok(());
+        }
+
+        let holding_down = matches!(
+            input.direction,
+            Direction::Down | Direction::DownLeft | Direction::DownRight
+        );
+        self.execute_cpu_action(fighter_index, if holding_down { 13 } else { 12 })
     }
 
     /// Source-ordered CPU defendergolpe branch for a non-player-controlled slot.
@@ -2530,11 +2602,27 @@ impl FightSimulation {
 
         // Pascal defendergolpe runs after fighter animation updates, before
         // desenhaefeitos advances projectile positions and lifetimes.
-        if self.cpu_opponent_enabled && !self.state.clock_stopped && self.state.screen_flash == 0 {
-            if let Err(error) = self.execute_cpu_defense(1) {
-                report.errors.push(format!(
-                    "Estado7_Golpes.inc [defendergolpe] CPU fighter 2: {error}"
-                ));
+        if !self.state.clock_stopped && self.state.screen_flash == 0 {
+            for fighter_index in 0..2 {
+                if self.cpu_opponent_enabled && fighter_index == 1 {
+                    continue;
+                }
+                if let Err(error) =
+                    self.execute_human_defense(fighter_index, effective_inputs[fighter_index])
+                {
+                    report.errors.push(format!(
+                        "Estado7_Golpes.inc [defendergolpe] human fighter {}: {error}",
+                        fighter_index + 1
+                    ));
+                }
+            }
+
+            if self.cpu_opponent_enabled {
+                if let Err(error) = self.execute_cpu_defense(1) {
+                    report.errors.push(format!(
+                        "Estado7_Golpes.inc [defendergolpe] CPU fighter 2: {error}"
+                    ));
+                }
             }
         }
 
@@ -2640,6 +2728,65 @@ mod rot_runtime_integration_tests {
             },
             2026,
         )
+    }
+
+
+    #[test]
+    fn human_holds_back_to_guard_an_incoming_attack() {
+        let mut fight = simulation();
+        fight.state.fighters[1].attack_active = true;
+        fight.state.fighters[0].facing = crate::combat_runtime::SIDE_RIGHT;
+        let input = InputFrame { direction: Direction::Left, ..InputFrame::default() };
+        fight.execute_human_defense(0, input).unwrap();
+        assert_eq!(fight.state.fighters[0].action_id, ACTION_DEFENDING);
+        assert!(fight.state.fighters[0].defending);
+    }
+
+    #[test]
+    fn human_holds_back_and_down_to_use_low_guard() {
+        let mut fight = simulation();
+        fight.state.fighters[1].attack_active = true;
+        fight.state.fighters[0].facing = crate::combat_runtime::SIDE_RIGHT;
+        let input = InputFrame { direction: Direction::DownLeft, ..InputFrame::default() };
+        fight.execute_human_defense(0, input).unwrap();
+        assert_eq!(fight.state.fighters[0].action_id, ACTION_LOW_DEFENDING);
+        assert!(fight.state.fighters[0].defending);
+    }
+
+    #[test]
+    fn human_guard_uses_the_fighters_facing_for_back_direction() {
+        let mut fight = simulation();
+        fight.state.fighters[1].attack_active = true;
+        fight.state.fighters[0].facing = crate::combat_runtime::SIDE_LEFT;
+        let input = InputFrame { direction: Direction::Right, ..InputFrame::default() };
+        fight.execute_human_defense(0, input).unwrap();
+        assert_eq!(fight.state.fighters[0].action_id, ACTION_DEFENDING);
+    }
+
+    #[test]
+    fn human_guard_requires_an_incoming_attack_or_effect() {
+        let mut fight = simulation();
+        let input = InputFrame { direction: Direction::Left, ..InputFrame::default() };
+        fight.execute_human_defense(0, input).unwrap();
+        assert_eq!(fight.state.fighters[0].action_id, ACTION_IDLE);
+    }
+
+    #[test]
+    fn loading_a_campaign_opponent_updates_the_cpu_phase_and_character_ai() {
+        let mut fight = simulation();
+        fight.configure_cpu_opponent(true, 8);
+        let plan = CampaignPlan {
+            selected_character: 1,
+            opponents: [2, 3, 4, 5, 6, 7, 8, 15],
+        };
+        let mut progress = CampaignProgress::new();
+        for _ in 0..6 {
+            progress.record_victory();
+        }
+        assert_eq!(fight.load_campaign_opponent(&plan, &progress).unwrap(), 8);
+        assert_eq!(fight.cpu_campaign_phase, 7);
+        assert_eq!(fight.state.fighters[1].character_id, 8);
+        assert!((fight.cpu_probability_factor() - 0.9).abs() < 1e-10);
     }
 
     #[test]
