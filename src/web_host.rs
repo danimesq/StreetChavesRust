@@ -16,7 +16,8 @@ use crate::native_foundation::WebFightHost;
 use crate::startup_flow::{StartupEvent, StartupFlow, StartupPhase};
 use foundation_runtime::web::LoadedWebAssets;
 use foundation_runtime::RuntimeConfig;
-use js_sys::Array;
+use js_sys::{Array, Object, Reflect};
+use crate::custom_character::{CustomCharacterPackage, PackageFile};
 use wasm_bindgen::prelude::*;
 
 const LOGICAL_WIDTH: u32 = 400;
@@ -37,6 +38,8 @@ pub struct StreetChavesWebRuntime {
     cpu_opponent: bool,
     player_character: u8,
     settings: crate::arcade::ArcadeSettings,
+    custom_packages: Vec<CustomCharacterPackage>,
+    custom_selections: [Option<String>; 2],
 }
 
 #[wasm_bindgen]
@@ -68,6 +71,8 @@ impl StreetChavesWebRuntime {
             cpu_opponent: false,
             player_character: 1,
             settings: crate::arcade::ArcadeSettings::default(),
+            custom_packages: Vec::new(),
+            custom_selections: [None, None],
         })
     }
 
@@ -82,6 +87,20 @@ impl StreetChavesWebRuntime {
             .map_err(js_error)?;
         let count = assets.textures.len() + assets.audio_clips.len() + assets.data.len();
         self.diagnostics.extend(self.host.load_web_audio_resources(&assets));
+        let (packages, package_messages) = discover_custom_character_packages(&assets);
+        self.diagnostics.extend(package_messages);
+        self.custom_packages = packages;
+        for package in self.custom_packages.clone() {
+            match self.fight.register_custom_character_package(package.clone()) {
+                Ok(runtime_id) => self.diagnostics.push(format!(
+                    "registered Web custom fighter {} as runtime ID {runtime_id}",
+                    package.manifest.id
+                )),
+                Err(error) => self.diagnostics.push(format!(
+                    "custom fighter {}: {error}", package.manifest.id
+                )),
+            }
+        }
         self.assets = Some(assets);
         self.diagnostics
             .push(format!("loaded {count} web package resources"));
@@ -118,6 +137,88 @@ impl StreetChavesWebRuntime {
             .resume_audio()
             .await
             .map_err(js_error)
+    }
+
+    /// Return discovered packages for the optional browser roster selector.
+    pub fn list_custom_characters(&self) -> Result<Array, JsValue> {
+        let output = Array::new();
+        for package in &self.custom_packages {
+            let item = Object::new();
+            Reflect::set(&item, &JsValue::from_str("id"), &JsValue::from_str(&package.manifest.id))?;
+            Reflect::set(&item, &JsValue::from_str("name"), &JsValue::from_str(&package.manifest.display_name))?;
+            Reflect::set(&item, &JsValue::from_str("version"), &JsValue::from_str(&package.manifest.version))?;
+            let runtime_id = package.manifest.fighter.get("runtime_id").and_then(serde_json::Value::as_u64).unwrap_or(0);
+            Reflect::set(&item, &JsValue::from_str("runtime_id"), &JsValue::from_f64(runtime_id as f64))?;
+            output.push(&item);
+        }
+        Ok(output)
+    }
+
+    /// Select a manifest-installed custom fighter for P1 or P2.
+    /// The selection is retained across the next character-select transition.
+    pub fn select_custom_character(&mut self, player: usize, package_id: &str) -> Result<u8, JsValue> {
+        if player >= 2 {
+            return Err(JsValue::from_str("player slot must be 0 or 1"));
+        }
+        let package = self.custom_packages.iter()
+            .find(|package| package.manifest.id == package_id)
+            .ok_or_else(|| JsValue::from_str("custom character package was not found in the Web manifest"))?;
+        let runtime_id = package.manifest.fighter.get("runtime_id")
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|value| u8::try_from(value).ok())
+            .ok_or_else(|| JsValue::from_str("custom fighter manifest has no valid runtime_id"))?;
+        self.custom_selections[player] = Some(package_id.to_owned());
+        if self.fight.state.fighters[player].character_id != runtime_id {
+            self.fight.select_custom_character(player, package_id).map_err(js_error)?;
+        }
+        self.register_selected_custom_sprite(player, package_id, runtime_id)?;
+        Ok(runtime_id)
+    }
+
+    fn register_selected_custom_sprite(
+        &mut self,
+        player: usize,
+        package_id: &str,
+        runtime_id: u8,
+    ) -> Result<(), JsValue> {
+        let package = self.custom_packages.iter()
+            .find(|package| package.manifest.id == package_id)
+            .ok_or_else(|| JsValue::from_str("custom package disappeared"))?;
+        let asset_name = if package.manifest.assets.contains_key("fighter_strip") {
+            "fighter_strip"
+        } else {
+            package.manifest.assets.keys().next().map(String::as_str)
+                .ok_or_else(|| JsValue::from_str("custom package has no sprite asset"))?
+        };
+        let slug = web_resource_slug(asset_name);
+        let package_slug = web_resource_slug(package_id);
+        let image_key = format!("custom_package_{package_slug}_image_{slug}");
+        let image = self.assets.as_ref()
+            .and_then(|assets| assets.images.get(&image_key))
+            .cloned()
+            .ok_or_else(|| JsValue::from_str(&format!("custom sprite image {image_key} is missing from the Web manifest")))?;
+        self.host.register_custom_fighter_textures(player, runtime_id, &image, &self.fight)
+            .map_err(js_error)?;
+        Ok(())
+    }
+
+    fn reapply_custom_selections(&mut self) {
+        for package in self.custom_packages.clone() {
+            if let Err(error) = self.fight.register_custom_character_package(package.clone()) {
+                self.diagnostics.push(format!("custom fighter {}: {error}", package.manifest.id));
+            }
+        }
+        for player in 0..2 {
+            let Some(package_id) = self.custom_selections[player].clone() else { continue; };
+            match self.fight.select_custom_character(player, &package_id) {
+                Ok(runtime_id) => {
+                    if let Err(error) = self.register_selected_custom_sprite(player, &package_id, runtime_id) {
+                        self.diagnostics.push(error.as_string().unwrap_or_else(|| "custom sprite registration failed".to_owned()));
+                    }
+                }
+                Err(error) => self.diagnostics.push(format!("custom fighter selection: {error}")),
+            }
+        }
     }
 
     /// Unlock browser audio and play the embedded original menu track.
@@ -160,11 +261,27 @@ impl StreetChavesWebRuntime {
                     self.campaign = None;
                     self.rounds = Some(ArcadeRoundProgress::new(settings));
                     self.fight = build_fight(characters, DEFAULT_SEED);
+                    for package in self.custom_packages.clone() {
+                        if let Err(error) = self.fight.register_custom_character_package(package.clone()) {
+                            self.diagnostics.push(format!("custom fighter {}: {error}", package.manifest.id));
+                        }
+                    }
                     configure_fight(&mut self.fight, cpu_opponent, settings.difficulty, settings.power_mode);
                     if let Some(assets) = self.assets.as_ref() {
                         let messages = self.host.load_web_resources(assets, 1, characters, &mut self.fight);
                         self.diagnostics.extend(messages);
-                        if cpu_opponent {
+                        for player in 0..2 {
+                            if let Some(package_id) = self.custom_selections[player].clone() {
+                                if let Err(error) = self.fight.select_custom_character(player, &package_id) {
+                                    self.diagnostics.push(format!("custom fighter selection: {error}"));
+                                } else if let Some(runtime_id) = self.fight.state.fighters.get(player).map(|fighter| fighter.character_id) {
+                                    if let Err(error) = self.register_selected_custom_sprite(player, &package_id, runtime_id) {
+                                        self.diagnostics.push(error.as_string().unwrap_or_else(|| "custom sprite registration failed".to_owned()));
+                                    }
+                                }
+                            }
+                        }
+                        if cpu_opponent && self.custom_selections[0].is_none() {
                             let ini_key = format!("fighter_ini_{:02}", characters[0]);
                             if let Some(ini) = assets.data.get(&ini_key).and_then(|bytes| std::str::from_utf8(bytes).ok()) {
                                 match CampaignProfile::from_ini(characters[0], ini)
@@ -418,6 +535,67 @@ fn stage_music_number(assets: &LoadedWebAssets, stage: u8, fallback: u8) -> u8 {
         }
     }
     fallback
+}
+
+
+fn web_resource_slug(value: &str) -> String {
+    let mut output = String::new();
+    let mut separator = false;
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() {
+            output.push((byte as char).to_ascii_lowercase());
+            separator = false;
+        } else if !separator {
+            output.push('_');
+            separator = true;
+        }
+    }
+    output.trim_matches('_').to_owned()
+}
+
+fn discover_custom_character_packages(
+    assets: &LoadedWebAssets,
+) -> (Vec<CustomCharacterPackage>, Vec<String>) {
+    let mut packages = Vec::new();
+    let mut messages = Vec::new();
+    for (manifest_key, manifest_bytes) in &assets.data {
+        let Some(slug) = manifest_key.strip_prefix("custom_package_")
+            .and_then(|key| key.strip_suffix("_manifest")) else { continue; };
+        let manifest: serde_json::Value = match serde_json::from_slice(manifest_bytes) {
+            Ok(value) => value,
+            Err(error) => {
+                messages.push(format!("custom manifest {manifest_key}: invalid JSON: {error}"));
+                continue;
+            }
+        };
+        let Some(asset_map) = manifest.get("assets").and_then(serde_json::Value::as_object) else {
+            messages.push(format!("custom manifest {manifest_key}: assets must be an object"));
+            continue;
+        };
+        let mut files = vec![PackageFile { path: "character.json".to_owned(), bytes: manifest_bytes.clone() }];
+        let mut valid = true;
+        for (asset_name, path_value) in asset_map {
+            let Some(path) = path_value.as_str() else { valid = false; break; };
+            let asset_slug = web_resource_slug(asset_name);
+            let bytes_key = format!("custom_package_{slug}_bytes_{asset_slug}");
+            let Some(bytes) = assets.data.get(&bytes_key) else {
+                messages.push(format!("custom manifest {manifest_key}: missing byte resource {bytes_key}"));
+                valid = false;
+                break;
+            };
+            files.push(PackageFile { path: path.to_owned(), bytes: bytes.clone() });
+        }
+        if !valid { continue; }
+        match CustomCharacterPackage::from_files(files) {
+            Ok(package) => {
+                messages.push(format!("discovered custom fighter {} ({})", package.manifest.display_name, package.manifest.id));
+                packages.push(package);
+            }
+            Err(error) => messages.push(format!("custom manifest {manifest_key}: {error}")),
+        }
+    }
+    packages.sort_by(|a,b| a.manifest.id.cmp(&b.manifest.id));
+    (packages, messages)
 }
 
 fn configure_fight(
