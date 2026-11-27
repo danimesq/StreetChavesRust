@@ -46,9 +46,13 @@ def asset_block(asset_id, source, output, kind):
         f"kind = {quote(kind)}",
     ])
 
-packages_root = root / "custom-characters"
-package_dirs = sorted(p for p in packages_root.glob("*")
-                      if p.is_dir() and (p / "character.json").is_file())
+package_roots = [root / "custom-characters", root / "examples" / "custom-characters"]
+package_dirs = sorted(
+    package_dir
+    for packages_root in package_roots
+    for package_dir in packages_root.glob("*")
+    if package_dir.is_dir() and (package_dir / "character.json").is_file()
+)
 seen_ids = set()
 added = 0
 
