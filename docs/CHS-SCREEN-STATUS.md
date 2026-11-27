@@ -24,14 +24,14 @@ This document tracks StreetChavesRust against the original state's responsibilit
 - **CPU opponent AI:** the unjoined P2 slot runs source `Comum.rot [IA]` followed by the selected fighter's own C01-C15 `[IA]` section through the shared ROT interpreter and RNG stream. Projectile threat, `DistProj`, `OppY`, `Ameaca`, projectile-height response, incoming fighter-attack defense and the exact CpuNovo/defendergolpe formulas are implemented. `CampaignProgress` plus `load_campaign_opponent` now supplies the changing phase/character when the host advances the campaign. C16 Chapolin remains a documentation-only custom-character example, not part of the standard roster or executable.
 - **Continue, records and initials:** the original has continue countdown, high-score entry and record-table states. These are not complete in the Rust startup.
 - **Character endings and credits:** the source has per-character final scripts and the post-fight notice/credits flow. These remain pending.
-- **Effects/fight fidelity:** the Rust effect arena still implements only a subset of the original 36 effect types. The complete Pascal `desenhaefeitos` pass also animates type-specific sprites, applies orbit/gravity/motion, resolves effect-vs-effect reflection/destruction, effect-vs-fighter guard/hit/item consequences, and then ages/culls each slot in source order. Rust does not yet have full catalog, visual, physics or collision parity. Those behaviors must be ported from `Comum_Sprites.inc`/`Dados/Efeitos.ini` in source order with deterministic tests; no all-effects parity is claimed.
+- **Effects/fight fidelity:** the Rust effect arena currently supports only eight spawn/animation types (2, 7, 8, 13, 15, 16, 18 and 19). The original INI defines 40 entries: 1–36 for the base game, 37–38 for the C16 Chapolin extension and 39–40 for destructible-stage debris. Pascal `desenhaefeitos` also applies ordered sprite rules, special per-type logic, orbit/gravity/motion, effect-vs-effect reflection/destruction, effect-vs-fighter guard/hit/item consequences, lifetime and culling. Rust does not yet have full catalog, visual, physics or collision parity. These behaviors must be ported from `Comum_Sprites.inc`/`Dados/Efeitos.ini` with deterministic tests; no all-effects parity is claimed.
 
 ## Suggested implementation sequence
 
 1. Validate the integrated credits/F1/F2/CPU path on native SDL3 and browser WebAssembly, including the original CPU difficulty and defense formulas.
 2. Implement the opening attract/demo mode and deterministic demo setup.
-3. Build the opponent-order/campaign model from the original roster metadata, then render `CHS_ADVERSARIOS`.
-4. Split fight preparation into an explicit transition model so asset loading, selected stage/music and round state can be validated before combat starts.
+3. Connect the new campaign model to match-end win/loss detection, per-fighter `Chefe`/`NaoEnfrenta`/stage metadata, `CHS_ADVERSARIOS` rendering and next-fight setup.
+4. Complete `CHS_PREPARALUTA` as an explicit transition so asset loading, selected stage/music and round state can be validated before each fight.
 5. Add the round timer/round manager, remaining F1 consumers, full fight HUD and source-accurate audio/visual toggles.
 6. Continue combat parity with source-derived deterministic tests, then add continue, records, initials, endings and post-fight credits.
 
