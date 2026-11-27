@@ -4,11 +4,11 @@
 //! This module owns Pascal resource interpretation and maps game snapshots to draw commands.
 
 use crate::arcade::ArcadeSettings;
-use crate::campaign::{CampaignRuntime, CampaignRuntimeState};
-use crate::effect_runtime::EffectRenderSnapshot;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::audio_foundation::{FoundationAudioOutput, PascalAudioLayout};
+use crate::campaign::{CampaignRuntime, CampaignRuntimeState};
 use crate::combat_runtime::SIDE_LEFT;
+use crate::effect_runtime::EffectRenderSnapshot;
 use crate::fight_simulation::{FightPresentationFrame, FightSimulation, FighterPresentation};
 use crate::fixed_timestep::{FixedTimestepClock, TickBatch};
 use crate::input::{Button, Direction, InputEvent, InputFrame, InputSampler};
@@ -274,20 +274,26 @@ impl FightPresentationHost<Sdl3Host> {
         if self.audio_layout.is_none() {
             self.load_pascal_audio(game_root);
         }
-        let Some(layout) = self.audio_layout.as_ref() else { return false; };
+        let Some(layout) = self.audio_layout.as_ref() else {
+            return false;
+        };
         self.audio.play_menu_music(&mut self.host, layout)
     }
 
     /// Select a fight music track without rebuilding the effect and victory banks.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn stop_menu_audio(&mut self) -> bool {
-        let Some(layout) = self.audio_layout.as_ref() else { return false; };
+        let Some(layout) = self.audio_layout.as_ref() else {
+            return false;
+        };
         self.audio.stop_menu_music(&mut self.host, layout)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn play_selected_fight_music(&mut self, track: usize) -> bool {
-        let Some(layout) = self.audio_layout.as_ref() else { return false; };
+        let Some(layout) = self.audio_layout.as_ref() else {
+            return false;
+        };
         if track == 0 {
             return self.audio.stop_music(&mut self.host, layout);
         }
@@ -299,31 +305,48 @@ impl FightPresentationHost<Sdl3Host> {
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn stop_original_music(&mut self) -> bool {
-        let Some(layout) = self.audio_layout.as_ref() else { return false; };
+        let Some(layout) = self.audio_layout.as_ref() else {
+            return false;
+        };
         self.audio.stop_music(&mut self.host, layout)
     }
 
     /// Play the F1 one-based sound preview slot (zero means disabled).
     #[cfg(not(target_arch = "wasm32"))]
     pub fn play_sound_test(&mut self, one_based_slot: u8) -> bool {
-        if one_based_slot == 0 { return false; }
-        let Some(layout) = self.audio_layout.as_ref() else { return false; };
-        self.audio.play(&mut self.host, layout.effects, usize::from(one_based_slot - 1))
+        if one_based_slot == 0 {
+            return false;
+        }
+        let Some(layout) = self.audio_layout.as_ref() else {
+            return false;
+        };
+        self.audio.play(
+            &mut self.host,
+            layout.effects,
+            usize::from(one_based_slot - 1),
+        )
     }
 
     /// Pascal victory bank order is fighter-first, then A/B voice variant.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn play_victory_voice(&mut self, character_id: u8, variant: u8) -> bool {
-        if character_id == 0 || !(1..=2).contains(&variant) { return false; }
-        let Some(layout) = self.audio_layout.as_ref() else { return false; };
+        if character_id == 0 || !(1..=2).contains(&variant) {
+            return false;
+        }
+        let Some(layout) = self.audio_layout.as_ref() else {
+            return false;
+        };
         let index = usize::from(character_id - 1) * 2 + usize::from(variant - 1);
         self.audio.play_victory_voice(&mut self.host, layout, index)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn play_pending_fight_sound(&mut self, fight: &mut FightSimulation) -> bool {
-        let Some(layout) = self.audio_layout.as_ref() else { return false; };
-        self.audio.play_pending_fight_sound(&mut self.host, layout, fight)
+        let Some(layout) = self.audio_layout.as_ref() else {
+            return false;
+        };
+        self.audio
+            .play_pending_fight_sound(&mut self.host, layout, fight)
     }
 
     /// Loads original local assets after character select. Missing assets stay diagnostics.
@@ -381,20 +404,32 @@ impl FightPresentationHost<Sdl3Host> {
         }
         if self.effect_frames.is_empty() {
             let resources = IniDocument::read(&root.join("Dados/Recursos.ini"));
-            let pattern = resources.get("Efeitos", "Arquivo").unwrap_or("Efeitos/Efeito-###.bmp");
-            let count = resources.get("Efeitos", "Quantidade")
-                .and_then(|value| value.parse::<usize>().ok()).unwrap_or(111).min(255);
+            let pattern = resources
+                .get("Efeitos", "Arquivo")
+                .unwrap_or("Efeitos/Efeito-###.bmp");
+            let count = resources
+                .get("Efeitos", "Quantidade")
+                .and_then(|value| value.parse::<usize>().ok())
+                .unwrap_or(111)
+                .min(255);
             for sprite in 1..=count {
                 let path = rooted_path(root, &numbered_path(pattern, sprite));
-                if !path.is_file() { break; }
+                if !path.is_file() {
+                    break;
+                }
                 match Sdl3Host::load_bmp(&path) {
                     Ok(mut image) => {
                         apply_white_color_key(&mut image);
                         match self.host.register_texture(&image) {
                             Ok(texture) => {
-                                self.effect_frames.insert(sprite as u8, EffectSpriteMapping {
-                                    texture, width: image.width, height: image.height
-                                });
+                                self.effect_frames.insert(
+                                    sprite as u8,
+                                    EffectSpriteMapping {
+                                        texture,
+                                        width: image.width,
+                                        height: image.height,
+                                    },
+                                );
                             }
                             Err(error) => messages.push(format!("effect sprite {sprite}: {error}")),
                         }
@@ -402,7 +437,10 @@ impl FightPresentationHost<Sdl3Host> {
                     Err(error) => messages.push(format!("effect sprite {sprite}: {error}")),
                 }
             }
-            messages.push(format!("registered {} Pascal effect sprites", self.effect_frames.len()));
+            messages.push(format!(
+                "registered {} Pascal effect sprites",
+                self.effect_frames.len()
+            ));
         }
         self.diagnostics.extend(messages.iter().cloned());
         messages
@@ -454,15 +492,25 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         if player >= 2 {
             return Err(RuntimeError::InvalidConfig("player slot must be 0 or 1"));
         }
-        let definition = fight.custom_character_definition(runtime_id)
-            .ok_or_else(|| RuntimeError::Host(format!("custom fighter runtime ID {runtime_id} is not registered")))?;
+        let definition = fight
+            .custom_character_definition(runtime_id)
+            .ok_or_else(|| {
+                RuntimeError::Host(format!(
+                    "custom fighter runtime ID {runtime_id} is not registered"
+                ))
+            })?;
         let fighter = &fight.state.fighters[player];
         if fighter.character_id != runtime_id {
-            return Err(RuntimeError::Host("custom fighter must be selected before its sprites are registered".to_owned()));
+            return Err(RuntimeError::Host(
+                "custom fighter must be selected before its sprites are registered".to_owned(),
+            ));
         }
         let slices = split_pascal_sprite_sheet(sheet)?;
         if slices.is_empty() {
-            return Err(RuntimeError::Host(format!("custom fighter {} has no delimited sprite frames", definition.display_name)));
+            return Err(RuntimeError::Host(format!(
+                "custom fighter {} has no delimited sprite frames",
+                definition.display_name
+            )));
         }
         let offset = if player == 0 { 0 } else { 50 };
         let centers = &definition.frame_boxes.center_x;
@@ -479,7 +527,10 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                     source: Rect::new(0, 0, pixels.width, pixels.height),
                     width: pixels.width,
                     height: pixels.height,
-                    center_x: centers.iter().find_map(|(frame, x)| (*frame == frame_number).then_some(i32::from(*x))).unwrap_or(0),
+                    center_x: centers
+                        .iter()
+                        .find_map(|(frame, x)| (*frame == frame_number).then_some(i32::from(*x)))
+                        .unwrap_or(0),
                     sprite_height: definition.sprite_height,
                 },
             );
@@ -496,52 +547,179 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
 
     /// Feed browser gamepad, touchscreen or accessibility input into the shared sampler.
     pub fn inject_input_event(&mut self, player: usize, event: InputEvent) -> bool {
-        let Some(sampler) = self.virtual_input.get_mut(player) else { return false; };
+        let Some(sampler) = self.virtual_input.get_mut(player) else {
+            return false;
+        };
         sampler.apply_event(event);
         true
     }
 
     /// Render the eight-fight CHS_ADVERSARIOS interstitial for native and Web.
-    pub fn render_campaign(&mut self, campaign: &CampaignRuntime, selected: u8) -> Result<(), RuntimeError> {
+    pub fn render_campaign(
+        &mut self,
+        campaign: &CampaignRuntime,
+        selected: u8,
+    ) -> Result<(), RuntimeError> {
         let mut commands = Vec::with_capacity(160);
-        commands.push(DrawCommand::Clear { rgba: [12, 17, 32, 255] });
-        draw_text(&mut commands, 106, 18, "CHOOSE YOUR NEXT FIGHT", [255, 224, 143, 255], 2);
-        draw_text(&mut commands, 170, 48, &format!("PHASE {}/8", campaign.current_phase().unwrap_or(8)), [231, 236, 246, 255], 2);
-        draw_text(&mut commands, 74, 82, &format!("PLAYER {}", fighter_display_name(selected)), [185, 214, 235, 255], 1);
+        commands.push(DrawCommand::Clear {
+            rgba: [12, 17, 32, 255],
+        });
+        draw_text(
+            &mut commands,
+            106,
+            18,
+            "CHOOSE YOUR NEXT FIGHT",
+            [255, 224, 143, 255],
+            2,
+        );
+        draw_text(
+            &mut commands,
+            170,
+            48,
+            &format!("PHASE {}/8", campaign.current_phase().unwrap_or(8)),
+            [231, 236, 246, 255],
+            2,
+        );
+        draw_text(
+            &mut commands,
+            74,
+            82,
+            &format!("PLAYER {}", fighter_display_name(selected)),
+            [185, 214, 235, 255],
+            1,
+        );
         for (index, opponent) in campaign.plan().opponents.iter().copied().enumerate() {
             let x = 22 + index as i32 * 45;
             let current = campaign.current_phase() == Some(index as u8 + 1);
             commands.push(DrawCommand::Rect {
                 rect: Rect::new(x, 134, 38, 52),
-                rgba: if current { [67, 98, 133, 255] } else { [34, 45, 63, 255] },
+                rgba: if current {
+                    [67, 98, 133, 255]
+                } else {
+                    [34, 45, 63, 255]
+                },
             });
-            draw_text(&mut commands, x + 13, 141, &format!("{}", index + 1), [255, 224, 143, 255], 1);
-            draw_text(&mut commands, x + 8, 161, &format!("C{:02}", opponent), [245, 241, 222, 255], 1);
-            if campaign.current_phase().is_some_and(|phase| phase > index as u8 + 1) {
+            draw_text(
+                &mut commands,
+                x + 13,
+                141,
+                &format!("{}", index + 1),
+                [255, 224, 143, 255],
+                1,
+            );
+            draw_text(
+                &mut commands,
+                x + 8,
+                161,
+                &format!("C{:02}", opponent),
+                [245, 241, 222, 255],
+                1,
+            );
+            if campaign
+                .current_phase()
+                .is_some_and(|phase| phase > index as u8 + 1)
+            {
                 draw_text(&mut commands, x + 12, 173, "X", [240, 112, 106, 255], 1);
             }
         }
         match campaign.state() {
             CampaignRuntimeState::Adversaries => {
-                draw_text(&mut commands, 96, 224, "NEXT OPPONENT", [255, 231, 163, 255], 2);
-                draw_text(&mut commands, 94, 252, &format!("{} ({}/151)", campaign.current_opponent().map(fighter_display_name).unwrap_or("UNKNOWN"), campaign.presentation_ticks()), [213, 222, 232, 255], 1);
-                draw_text(&mut commands, 92, 280, "PRESS ATTACK TO SKIP", [185, 214, 235, 255], 1);
+                draw_text(
+                    &mut commands,
+                    96,
+                    224,
+                    "NEXT OPPONENT",
+                    [255, 231, 163, 255],
+                    2,
+                );
+                draw_text(
+                    &mut commands,
+                    94,
+                    252,
+                    &format!(
+                        "{} ({}/151)",
+                        campaign
+                            .current_opponent()
+                            .map(fighter_display_name)
+                            .unwrap_or("UNKNOWN"),
+                        campaign.presentation_ticks()
+                    ),
+                    [213, 222, 232, 255],
+                    1,
+                );
+                draw_text(
+                    &mut commands,
+                    92,
+                    280,
+                    "PRESS ATTACK TO SKIP",
+                    [185, 214, 235, 255],
+                    1,
+                );
             }
-            CampaignRuntimeState::Completed => draw_text(&mut commands, 148, 245, "CAMPAIGN COMPLETE", [130, 230, 165, 255], 2),
-            CampaignRuntimeState::Defeated => draw_text(&mut commands, 170, 245, "CAMPAIGN OVER", [240, 112, 106, 255], 2),
-            CampaignRuntimeState::Fighting => draw_text(&mut commands, 176, 245, "FIGHT!", [255, 231, 163, 255], 2),
+            CampaignRuntimeState::Completed => draw_text(
+                &mut commands,
+                148,
+                245,
+                "CAMPAIGN COMPLETE",
+                [130, 230, 165, 255],
+                2,
+            ),
+            CampaignRuntimeState::Defeated => draw_text(
+                &mut commands,
+                170,
+                245,
+                "CAMPAIGN OVER",
+                [240, 112, 106, 255],
+                2,
+            ),
+            CampaignRuntimeState::Fighting => {
+                draw_text(&mut commands, 176, 245, "FIGHT!", [255, 231, 163, 255], 2)
+            }
         }
-        self.host.present(&FrameOutput { draw_commands: commands, audio: Vec::new() })
+        self.host.present(&FrameOutput {
+            draw_commands: commands,
+            audio: Vec::new(),
+        })
     }
 
     /// Display the winner after a standalone two-player match reaches its round limit.
     pub fn render_match_result(&mut self, winner: usize) -> Result<(), RuntimeError> {
         let mut commands = Vec::with_capacity(8);
-        commands.push(DrawCommand::Clear { rgba: [12, 17, 32, 255] });
-        draw_text(&mut commands, 112, 105, "MATCH COMPLETE", [255, 224, 143, 255], 2);
-        draw_text(&mut commands, 150, 155, if winner == 0 { "PLAYER 1 WINS" } else { "PLAYER 2 WINS" }, [130, 230, 165, 255], 2);
-        draw_text(&mut commands, 100, 210, "INSERT CREDIT TO PLAY AGAIN", [213, 222, 232, 255], 1);
-        self.host.present(&FrameOutput { draw_commands: commands, audio: Vec::new() })
+        commands.push(DrawCommand::Clear {
+            rgba: [12, 17, 32, 255],
+        });
+        draw_text(
+            &mut commands,
+            112,
+            105,
+            "MATCH COMPLETE",
+            [255, 224, 143, 255],
+            2,
+        );
+        draw_text(
+            &mut commands,
+            150,
+            155,
+            if winner == 0 {
+                "PLAYER 1 WINS"
+            } else {
+                "PLAYER 2 WINS"
+            },
+            [130, 230, 165, 255],
+            2,
+        );
+        draw_text(
+            &mut commands,
+            100,
+            210,
+            "INSERT CREDIT TO PLAY AGAIN",
+            [213, 222, 232, 255],
+            1,
+        );
+        self.host.present(&FrameOutput {
+            draw_commands: commands,
+            audio: Vec::new(),
+        })
     }
 
     /// Construct the shared game host around any Foundation runtime adapter.
@@ -787,21 +965,26 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         }
 
         if self.effect_frames.is_empty() {
-        for sprite in 1..=111_u8 {
-            let key = format!("effect_sprite_{sprite:03}");
-            if let Some(source) = assets.images.get(&key) {
-                let mut image = source.clone();
-                apply_white_color_key(&mut image);
-                match self.host.register_texture(&image) {
-                    Ok(texture) => {
-                        self.effect_frames.insert(sprite, EffectSpriteMapping {
-                            texture, width: image.width, height: image.height
-                        });
+            for sprite in 1..=111_u8 {
+                let key = format!("effect_sprite_{sprite:03}");
+                if let Some(source) = assets.images.get(&key) {
+                    let mut image = source.clone();
+                    apply_white_color_key(&mut image);
+                    match self.host.register_texture(&image) {
+                        Ok(texture) => {
+                            self.effect_frames.insert(
+                                sprite,
+                                EffectSpriteMapping {
+                                    texture,
+                                    width: image.width,
+                                    height: image.height,
+                                },
+                            );
+                        }
+                        Err(error) => messages.push(format!("{key}: {error}")),
                     }
-                    Err(error) => messages.push(format!("{key}: {error}")),
                 }
             }
-        }
         }
         messages.extend(self.load_web_audio_resources(assets));
 
@@ -813,51 +996,54 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
     #[cfg(target_arch = "wasm32")]
     pub fn load_web_audio_resources(&mut self, assets: &LoadedWebAssets) -> Vec<String> {
         let mut messages = Vec::new();
-                self.web_effect_clips.clear();
-                self.web_effect_bank_len = 0;
-                for slot in 0_u16..=255 {
-                    let key = format!("effect_slot_{slot:03}");
-                    if let Some(clip) = assets.audio_clips.get(&key).copied() {
-                        self.web_effect_clips.insert(slot, clip);
-                        self.web_effect_bank_len = usize::from(slot) + 1;
-                    }
+        self.web_effect_clips.clear();
+        self.web_effect_bank_len = 0;
+        for slot in 0_u16..=255 {
+            let key = format!("effect_slot_{slot:03}");
+            if let Some(clip) = assets.audio_clips.get(&key).copied() {
+                self.web_effect_clips.insert(slot, clip);
+                self.web_effect_bank_len = usize::from(slot) + 1;
+            }
+        }
+        self.web_menu_music = assets.audio_clips.get("menu_music").copied();
+        self.web_music_tracks.clear();
+        if let Some(track) = assets.audio_clips.get("fight_music").copied() {
+            self.web_music_tracks.insert(1, track);
+        }
+        for number in 2..=6_u8 {
+            let key = format!("fight_music_{number:03}");
+            if let Some(track) = assets.audio_clips.get(&key).copied() {
+                self.web_music_tracks.insert(number, track);
+            }
+        }
+        self.web_music = self.web_music_tracks.get(&1).copied();
+        self.web_victory_clips.clear();
+        for character in 1..=16_u8 {
+            for variant in 1..=2_u8 {
+                let suffix = if variant == 1 { "a" } else { "b" };
+                let key = format!("victory_voice_{character:02}_{suffix}");
+                if let Some(clip) = assets.audio_clips.get(&key).copied() {
+                    self.web_victory_clips.insert((character, variant), clip);
                 }
-                self.web_menu_music = assets.audio_clips.get("menu_music").copied();
-                self.web_music_tracks.clear();
-                if let Some(track) = assets.audio_clips.get("fight_music").copied() {
-                    self.web_music_tracks.insert(1, track);
-                }
-                for number in 2..=6_u8 {
-                    let key = format!("fight_music_{number:03}");
-                    if let Some(track) = assets.audio_clips.get(&key).copied() {
-                        self.web_music_tracks.insert(number, track);
-                    }
-                }
-                self.web_music = self.web_music_tracks.get(&1).copied();
-                self.web_victory_clips.clear();
-                for character in 1..=16_u8 {
-                    for variant in 1..=2_u8 {
-                        let suffix = if variant == 1 { "a" } else { "b" };
-                        let key = format!("victory_voice_{character:02}_{suffix}");
-                        if let Some(clip) = assets.audio_clips.get(&key).copied() {
-                            self.web_victory_clips.insert((character, variant), clip);
-                        }
-                    }
-                }
-                messages.push(format!(
-                    "loaded web audio: {} fight tracks, {} victory voices, menu={}",
-                    self.web_music_tracks.len(),
-                    self.web_victory_clips.len(),
-                    self.web_menu_music.is_some()
-                ));
+            }
+        }
+        messages.push(format!(
+            "loaded web audio: {} fight tracks, {} victory voices, menu={}",
+            self.web_music_tracks.len(),
+            self.web_victory_clips.len(),
+            self.web_menu_music.is_some()
+        ));
         messages
     }
 
     /// Start original embedded menu music once WebAudio has been unlocked.
     #[cfg(target_arch = "wasm32")]
     pub fn play_web_menu_music(&mut self) -> Result<bool, RuntimeError> {
-        let Some(clip) = self.web_menu_music else { return Ok(false); };
-        self.host.audio(&AudioRequest::PlayClip { clip, looped: true })?;
+        let Some(clip) = self.web_menu_music else {
+            return Ok(false);
+        };
+        self.host
+            .audio(&AudioRequest::PlayClip { clip, looped: true })?;
         self.web_active_music = Some(clip);
         Ok(true)
     }
@@ -868,9 +1054,14 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         if let Some(active) = self.web_active_music.take() {
             self.host.audio(&AudioRequest::StopClip { clip: active })?;
         }
-        if number == 0 { return Ok(true); }
-        let Some(clip) = self.web_music_tracks.get(&number).copied() else { return Ok(false); };
-        self.host.audio(&AudioRequest::PlayClip { clip, looped: true })?;
+        if number == 0 {
+            return Ok(true);
+        }
+        let Some(clip) = self.web_music_tracks.get(&number).copied() else {
+            return Ok(false);
+        };
+        self.host
+            .audio(&AudioRequest::PlayClip { clip, looped: true })?;
         self.web_active_music = Some(clip);
         Ok(true)
     }
@@ -883,27 +1074,45 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
 
     #[cfg(target_arch = "wasm32")]
     pub fn stop_web_music(&mut self) -> Result<bool, RuntimeError> {
-        let Some(clip) = self.web_active_music.take() else { return Ok(false); };
+        let Some(clip) = self.web_active_music.take() else {
+            return Ok(false);
+        };
         self.host.audio(&AudioRequest::StopClip { clip })?;
         Ok(true)
     }
 
     #[cfg(target_arch = "wasm32")]
     pub fn play_web_sound_effect(&mut self, one_based_slot: u8) -> Result<bool, RuntimeError> {
-        let Some(slot) = one_based_slot.checked_sub(1) else { return Ok(false); };
+        let Some(slot) = one_based_slot.checked_sub(1) else {
+            return Ok(false);
+        };
         let Some(clip) = self.web_effect_clips.get(&u16::from(slot)).copied() else {
             return Ok(false);
         };
-        self.host.audio(&AudioRequest::PlayClip { clip, looped: false })?;
+        self.host.audio(&AudioRequest::PlayClip {
+            clip,
+            looped: false,
+        })?;
         Ok(true)
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn play_web_victory_voice(&mut self, character_id: u8, variant: u8) -> Result<bool, RuntimeError> {
-        let Some(clip) = self.web_victory_clips.get(&(character_id, variant)).copied() else {
+    pub fn play_web_victory_voice(
+        &mut self,
+        character_id: u8,
+        variant: u8,
+    ) -> Result<bool, RuntimeError> {
+        let Some(clip) = self
+            .web_victory_clips
+            .get(&(character_id, variant))
+            .copied()
+        else {
             return Ok(false);
         };
-        self.host.audio(&AudioRequest::PlayClip { clip, looped: false })?;
+        self.host.audio(&AudioRequest::PlayClip {
+            clip,
+            looped: false,
+        })?;
         Ok(true)
     }
 
@@ -1482,11 +1691,19 @@ fn split_effect_draw_commands(
     let mut foreground = Vec::new();
     for effect in snapshots {
         // Estado7_Luta explicitly identifies Efeito10 as the blood burst.
-        if !blood_enabled && effect.effect_type == 10 { continue; }
-        let Some(sprite) = mappings.get(&effect.sprite) else { continue; };
+        if !blood_enabled && effect.effect_type == 10 {
+            continue;
+        }
+        let Some(sprite) = mappings.get(&effect.sprite) else {
+            continue;
+        };
         let destination = Rect::new(
             (effect.x - camera_x).round() as i32,
-            if effect.bottom_anchor { effect.y.round() as i32 - sprite.height as i32 } else { effect.y.round() as i32 },
+            if effect.bottom_anchor {
+                effect.y.round() as i32 - sprite.height as i32
+            } else {
+                effect.y.round() as i32
+            },
             sprite.width,
             sprite.height,
         );
@@ -1496,7 +1713,11 @@ fn split_effect_draw_commands(
             destination,
             flip_horizontal: effect.facing == SIDE_LEFT,
         };
-        if effect.stage { foreground.push(command); } else { behind.push(command); }
+        if effect.stage {
+            foreground.push(command);
+        } else {
+            behind.push(command);
+        }
     }
     (behind, foreground)
 }
@@ -1791,7 +2012,14 @@ fn append_hud(
         rgba: [10, 13, 21, 222],
     });
     if settings.show_credits {
-        draw_text(commands, 5, height as i32 - 12, &format!("CREDITS {credits}"), [255, 224, 143, 255], 1);
+        draw_text(
+            commands,
+            5,
+            height as i32 - 12,
+            &format!("CREDITS {credits}"),
+            [255, 224, 143, 255],
+            1,
+        );
     }
     draw_text(
         commands,

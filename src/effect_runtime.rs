@@ -110,7 +110,6 @@ pub struct EffectArena {
     catalog: EffectCatalog,
 }
 
-
 /// Ordered, data-driven view of the original Pascal [EfeitoN] sections.
 /// Entries remain in source order because duplicate keys and Random() call order
 /// are observable parts of the original game.
@@ -124,42 +123,71 @@ impl EffectCatalog {
         let mut current: Option<u8> = None;
         for (line_number, raw) in source.lines().enumerate() {
             let line = raw.trim();
-            if line.is_empty() || line.starts_with(';') { continue; }
+            if line.is_empty() || line.starts_with(';') {
+                continue;
+            }
             if line.starts_with('[') && line.ends_with(']') {
                 let name = line[1..line.len() - 1].trim();
-                let number = name.strip_prefix("Efeito").or_else(|| name.strip_prefix("efeito"))
+                let number = name
+                    .strip_prefix("Efeito")
+                    .or_else(|| name.strip_prefix("efeito"))
                     .and_then(|value| value.parse::<u8>().ok());
-                let Some(number) = number else { current = None; continue; };
+                let Some(number) = number else {
+                    current = None;
+                    continue;
+                };
                 if !(1..=40).contains(&number) {
-                    return Err(format!("effect section [{name}] at line {} is outside 1..=40", line_number + 1));
+                    return Err(format!(
+                        "effect section [{name}] at line {} is outside 1..=40",
+                        line_number + 1
+                    ));
                 }
                 current = Some(number);
                 catalog.definitions.entry(number).or_default();
                 continue;
             }
-            let Some(number) = current else { continue; };
-            let Some((key, value)) = line.split_once('=') else {
-                return Err(format!("invalid effect INI entry at line {}", line_number + 1));
+            let Some(number) = current else {
+                continue;
             };
-            catalog.definitions.entry(number).or_default()
+            let Some((key, value)) = line.split_once('=') else {
+                return Err(format!(
+                    "invalid effect INI entry at line {}",
+                    line_number + 1
+                ));
+            };
+            catalog
+                .definitions
+                .entry(number)
+                .or_default()
                 .push((key.trim().to_owned(), value.trim().to_owned()));
         }
         if catalog.definitions.len() != 40 {
-            return Err(format!("expected 40 Pascal effect definitions, found {}", catalog.definitions.len()));
+            return Err(format!(
+                "expected 40 Pascal effect definitions, found {}",
+                catalog.definitions.len()
+            ));
         }
         Ok(catalog)
     }
-    pub fn definition_count(&self) -> usize { self.definitions.len() }
-    pub fn contains(&self, effect_type: u8) -> bool { self.definitions.contains_key(&effect_type) }
+    pub fn definition_count(&self) -> usize {
+        self.definitions.len()
+    }
+    pub fn contains(&self, effect_type: u8) -> bool {
+        self.definitions.contains_key(&effect_type)
+    }
     fn definition(&self, effect_type: u8) -> Option<&[(String, String)]> {
         self.definitions.get(&effect_type).map(Vec::as_slice)
     }
 }
 impl Default for EffectArena {
     fn default() -> Self {
-        let catalog = EffectCatalog::from_ini(include_str!("../research/pascal-effects/Efeitos.ini"))
-            .expect("bundled Pascal effect catalog must contain Efeito1..Efeito40");
-        Self { slots: std::array::from_fn(|_| None), catalog }
+        let catalog =
+            EffectCatalog::from_ini(include_str!("../research/pascal-effects/Efeitos.ini"))
+                .expect("bundled Pascal effect catalog must contain Efeito1..Efeito40");
+        Self {
+            slots: std::array::from_fn(|_| None),
+            catalog,
+        }
     }
 }
 
@@ -170,19 +198,29 @@ fn eval_random_expression<R: PascalRandomSource>(
     let compact = expression.replace(' ', "");
     if let Some((_, denominator)) = compact.split_once("em") {
         let range = denominator.parse::<i32>().unwrap_or(1).max(1);
-        return Ok(i32::from(rng.draw_longint(range).map_err(EffectSpawnError::Rng)? == 0));
+        return Ok(i32::from(
+            rng.draw_longint(range).map_err(EffectSpawnError::Rng)? == 0,
+        ));
     }
     let mut total = 0_i32;
     let mut index = 0_usize;
     let bytes = compact.as_bytes();
     while index < bytes.len() {
         let mut sign = 1_i32;
-        if bytes[index] == b'+' { index += 1; }
-        else if bytes[index] == b'-' { sign = -1; index += 1; }
+        if bytes[index] == b'+' {
+            index += 1;
+        } else if bytes[index] == b'-' {
+            sign = -1;
+            index += 1;
+        }
         let start = index;
-        while index < bytes.len() && bytes[index] != b'+' && bytes[index] != b'-' { index += 1; }
+        while index < bytes.len() && bytes[index] != b'+' && bytes[index] != b'-' {
+            index += 1;
+        }
         let term = &compact[start..index];
-        if term.is_empty() { continue; }
+        if term.is_empty() {
+            continue;
+        }
         let value = if let Some((coefficient, random)) = term.split_once("*R") {
             let coefficient = coefficient.parse::<i32>().unwrap_or(1);
             let range = random.parse::<i32>().unwrap_or(1).max(1);
@@ -191,7 +229,8 @@ fn eval_random_expression<R: PascalRandomSource>(
             let range = random.parse::<i32>().unwrap_or(1).max(1);
             rng.draw_longint(range).map_err(EffectSpawnError::Rng)?
         } else {
-            term.parse::<i32>().map_err(|_| EffectSpawnError::UnsupportedType(0))?
+            term.parse::<i32>()
+                .map_err(|_| EffectSpawnError::UnsupportedType(0))?
         };
         total = total.saturating_add(sign.saturating_mul(value));
     }
@@ -204,15 +243,25 @@ fn eval_condition_value(value: &str, effect: &EffectInstance) -> Option<i32> {
     let bytes = compact.as_bytes();
     while index < bytes.len() {
         let mut sign = 1_i32;
-        if bytes[index] == b'+' { index += 1; }
-        else if bytes[index] == b'-' { sign = -1; index += 1; }
+        if bytes[index] == b'+' {
+            index += 1;
+        } else if bytes[index] == b'-' {
+            sign = -1;
+            index += 1;
+        }
         let start = index;
-        while index < bytes.len() && bytes[index] != b'+' && bytes[index] != b'-' { index += 1; }
+        while index < bytes.len() && bytes[index] != b'+' && bytes[index] != b'-' {
+            index += 1;
+        }
         let term = &compact[start..index];
-        if term.is_empty() { continue; }
+        if term.is_empty() {
+            continue;
+        }
         let part = match term {
-            "Q" => i32::from(effect.frame), "C" => i32::from(effect.count),
-            "D" => i32::from(effect.duration), "L" => i32::from(effect.count_limit),
+            "Q" => i32::from(effect.frame),
+            "C" => i32::from(effect.count),
+            "D" => i32::from(effect.duration),
+            "L" => i32::from(effect.count_limit),
             _ => term.parse::<i32>().ok()?,
         };
         total = total.saturating_add(sign.saturating_mul(part));
@@ -221,25 +270,44 @@ fn eval_condition_value(value: &str, effect: &EffectInstance) -> Option<i32> {
 }
 fn effect_condition_matches(condition: &str, effect: &EffectInstance) -> bool {
     let condition = condition.trim();
-    if condition == "*" { return true; }
+    if condition == "*" {
+        return true;
+    }
     for clause in condition.split('&') {
         let clause = clause.trim();
-        let (left, operator, right) = if let Some((a,b)) = clause.split_once(">=") { (a, ">=", b) }
-            else if let Some((a,b)) = clause.split_once("<=") { (a, "<=", b) }
-            else if let Some((a,b)) = clause.split_once('>') { (a, ">", b) }
-            else if let Some((a,b)) = clause.split_once('<') { (a, "<", b) }
-            else if let Some((a,b)) = clause.split_once('=') { (a, "=", b) }
-            else { return false; };
-        let (Some(left), Some(right)) = (eval_condition_value(left, effect), eval_condition_value(right, effect)) else { return false; };
-        let matches = match operator {
-            ">=" => left >= right, "<=" => left <= right, ">" => left > right,
-            "<" => left < right, "=" => left == right, _ => false,
+        let (left, operator, right) = if let Some((a, b)) = clause.split_once(">=") {
+            (a, ">=", b)
+        } else if let Some((a, b)) = clause.split_once("<=") {
+            (a, "<=", b)
+        } else if let Some((a, b)) = clause.split_once('>') {
+            (a, ">", b)
+        } else if let Some((a, b)) = clause.split_once('<') {
+            (a, "<", b)
+        } else if let Some((a, b)) = clause.split_once('=') {
+            (a, "=", b)
+        } else {
+            return false;
         };
-        if !matches { return false; }
+        let (Some(left), Some(right)) = (
+            eval_condition_value(left, effect),
+            eval_condition_value(right, effect),
+        ) else {
+            return false;
+        };
+        let matches = match operator {
+            ">=" => left >= right,
+            "<=" => left <= right,
+            ">" => left > right,
+            "<" => left < right,
+            "=" => left == right,
+            _ => false,
+        };
+        if !matches {
+            return false;
+        }
     }
     true
 }
-
 
 impl EffectArena {
     pub fn active_count(&self) -> usize {
@@ -295,19 +363,40 @@ impl EffectArena {
             return Err(EffectSpawnError::InvalidOwner(owner));
         }
 
-        if owner > 2 { return Err(EffectSpawnError::InvalidOwner(owner)); }
+        if owner > 2 {
+            return Err(EffectSpawnError::InvalidOwner(owner));
+        }
         let mut effect = EffectInstance {
-            effect_type, source_variant, owner, x, y,
-            bounds: EffectBounds::default(), facing: EFFECT_SIDE_RIGHT,
-            horizontal_velocity: 0, vertical_velocity: 0, damage: 0, guard_damage: 0,
-            can_hit: false, stage: false, variant_flag: false, terminating: false,
-            bottom_anchor: false, frame: 0, duration: 0, sprite: 0, count: 0,
-            count_limit: 0, reflect: false, gravity: false,
+            effect_type,
+            source_variant,
+            owner,
+            x,
+            y,
+            bounds: EffectBounds::default(),
+            facing: EFFECT_SIDE_RIGHT,
+            horizontal_velocity: 0,
+            vertical_velocity: 0,
+            damage: 0,
+            guard_damage: 0,
+            can_hit: false,
+            stage: false,
+            variant_flag: false,
+            terminating: false,
+            bottom_anchor: false,
+            frame: 0,
+            duration: 0,
+            sprite: 0,
+            count: 0,
+            count_limit: 0,
+            reflect: false,
+            gravity: false,
         };
         let Some(definition) = self.catalog.definition(effect_type) else {
             return Err(EffectSpawnError::UnsupportedType(effect_type));
         };
-        let has_variant_fields = definition.iter().any(|(key, _)| key.ends_with(".A") || key.ends_with(".B"));
+        let has_variant_fields = definition
+            .iter()
+            .any(|(key, _)| key.ends_with(".A") || key.ends_with(".B"));
         if has_variant_fields && !matches!(source_variant, Some('A' | 'B')) {
             return Err(EffectSpawnError::InvalidVariant { effect_type });
         }
@@ -315,23 +404,39 @@ impl EffectArena {
             return Err(EffectSpawnError::InvalidVariant { effect_type });
         }
         for (raw_key, value) in definition {
-            if raw_key.starts_with("Anim") { continue; }
+            if raw_key.starts_with("Anim") {
+                continue;
+            }
             let mut key = raw_key.as_str();
             if let Some((base, variant)) = key.rsplit_once('.') {
                 if variant == "A" || variant == "B" {
-                    if Some(variant.chars().next().unwrap()) != source_variant { continue; }
+                    if Some(variant.chars().next().unwrap()) != source_variant {
+                        continue;
+                    }
                     key = base;
                 }
             }
             let key = key.split('#').next().unwrap_or(key);
             match key {
-                "Duracao" => effect.duration = eval_random_expression(value, rng)?.clamp(0, 255) as u8,
-                "Vel" => effect.horizontal_velocity = eval_random_expression(value, rng)?.clamp(-32768, 32767) as i16,
-                "VelY" => effect.vertical_velocity = eval_random_expression(value, rng)?.clamp(-32768, 32767) as i16,
+                "Duracao" => {
+                    effect.duration = eval_random_expression(value, rng)?.clamp(0, 255) as u8
+                }
+                "Vel" => {
+                    effect.horizontal_velocity =
+                        eval_random_expression(value, rng)?.clamp(-32768, 32767) as i16
+                }
+                "VelY" => {
+                    effect.vertical_velocity =
+                        eval_random_expression(value, rng)?.clamp(-32768, 32767) as i16
+                }
                 "Dano" => effect.damage = eval_random_expression(value, rng)?.clamp(0, 255) as u8,
-                "DanoDefesa" => effect.guard_damage = eval_random_expression(value, rng)?.clamp(0, 255) as u8,
+                "DanoDefesa" => {
+                    effect.guard_damage = eval_random_expression(value, rng)?.clamp(0, 255) as u8
+                }
                 "Sprite" => effect.sprite = eval_random_expression(value, rng)?.clamp(0, 255) as u8,
-                "LimiteContagem" => effect.count_limit = eval_random_expression(value, rng)?.clamp(0, 255) as u8,
+                "LimiteContagem" => {
+                    effect.count_limit = eval_random_expression(value, rng)?.clamp(0, 255) as u8
+                }
                 "Lado" => {
                     if value.eq_ignore_ascii_case("dono") {
                         if !matches!(owner_facing, EFFECT_SIDE_RIGHT | EFFECT_SIDE_LEFT) {
@@ -340,18 +445,29 @@ impl EffectArena {
                         effect.facing = owner_facing;
                     } else {
                         let side = eval_random_expression(value, rng)?;
-                        if side != i32::from(EFFECT_SIDE_RIGHT) && side != i32::from(EFFECT_SIDE_LEFT) {
+                        if side != i32::from(EFFECT_SIDE_RIGHT)
+                            && side != i32::from(EFFECT_SIDE_LEFT)
+                        {
                             return Err(EffectSpawnError::InvalidFacing(side.clamp(0, 255) as u8));
                         }
                         effect.facing = side as u8;
                     }
                 }
                 "Caixa" => {
-                    let values = value.split(',').map(|part| part.trim().parse::<i16>())
+                    let values = value
+                        .split(',')
+                        .map(|part| part.trim().parse::<i16>())
                         .collect::<Result<Vec<_>, _>>()
                         .map_err(|_| EffectSpawnError::UnsupportedType(effect_type))?;
-                    if values.len() != 4 { return Err(EffectSpawnError::UnsupportedType(effect_type)); }
-                    effect.bounds = EffectBounds { left: values[0], top: values[1], right: values[2], bottom: values[3] };
+                    if values.len() != 4 {
+                        return Err(EffectSpawnError::UnsupportedType(effect_type));
+                    }
+                    effect.bounds = EffectBounds {
+                        left: values[0],
+                        top: values[1],
+                        right: values[2],
+                        bottom: values[3],
+                    };
                 }
                 "PodeAcertar" => effect.can_hit = value == "1",
                 "Terminando" => effect.terminating = value == "1",
@@ -387,17 +503,27 @@ impl EffectArena {
                     continue;
                 };
 
-                let Some(definition) = catalog.definition(effect.effect_type) else { continue; };
+                let Some(definition) = catalog.definition(effect.effect_type) else {
+                    continue;
+                };
                 for (key, instruction) in definition {
-                    if !key.starts_with("Anim") { continue; }
-                    let Some((condition, action)) = instruction.split_once(':') else { continue; };
-                    if !effect_condition_matches(condition, effect) { continue; }
+                    if !key.starts_with("Anim") {
+                        continue;
+                    }
+                    let Some((condition, action)) = instruction.split_once(':') else {
+                        continue;
+                    };
+                    if !effect_condition_matches(condition, effect) {
+                        continue;
+                    }
                     match action.trim() {
                         "Q0" => effect.frame = 0,
                         "E1" => effect.stage = true,
                         "SOBE" if !frozen => effect.y -= 1.0,
                         sprite if sprite.starts_with('S') => {
-                            if let Ok(number) = sprite[1..].parse::<u8>() { effect.sprite = number; }
+                            if let Ok(number) = sprite[1..].parse::<u8>() {
+                                effect.sprite = number;
+                            }
                         }
                         _ => {}
                     }
@@ -413,8 +539,12 @@ impl EffectArena {
                         effect.count = effect.count.saturating_add(1);
                     }
                     match effect.facing {
-                        EFFECT_SIDE_RIGHT => { effect.x += f64::from(effect.horizontal_velocity); }
-                        EFFECT_SIDE_LEFT => { effect.x -= f64::from(effect.horizontal_velocity); }
+                        EFFECT_SIDE_RIGHT => {
+                            effect.x += f64::from(effect.horizontal_velocity);
+                        }
+                        EFFECT_SIDE_LEFT => {
+                            effect.x -= f64::from(effect.horizontal_velocity);
+                        }
                         _ => {}
                     }
                 }
@@ -456,7 +586,6 @@ impl EffectArena {
     }
 }
 
-
 #[cfg(test)]
 mod catalog_tests {
     use super::*;
@@ -464,8 +593,12 @@ mod catalog_tests {
     struct ZeroRng;
     impl PascalRandomSource for ZeroRng {
         type Error = &'static str;
-        fn draw_longint(&mut self, _range: i32) -> Result<i32, Self::Error> { Ok(0) }
-        fn draw_int64(&mut self, _range: i64) -> Result<i64, Self::Error> { Ok(0) }
+        fn draw_longint(&mut self, _range: i32) -> Result<i32, Self::Error> {
+            Ok(0)
+        }
+        fn draw_int64(&mut self, _range: i64) -> Result<i64, Self::Error> {
+            Ok(0)
+        }
     }
 
     #[test]
@@ -485,8 +618,23 @@ mod catalog_tests {
             let definition = arena.catalog.definition(effect_type).unwrap();
             let has_a = definition.iter().any(|(key, _)| key.ends_with(".A"));
             let has_b = definition.iter().any(|(key, _)| key.ends_with(".B"));
-            let variant = if has_a { Some('A') } else if has_b { Some('B') } else { None };
-            let slot = arena.spawn(effect_type, variant, 1, EFFECT_SIDE_RIGHT, 100.0, 100.0, &mut rng)
+            let variant = if has_a {
+                Some('A')
+            } else if has_b {
+                Some('B')
+            } else {
+                None
+            };
+            let slot = arena
+                .spawn(
+                    effect_type,
+                    variant,
+                    1,
+                    EFFECT_SIDE_RIGHT,
+                    100.0,
+                    100.0,
+                    &mut rng,
+                )
                 .unwrap_or_else(|error| panic!("Efeito{effect_type}: {error}"));
             assert!(slot.is_some());
             arena.remove(slot.unwrap());
@@ -497,11 +645,12 @@ mod catalog_tests {
     fn animation_rules_follow_pascal_ini_order_and_frame_conditions() {
         let mut arena = EffectArena::default();
         let mut rng = ZeroRng;
-        arena.spawn(1, None, 0, EFFECT_SIDE_RIGHT, 100.0, 100.0, &mut rng).unwrap();
+        arena
+            .spawn(1, None, 0, EFFECT_SIDE_RIGHT, 100.0, 100.0, &mut rng)
+            .unwrap();
         let first = arena.advance(EffectTickContext::default());
         assert_eq!(first.render_snapshots[0].sprite, 1);
         let second = arena.advance(EffectTickContext::default());
         assert_eq!(second.render_snapshots[0].sprite, 2);
     }
 }
-
