@@ -2738,7 +2738,9 @@ impl FightSimulation {
                 request.y,
                 &mut self.rng,
             ) {
-                report.errors.push(format!("Pascal effect child allocation: {error}"));
+                report
+                    .errors
+                    .push(format!("Pascal effect child allocation: {error}"));
             }
         }
 
