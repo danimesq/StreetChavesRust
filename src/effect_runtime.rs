@@ -101,11 +101,23 @@ pub struct EffectRenderSnapshot {
     pub bounds: EffectBounds,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EffectSpawnRequest {
+    pub effect_type: u8,
+    pub variant: Option<char>,
+    pub owner: u8,
+    pub owner_facing: u8,
+    pub x: f64,
+    pub y: f64,
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct EffectTickResult {
     /// Ordered snapshots are captured before lifetime and culling cleanup.
     pub render_snapshots: Vec<EffectRenderSnapshot>,
     pub removed_slots: Vec<usize>,
+    /// Source-ordered child effects created by the Pascal Efeito27 fan-out.
+    pub spawn_requests: Vec<EffectSpawnRequest>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -616,9 +628,6 @@ impl EffectArena {
                     if effect.gravity {
                         effect.vertical_velocity = effect.vertical_velocity.saturating_add(4);
                     }
-                    if effect.count_limit > 0 {
-                        effect.count = effect.count.saturating_add(1);
-                    }
                     match effect.facing {
                         EFFECT_SIDE_RIGHT => {
                             effect.x += f64::from(effect.horizontal_velocity);
@@ -648,6 +657,45 @@ impl EffectArena {
                     effect.frame = effect.frame.saturating_add(1);
                     if effect.frame > effect.duration {
                         remove = true;
+                    }
+                }
+                // The Pascal count timer advances after drawing/lifetime. Efeito27
+                // emits its three Efeito28 children in source order at its limit.
+                if !frozen && effect.count_limit > 0 {
+                    effect.count = effect.count.saturating_add(1);
+                    if effect.effect_type == 27 {
+                        if effect.count >= effect.count_limit.saturating_sub(2) {
+                            effect.can_hit = true;
+                        }
+                        if effect.count >= effect.count_limit {
+                            result.spawn_requests.extend([
+                                EffectSpawnRequest {
+                                    effect_type: 28,
+                                    variant: Some('A'),
+                                    owner: effect.owner,
+                                    owner_facing: effect.facing,
+                                    x: effect.x - 30.0,
+                                    y: effect.y + 20.0,
+                                },
+                                EffectSpawnRequest {
+                                    effect_type: 28,
+                                    variant: Some('A'),
+                                    owner: effect.owner,
+                                    owner_facing: effect.facing,
+                                    x: effect.x + 30.0,
+                                    y: effect.y + 20.0,
+                                },
+                                EffectSpawnRequest {
+                                    effect_type: 28,
+                                    variant: Some('A'),
+                                    owner: effect.owner,
+                                    owner_facing: effect.facing,
+                                    x: effect.x,
+                                    y: effect.y - 40.0,
+                                },
+                            ]);
+                            remove = true;
+                        }
                     }
                 }
                 // Pascal culls after drawing and lifetime checks, so the current snapshot survives.
@@ -722,6 +770,25 @@ mod catalog_tests {
             assert!(slot.is_some());
             arena.remove(slot.unwrap());
         }
+    }
+
+    #[test]
+    fn type27_emits_three_type28_children_in_pascal_order_at_its_count_limit() {
+        let mut arena = EffectArena::default();
+        let mut rng = ZeroRng;
+        arena.spawn(27, Some('A'), 1, EFFECT_SIDE_RIGHT, 100.0, 200.0, &mut rng).unwrap();
+        let mut result = EffectTickResult::default();
+        for _ in 0..22 {
+            result = arena.advance(EffectTickContext::default());
+        }
+        assert_eq!(result.spawn_requests.len(), 3);
+        assert_eq!(result.spawn_requests[0].effect_type, 28);
+        assert_eq!(result.spawn_requests[0].x, 70.0);
+        assert_eq!(result.spawn_requests[0].y, 220.0);
+        assert_eq!(result.spawn_requests[1].x, 130.0);
+        assert_eq!(result.spawn_requests[2].y, 160.0);
+        assert_eq!(result.spawn_requests.iter().map(|request| request.variant).collect::<Vec<_>>(), vec![Some('A'); 3]);
+        assert_eq!(arena.active_count(), 0);
     }
 
     #[test]
