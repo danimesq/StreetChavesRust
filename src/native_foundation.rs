@@ -456,6 +456,10 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         }
         let definition = fight.custom_character_definition(runtime_id)
             .ok_or_else(|| RuntimeError::Host(format!("custom fighter runtime ID {runtime_id} is not registered")))?;
+        let fighter = &fight.state.fighters[player];
+        if fighter.character_id != runtime_id {
+            return Err(RuntimeError::Host("custom fighter must be selected before its sprites are registered".to_owned()));
+        }
         let slices = split_pascal_sprite_sheet(sheet)?;
         if slices.is_empty() {
             return Err(RuntimeError::Host(format!("custom fighter {} has no delimited sprite frames", definition.display_name)));
@@ -482,10 +486,6 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         }
         self.sprite_heights[player] = definition.sprite_height;
         self.fighter_names[player] = definition.display_name.clone();
-        let fighter = &fight.state.fighters[player];
-        if fighter.character_id != runtime_id {
-            return Err(RuntimeError::Host("custom fighter must be selected before its sprites are registered".to_owned()));
-        }
         Ok(FighterAssetInfo {
             character_id: runtime_id,
             sprite_height: definition.sprite_height,
