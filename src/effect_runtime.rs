@@ -538,11 +538,17 @@ impl EffectArena {
                     8 => {
                         if effect.frame == 2 {
                             effect.bounds = EffectBounds {
-                                left: -45, top: -150, right: 45, bottom: 0
+                                left: -45,
+                                top: -150,
+                                right: 45,
+                                bottom: 0,
                             };
                         } else if effect.frame == 5 {
                             effect.bounds = EffectBounds {
-                                left: -45, top: -220, right: 45, bottom: 0
+                                left: -45,
+                                top: -220,
+                                right: 45,
+                                bottom: 0,
                             };
                             effect.stage = true;
                         }
@@ -610,7 +616,10 @@ impl EffectArena {
                     if effect.gravity {
                         effect.vertical_velocity = effect.vertical_velocity.saturating_add(4);
                     }
-                    if effect.count_limit > 0 && effect.effect_type != 28 && !matches!(effect.effect_type, 31 | 32) {
+                    if effect.count_limit > 0
+                        && effect.effect_type != 28
+                        && !matches!(effect.effect_type, 31 | 32)
+                    {
                         effect.count = effect.count.saturating_add(1);
                     }
                     match effect.facing {
@@ -625,17 +634,17 @@ impl EffectArena {
                 }
 
                 if !remove {
-                result.render_snapshots.push(EffectRenderSnapshot {
-                    slot,
-                    effect_type: effect.effect_type,
-                    sprite: effect.sprite,
-                    x: effect.x,
-                    y: effect.y,
-                    facing: effect.facing,
-                    stage: effect.stage,
-                    bottom_anchor: effect.bottom_anchor,
-                    bounds: effect.bounds,
-                });
+                    result.render_snapshots.push(EffectRenderSnapshot {
+                        slot,
+                        effect_type: effect.effect_type,
+                        sprite: effect.sprite,
+                        x: effect.x,
+                        y: effect.y,
+                        facing: effect.facing,
+                        stage: effect.stage,
+                        bottom_anchor: effect.bottom_anchor,
+                        bounds: effect.bounds,
+                    });
                 }
 
                 if !frozen && effect.duration != 99 {
