@@ -1800,7 +1800,7 @@ kind = "image"
 source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Efeitos/Efeito-111.bmp"
 
 [[assets]]
-id = "fight_music_02"
+id = "fight_music_002"
 source = "Musicas/Musica-02.wav"
 path = "assets/audio/music/Musica-02.wav"
 kind = "audio"
@@ -1808,7 +1808,7 @@ volume-percent = 100
 source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Musicas/Musica-02.wav"
 
 [[assets]]
-id = "fight_music_03"
+id = "fight_music_003"
 source = "Musicas/Musica-03.wav"
 path = "assets/audio/music/Musica-03.wav"
 kind = "audio"
@@ -1816,7 +1816,7 @@ volume-percent = 100
 source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Musicas/Musica-03.wav"
 
 [[assets]]
-id = "fight_music_04"
+id = "fight_music_004"
 source = "Musicas/Musica-04.wav"
 path = "assets/audio/music/Musica-04.wav"
 kind = "audio"
@@ -1824,7 +1824,7 @@ volume-percent = 100
 source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Musicas/Musica-04.wav"
 
 [[assets]]
-id = "fight_music_05"
+id = "fight_music_005"
 source = "Musicas/Musica-05.wav"
 path = "assets/audio/music/Musica-05.wav"
 kind = "audio"
@@ -1832,7 +1832,7 @@ volume-percent = 100
 source-url = "https://github.com/danimesq/OpenStreetChaves/blob/main/Musicas/Musica-05.wav"
 
 [[assets]]
-id = "fight_music_06"
+id = "fight_music_006"
 source = "Musicas/Musica-06.wav"
 path = "assets/audio/music/Musica-06.wav"
 kind = "audio"
