@@ -81,6 +81,10 @@ pub struct EffectTickContext {
     pub hit_stop_active: bool,
     pub camera_x: f64,
     pub camera_y: f64,
+    /// World positions and original special-action state for owners 1 and 2.
+    pub owner_positions: [(f64, f64); 2],
+    pub owner_special2: [bool; 2],
+    pub owner_special5: [bool; 2],
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -529,13 +533,84 @@ impl EffectArena {
                     }
                 }
 
+                match effect.effect_type {
+                    // Source Comum_Sprites.inc: the two-frame projectile hitbox transition.
+                    8 => {
+                        if effect.frame == 2 {
+                            effect.bounds = EffectBounds {
+                                left: -45, top: -150, right: 45, bottom: 0
+                            };
+                        } else if effect.frame == 5 {
+                            effect.bounds = EffectBounds {
+                                left: -45, top: -220, right: 45, bottom: 0
+                            };
+                            effect.stage = true;
+                        }
+                        if effect.frame == 6 || effect.frame == 12 {
+                            effect.can_hit = true;
+                            effect.frame = effect.frame.saturating_add(1);
+                        }
+                    }
+                    // Source uses a three-step pulse cadence for this repeated hitbox.
+                    28 => {
+                        if matches!(effect.count, 3 | 6 | 9) {
+                            effect.can_hit = true;
+                        }
+                        if !frozen {
+                            effect.count = effect.count.saturating_add(1);
+                        }
+                    }
+                    // Effects 30-32 are owned by special-action state, not by a timer.
+                    30 => {
+                        let owner_index = usize::from(effect.owner.saturating_sub(1));
+                        if effect.owner == 0 || !context.owner_special2[owner_index.min(1)] {
+                            remove = true;
+                        }
+                    }
+                    31 | 32 => {
+                        let owner_index = usize::from(effect.owner.saturating_sub(1)).min(1);
+                        if effect.owner == 0 {
+                            remove = true;
+                        } else {
+                            if effect.count % 10 == 0 {
+                                if !context.owner_special5[owner_index] {
+                                    remove = true;
+                                }
+                                effect.can_hit = true;
+                                effect.count = effect.count.saturating_add(1);
+                            }
+                            let (owner_x, owner_y) = context.owner_positions[owner_index];
+                            let orbit = (f64::from(effect.count) / 3.0).cos() * 70.0;
+                            let offset = orbit.round();
+                            effect.x = if effect.effect_type == 31 {
+                                owner_x + offset
+                            } else {
+                                owner_x - offset
+                            };
+                            effect.y = offset + owner_y - 80.0;
+                        }
+                    }
+                    // Source animation 24 drifts while its frame-specific sprite animates.
+                    24 if !frozen => {
+                        effect.x += (f64::from(effect.frame) / 2.0).cos() * 2.0;
+                        effect.y -= 1.0;
+                    }
+                    19 if !frozen => {
+                        effect.y += f64::from(effect.horizontal_velocity);
+                    }
+                    34 if effect.frame >= 14 => {
+                        effect.can_hit = false;
+                    }
+                    _ => {}
+                }
+
                 // Generic horizontal movement follows animation and precedes the draw snapshot.
                 if !frozen {
                     effect.y += f64::from(effect.vertical_velocity);
                     if effect.gravity {
                         effect.vertical_velocity = effect.vertical_velocity.saturating_add(4);
                     }
-                    if effect.count_limit > 0 {
+                    if effect.count_limit > 0 && effect.effect_type != 28 && !matches!(effect.effect_type, 31 | 32) {
                         effect.count = effect.count.saturating_add(1);
                     }
                     match effect.facing {
@@ -549,6 +624,7 @@ impl EffectArena {
                     }
                 }
 
+                if !remove {
                 result.render_snapshots.push(EffectRenderSnapshot {
                     slot,
                     effect_type: effect.effect_type,
@@ -560,6 +636,7 @@ impl EffectArena {
                     bottom_anchor: effect.bottom_anchor,
                     bounds: effect.bounds,
                 });
+                }
 
                 if !frozen && effect.duration != 99 {
                     effect.frame = effect.frame.saturating_add(1);
