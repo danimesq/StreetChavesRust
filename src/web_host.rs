@@ -81,6 +81,7 @@ impl StreetChavesWebRuntime {
             .await
             .map_err(js_error)?;
         let count = assets.textures.len() + assets.audio_clips.len() + assets.data.len();
+        self.diagnostics.extend(self.host.load_web_audio_resources(&assets));
         self.assets = Some(assets);
         self.diagnostics
             .push(format!("loaded {count} web package resources"));
