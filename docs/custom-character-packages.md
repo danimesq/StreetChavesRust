@@ -10,20 +10,32 @@ Custom characters now have a shared package loader **and a bounded gameplay runt
 - `FightSimulation` can register a package, select it into either fighter slot, start its named moves and execute its frames through the same tick path used by built-in fighters.
 - The runtime interprets declarative data only. It never executes packaged Pascal ROT, Rust, JavaScript, WASM or native code.
 
-The Chapolin C16 example is a **headless-playable logic package**: its five specials, 50 centre offsets, 50 hurtboxes and 20 attack rows are represented as data and exercised by integration tests. The repository does not bundle the original Chapolin bitmap/sprite sheet or audio files. A graphical host must supply rights-cleared artwork and map it as a package asset before it can draw the actual character. This is an asset/provenance boundary, not a second character format.
+The Chapolin C16 example is a **repository-only documentary/custom-character example**. Its five specials, 50 centre offsets, 50 hurtboxes and 20 attack rows are declarative data exercised by tests. C16 is not part of the default roster, is not linked into the release executable and is not shipped with the compiled program. The repository does not bundle the original Chapolin bitmap/sprite sheet or audio files. Users may copy/adapt the sample into their own custom-character folder after reviewing provenance and asset rights.
 
 ## Package layout
 
-Each character is a directory with one manifest and optional assets:
+The native user-data tree deliberately reuses the original Street Chaves directory vocabulary. A custom package can live below the fighter-data root:
 
 ```text
-chapolin/
-├── character.json
-└── assets/
-    └── chapolin.png        # optional art supplied/cleared by the package author
+<GameData>/
+├── Animacoes/
+├── Cenarios/
+├── Dados/
+│   └── Lutadores/
+│       └── Custom/
+│           └── chapolin/
+│               ├── character.json
+│               └── assets/
+│                   └── chapolin.png
+├── Efeitos/
+├── Lutadores/
+├── Rostos/
+└── Sons/
 ```
 
-The example at `examples/custom-characters/chapolin/` contains the complete source-derived C16 logic tables and move timelines. The original source repository also provides [the C16 sprite sheet](https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C16.bmp) and [its fighter metadata](https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C16.ini). The active browser build currently includes C01–C15; C16 remains an optional roster extension and can be added to the Foundation asset configuration when that roster decision is made.
+The directory names are familiar, but the Rust custom package uses the bounded `character.json` schema. Matching the Delphi folder layout does **not** mean arbitrary Pascal `.ini`/`.rot` files are loaded or executed. Those files remain references, not a code-injection interface.
+
+The example at `examples/custom-characters/chapolin/` contains source-derived C16 logic tables and move timelines for documentation/testing. The original source repository also provides [the C16 sprite sheet](https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C16.bmp) and [its fighter metadata](https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C16.ini). The release executable and default browser package do not bundle C16.
 
 ## Native installation and use
 
@@ -32,7 +44,7 @@ A native host loads the directory, registers the package with the simulation, se
 ```rust
 use street_chaves::custom_character::load_directory;
 
-let package = load_directory("custom-characters/chapolin")?;
+let package = load_directory("<GameData>/Dados/Lutadores/Custom/chapolin")?;
 let runtime_id = fight.register_custom_character_package(package)?;
 assert_eq!(runtime_id, 16);
 
@@ -53,11 +65,11 @@ A typical user-writable installation path is:
 
 Copying a package folder does not rebuild or modify the executable. The host decides whether a package should be selected; installing a package does not silently replace an existing roster slot.
 
-## Web and WebAssembly
+## Web, WebAssembly and other sandboxed platforms
 
-WASM cannot assume direct access to the user's disk. The browser host selects the package folder (or its files), preserves relative paths, and passes byte arrays to the Rust/WASM game host. The same `CustomCharacterPackage::from_files`, `FightSimulation::register_custom_character_package`, `select_custom_character` and `queue_custom_character_move` APIs are used after file selection. There is no Web-only manifest or move format.
+The native directory convention is **not portable by itself**. A WebAssembly build cannot freely scan `<GameData>/Dados/Lutadores/Custom` on the user's disk, and other sandboxed platforms have similar restrictions. They need a platform-specific import flow: folder/file picker, preservation of relative paths, byte transfer into the Rust host and an explicit persistence strategy. IndexedDB or another platform storage API may be appropriate, but that picker/storage workflow is future host work.
 
-The package-validation bridge added in the package-foundation milestone exports:
+The shared package validator is byte-oriented. The browser bridge exposes:
 
 - `install_custom_character_package(paths, contents)`
 - `enable_custom_character(id)`
@@ -66,9 +78,9 @@ The package-validation bridge added in the package-foundation milestone exports:
 - `list_custom_characters()`
 - `get_custom_character_asset(id, asset_id)`
 
-Each content item is a `Uint8Array`; each path is relative to the selected package root. The game host then constructs the same package object and registers it with its `FightSimulation`. Image decoding, file selection, persistent browser storage and drawing remain host responsibilities.
+Each content item is a `Uint8Array`; every path is relative to the imported package root. The host then constructs the same `CustomCharacterPackage` and registers it with `FightSimulation`. This does **not** turn the browser build into a Delphi filesystem scanner, nor does it make native folder-copy installation work automatically on Web or other platforms.
 
-For a normal browser file input, use `webkitdirectory` where supported or allow multi-file selection, preserving each file's relative path. Never flatten files into basenames, because different folders may contain files with the same name.
+A browser implementation could use `webkitdirectory` where supported or multi-file selection while preserving every relative path. The actual picker, permissions, persistent storage, update/removal UI and equivalent adapters for other targets still need to be designed. Never flatten files into basenames because separate folders may contain duplicate file names.
 
 ## Shared gameplay API
 
