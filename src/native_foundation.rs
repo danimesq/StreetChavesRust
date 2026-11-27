@@ -4,8 +4,6 @@
 //! This module owns Pascal resource interpretation and maps game snapshots to draw commands.
 
 use crate::arcade::ArcadeSettings;
-use crate::campaign::{CampaignRuntime, CampaignRuntimeState};
-use crate::effect_runtime::EffectRenderSnapshot;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::audio_foundation::{FoundationAudioOutput, PascalAudioLayout};
 use crate::combat_runtime::SIDE_LEFT;
@@ -49,25 +47,18 @@ pub struct FighterAssetInfo {
     pub frames: usize,
 }
 
-/// Registered native/Web texture for one Pascal effect sprite ID.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct EffectSpriteMapping {
-    pub texture: TextureId,
-    pub width: u32,
-    pub height: u32,
-}
-
 /// Backend-neutral presentation and fixed-step host for the two-player game core.
 pub struct FightPresentationHost<H: RuntimeHost + TextureRegistrar> {
     host: H,
     clock: FixedTimestepClock,
     input: [InputSampler; 2],
+    virtual_input: [InputSampler; 2],
+    combined_input_buttons: [u32; 2],
     last_host_time: Duration,
     quit_requested: bool,
     logical_width: u32,
     logical_height: u32,
     sprite_frames: HashMap<(u8, i32), SpriteFrameMapping>,
-    effect_frames: HashMap<u8, EffectSpriteMapping>,
     sprite_heights: [i32; 2],
     fighter_names: [String; 2],
     stage_texture: Option<TextureId>,
@@ -305,83 +296,22 @@ impl FightPresentationHost<Sdl3Host> {
                 }
             }
         }
-        let resource_ini = IniDocument::read(&root.join("Dados/Recursos.ini"));
-        let effect_pattern = resource_ini.get("Efeitos", "Arquivo").unwrap_or("Efeitos/Efeito-###.bmp");
-        let effect_count = resource_ini.get("Efeitos", "Quantidade")
-            .and_then(|value| value.parse::<usize>().ok()).unwrap_or(111).min(255);
-        self.effect_frames.clear();
-        for sprite in 1..=effect_count {
-            let path = rooted_path(root, &numbered_path(effect_pattern, sprite));
-            if !path.is_file() { break; }
-            match Sdl3Host::load_bmp(&path) {
-                Ok(mut image) => {
-                    apply_white_color_key(&mut image);
-                    match self.host.register_texture(&image) {
-                        Ok(texture) => {
-                            self.effect_frames.insert(sprite as u8, EffectSpriteMapping {
-                                texture, width: image.width, height: image.height
-                            });
-                        }
-                        Err(error) => messages.push(format!("effect sprite {sprite}: {error}")),
-                    }
-                }
-                Err(error) => messages.push(format!("effect sprite {sprite}: {error}")),
-            }
-        }
-        messages.push(format!("registered {} Pascal effect sprites", self.effect_frames.len()));
         self.diagnostics.extend(messages.iter().cloned());
         messages
     }
 }
 
 impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
-    /// Feed a normalized event from a gamepad, touchscreen, accessibility control
-    /// or another platform adapter into the same sampler used by physical input.
-    pub fn inject_input_event(&mut self, player: usize, event: InputEvent) -> bool {
-        let Some(sampler) = self.input.get_mut(player) else { return false; };
-        sampler.apply_event(event);
-        true
-    }
-
-    /// Render the CHS_ADVERSARIOS campaign interstitial on both native and Web hosts.
-    pub fn render_campaign(&mut self, campaign: &CampaignRuntime, selected: u8) -> Result<(), RuntimeError> {
-        let mut commands = Vec::with_capacity(160);
-        commands.push(DrawCommand::Clear { rgba: [12, 17, 32, 255] });
-        draw_text(&mut commands, 106, 18, "CHOOSE YOUR NEXT FIGHT", [255, 224, 143, 255], 2);
-        draw_text(&mut commands, 170, 48, &format!("PHASE {}/8", campaign.current_phase().unwrap_or(8)), [231, 236, 246, 255], 2);
-        draw_text(&mut commands, 74, 82, &format!("PLAYER {}", fighter_display_name(selected)), [185, 214, 235, 255], 1);
-        for (index, opponent) in campaign.plan().opponents.iter().copied().enumerate() {
-            let x = 22 + index as i32 * 45;
-            let y = 134;
-            commands.push(DrawCommand::Rect {
-                rect: Rect::new(x, y, 38, 52),
-                rgba: if campaign.current_phase() == Some(index as u8 + 1) { [67, 98, 133, 255] } else { [34, 45, 63, 255] },
-            });
-            draw_text(&mut commands, x + 13, y + 7, &format!("{}", index + 1), [255, 224, 143, 255], 1);
-            draw_text(&mut commands, x + 8, y + 27, &format!("C{:02}", opponent), [245, 241, 222, 255], 1);
-            if campaign.current_phase().is_some_and(|phase| phase > index as u8 + 1) {
-                draw_text(&mut commands, x + 12, y + 39, "X", [240, 112, 106, 255], 1);
-            }
-        }
-        match campaign.state() {
-            CampaignRuntimeState::Adversaries => {
-                draw_text(&mut commands, 96, 224, "NEXT OPPONENT", [255, 231, 163, 255], 2);
-                draw_text(&mut commands, 94, 252, &format!("{}  ({}/151)", campaign.current_opponent().map(fighter_display_name).unwrap_or("UNKNOWN"), campaign.presentation_ticks()), [213, 222, 232, 255], 1);
-                draw_text(&mut commands, 92, 280, "PRESS ATTACK TO SKIP", [185, 214, 235, 255], 1);
-            }
-            CampaignRuntimeState::Completed => draw_text(&mut commands, 148, 245, "CAMPAIGN COMPLETE", [130, 230, 165, 255], 2),
-            CampaignRuntimeState::Defeated => draw_text(&mut commands, 170, 245, "CAMPAIGN OVER", [240, 112, 106, 255], 2),
-            CampaignRuntimeState::Fighting => draw_text(&mut commands, 176, 245, "FIGHT!", [255, 231, 163, 255], 2),
-        }
-        self.host.present(&FrameOutput { draw_commands: commands, audio: Vec::new() })
-    }
-
     /// Apply the remapped P1 physical keyboard layout in the shared Foundation host.
     pub fn set_player_one_key_map(&mut self, map: PlayerOneKeyMap) {
         self.host.set_player_one_key_map(map);
         for sampler in &mut self.input {
             sampler.reset();
         }
+        for sampler in &mut self.virtual_input {
+            sampler.reset();
+        }
+        self.combined_input_buttons = [0; 2];
     }
 
     /// Update the damage multiplier used by the shared melee-contact resolver.
@@ -403,12 +333,13 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
             host,
             clock: FixedTimestepClock::new(),
             input: std::array::from_fn(|_| InputSampler::default()),
+            virtual_input: std::array::from_fn(|_| InputSampler::default()),
+            combined_input_buttons: [0; 2],
             last_host_time: now,
             quit_requested: false,
             logical_width: config.width,
             logical_height: config.height,
             sprite_frames: HashMap::new(),
-            effect_frames: HashMap::new(),
             sprite_heights: [0; 2],
             fighter_names: ["PLAYER 1".to_owned(), "PLAYER 2".to_owned()],
             stage_texture: None,
@@ -480,7 +411,6 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         self.sprite_frames.clear();
         self.sprite_heights = [0; 2];
         self.stage_texture = None;
-        self.effect_frames.clear();
 
         let stage_key = format!("stage_{stage_number:02}");
         if let Some(source) = assets.images.get(&stage_key) {
@@ -631,22 +561,6 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                 self.web_effect_bank_len = usize::from(slot) + 1;
             }
         }
-        for sprite in 1..=111_u8 {
-            let key = format!("effect_sprite_{sprite:03}");
-            if let Some(source) = assets.images.get(&key) {
-                let mut image = source.clone();
-                apply_white_color_key(&mut image);
-                match self.host.register_texture(&image) {
-                    Ok(texture) => {
-                        self.effect_frames.insert(sprite, EffectSpriteMapping {
-                            texture, width: image.width, height: image.height
-                        });
-                    }
-                    Err(error) => messages.push(format!("{key}: {error}")),
-                }
-            }
-        }
-        messages.push(format!("registered {} web Pascal effect sprites", self.effect_frames.len()));
         self.web_music = assets.audio_clips.get("fight_music").copied();
         if self.web_music.is_some() {
             messages.push("loaded web fight music".to_owned());
@@ -680,8 +594,6 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
     pub fn poll_input_ticks(&mut self) -> Result<(TickBatch, Vec<[InputFrame; 2]>), RuntimeError> {
         let snapshot = self.host.poll_input()?;
         self.quit_requested = snapshot.quit_requested;
-        self.input[0].record_physical_key_press(snapshot.physical_key_pressed);
-        self.input[0].record_physical_key_press(snapshot.physical_key_pressed);
         for player in 0..2 {
             apply_player_snapshot(&mut self.input[player], snapshot.players[player]);
         }
@@ -689,9 +601,31 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         let elapsed = now.saturating_sub(self.last_host_time);
         self.last_host_time = now;
         let batch = self.clock.advance(elapsed);
-        let samples = (0..batch.ticks_due)
-            .map(|_| std::array::from_fn(|player| self.input[player].sample_tick()))
-            .collect();
+        let mut samples = Vec::with_capacity(batch.ticks_due as usize);
+        for _ in 0..batch.ticks_due {
+            let frames = std::array::from_fn(|player| {
+                let physical = self.input[player].sample_tick();
+                let virtual_frame = self.virtual_input[player].sample_tick();
+                let held_buttons = physical.held_buttons | virtual_frame.held_buttons;
+                let previous = self.combined_input_buttons[player];
+                self.combined_input_buttons[player] = held_buttons;
+                InputFrame {
+                    direction: if virtual_frame.direction != Direction::Neutral {
+                        virtual_frame.direction
+                    } else {
+                        physical.direction
+                    },
+                    held_buttons,
+                    pressed_buttons: held_buttons & !previous,
+                    released_buttons: previous & !held_buttons,
+                    hold_ticks: std::array::from_fn(|slot| {
+                        physical.hold_ticks[slot].max(virtual_frame.hold_ticks[slot])
+                    }),
+                    physical_key_pressed: physical.physical_key_pressed,
+                }
+            });
+            samples.push(frames);
+        }
         Ok((batch, samples))
     }
 
@@ -1142,28 +1076,13 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         scene: &[DrawCommand],
     ) -> Result<(), RuntimeError> {
         let frame = fight.presentation_frame();
-        let (behind, foreground) = split_effect_draw_commands(
-            &fight.last_report().effects.render_snapshots,
-            &self.effect_frames,
-            frame.camera_x,
-        );
-        self.render_with_layers(&frame, scene, &behind, &foreground)
+        self.render(&frame, scene)
     }
 
     pub fn render(
         &mut self,
         frame: &FightPresentationFrame,
         scene: &[DrawCommand],
-    ) -> Result<(), RuntimeError> {
-        self.render_with_layers(frame, scene, &[], &[])
-    }
-
-    fn render_with_layers(
-        &mut self,
-        frame: &FightPresentationFrame,
-        scene: &[DrawCommand],
-        behind_effects: &[DrawCommand],
-        foreground_effects: &[DrawCommand],
     ) -> Result<(), RuntimeError> {
         let mut commands = Vec::with_capacity(scene.len() + 800);
         commands.push(DrawCommand::Clear {
@@ -1190,11 +1109,9 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
             );
         }
         commands.extend_from_slice(scene);
-        commands.extend_from_slice(behind_effects);
         for fighter in &frame.fighters {
             append_fighter(&mut commands, fighter, frame.camera_x, &self.sprite_frames);
         }
-        commands.extend_from_slice(foreground_effects);
         append_hud(
             &mut commands,
             self.logical_width,
@@ -1213,34 +1130,6 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
             audio: Vec::new(),
         })
     }
-}
-
-
-fn split_effect_draw_commands(
-    snapshots: &[EffectRenderSnapshot],
-    mappings: &HashMap<u8, EffectSpriteMapping>,
-    camera_x: f64,
-) -> (Vec<DrawCommand>, Vec<DrawCommand>) {
-    let mut behind = Vec::new();
-    let mut foreground = Vec::new();
-    for effect in snapshots {
-        let Some(sprite) = mappings.get(&effect.sprite) else { continue; };
-        let y = effect.y.round() as i32;
-        let destination = Rect::new(
-            (effect.x - camera_x).round() as i32,
-            if effect.bottom_anchor { y - sprite.height as i32 } else { y },
-            sprite.width,
-            sprite.height,
-        );
-        let command = DrawCommand::Texture {
-            texture: sprite.texture,
-            source: None,
-            destination,
-            flip_horizontal: effect.facing == SIDE_LEFT,
-        };
-        if effect.stage { foreground.push(command); } else { behind.push(command); }
-    }
-    (behind, foreground)
 }
 
 fn apply_player_snapshot(sampler: &mut InputSampler, snapshot: PlayerInputSnapshot) {
