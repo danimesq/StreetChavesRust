@@ -280,6 +280,12 @@ impl FightPresentationHost<Sdl3Host> {
 
     /// Select a fight music track without rebuilding the effect and victory banks.
     #[cfg(not(target_arch = "wasm32"))]
+    pub fn stop_menu_audio(&mut self) -> bool {
+        let Some(layout) = self.audio_layout.as_ref() else { return false; };
+        self.audio.stop_menu_music(&mut self.host, layout)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn play_selected_fight_music(&mut self, track: usize) -> bool {
         let Some(layout) = self.audio_layout.as_ref() else { return false; };
         if track == 0 {
