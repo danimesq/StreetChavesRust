@@ -51,11 +51,13 @@ Do not call the C01 hook from frame animation, command entry, or collision-candi
 
 ## 3. Effect collisions
 
-**Status: live effects and render snapshots exist; collision consequence integration is pending.**
+**Status: partial; full original effect parity is pending.**
 
-`EffectArena::advance` owns effect movement, snapshots, lifetime and culling. Its source comments explicitly leave effect-vs-effect and effect-vs-fighter consequences outside the current implementation.
+`EffectArena` currently supports spawning and advancing only eight effect IDs: 2, 7, 8, 13, 15, 16, 18 and 19. `Dados/Efeitos.ini` defines 40 effect IDs: 1–36 for the base game, 37–38 for the Chapolin C16 extension, and 39–40 for breakable-stage wood/glass debris.
 
-Next implementation must audit the Pascal effect loop and hit-resolution source at the pinned revision, then add source-ordered candidate detection and consequence writes. Avoid treating a render snapshot as authoritative simulation state, avoid duplicate ticking, and do not invent damage/guard/owner rules for effects whose source has not been inspected.
+The source audit in `source/game/Comum_Sprites.inc` shows the ordered pass: evaluate each `AnimN` rule, perform type-specific writes (including type 8/28 hit windows, 31/32 owner orbit, type 30/34 termination and type 24 drift), apply gravity/movement, draw using sprite/facing/anchor/flash rules, resolve effect-vs-effect collisions/reflection through `Flag50`, resolve fighter guard/hit/knockback/item-healing consequences, then advance lifetime counters and cull by camera/ground bounds.
+
+The Rust runtime does not yet reproduce all 40 definitions, the full ordered animation rules, visual sprite drawing, effect-vs-effect reflection/destruction, effect-vs-fighter damage/guard/pickup behavior, or the remaining per-type physics. The next implementation must port the INI definitions and source loop in phases, preserving effect-slot order, RNG draw widths and mutation order. Render snapshots must stay read-only; collision outcomes belong to authoritative live effect/fighter state.
 
 ## 4. Pascal C01 checkpoints
 
