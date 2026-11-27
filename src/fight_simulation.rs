@@ -1,5 +1,8 @@
 //! First concrete, renderer-free fight orchestrator.
-use crate::campaign::{CampaignPlan, CampaignProgress};
+use crate::campaign::{
+    choose_campaign_stage as choose_campaign_stage_with_rng, CampaignPlan, CampaignProgress,
+    CampaignProfile, CampaignStageChoice, CampaignStageProfile,
+};
 use crate::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome};
 use crate::combat_resolution::{
     resolve_melee_contact, resolve_melee_contact_after_guard_break, CombatResolution,
@@ -758,6 +761,33 @@ impl FightSimulation {
     /// The campaign host updates this when a new CHS_ADVERSARIOS entry becomes active.
     pub fn set_cpu_campaign_phase(&mut self, phase: u8) {
         self.cpu_campaign_phase = phase.clamp(1, 8);
+    }
+
+    /// Generate the seven-opponent order plus boss using this fight's shared
+    /// FPC 3.2.2 RNG stream, rather than a second, unsynchronized generator.
+    pub fn generate_campaign_plan(
+        &mut self,
+        profile: &CampaignProfile,
+        roster_size: u8,
+    ) -> Result<CampaignPlan, String> {
+        CampaignPlan::generate(profile, roster_size, &mut self.rng)
+    }
+
+    /// Choose the next campaign stage using the same shared Pascal RNG stream.
+    pub fn choose_campaign_stage(
+        &mut self,
+        profile: CampaignStageProfile,
+        phase: u8,
+        stage_count: u8,
+        secret_stage: Option<u8>,
+    ) -> Result<CampaignStageChoice, String> {
+        choose_campaign_stage_with_rng(
+            profile,
+            phase,
+            stage_count,
+            secret_stage,
+            &mut self.rng,
+        )
     }
 
     /// Load the current campaign opponent into P2 and refresh its source-driven AI.
@@ -2784,6 +2814,25 @@ mod rot_runtime_integration_tests {
         };
         fight.execute_human_defense(0, input).unwrap();
         assert_eq!(fight.state.fighters[0].action_id, ACTION_IDLE);
+    }
+
+    #[test]
+    fn campaign_plan_generation_uses_the_fight_simulations_shared_rng() {
+        let mut fight = simulation();
+        let profile = CampaignProfile {
+            selected_character: 1,
+            boss_character: 15,
+            never_face: vec![2, 3],
+        };
+
+        let plan = fight.generate_campaign_plan(&profile, 15).unwrap();
+
+        assert_eq!(plan.opponent(8), Some(15));
+        assert_eq!(plan.opponents.len(), 8);
+        assert!(!plan.opponents[..7].contains(&1));
+        assert!(!plan.opponents[..7].contains(&2));
+        assert!(!plan.opponents[..7].contains(&3));
+        assert!(!plan.opponents[..7].contains(&15));
     }
 
     #[test]
