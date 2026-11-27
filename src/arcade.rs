@@ -551,7 +551,7 @@ mod tests {
     fn round_rules_apply_timer_and_first_to_series() {
         let mut settings = ArcadeSettings::default();
         settings.round_time = 1;
-        settings.rounds = 3;
+        settings.rounds = 2;
         let mut progress = ArcadeRoundProgress::new(settings);
         assert_eq!(progress.rounds_to_win(), 2);
         for _ in 0..(30_000 / 28) {
@@ -570,6 +570,10 @@ mod tests {
             RoundAdvance::MatchWon { winner: 0 }
         );
         assert_eq!(progress.record_result(Some(1)), RoundAdvance::Inactive);
+
+        settings.rounds = 3;
+        let first_to_three = ArcadeRoundProgress::new(settings);
+        assert_eq!(first_to_three.rounds_to_win(), 3);
     }
 
     #[test]
