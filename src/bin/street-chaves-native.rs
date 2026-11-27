@@ -126,6 +126,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     } else {
                         eprintln!("[assets] no --game-root: procedural training stage and fighter fallbacks");
                     }
+                    if !options.no_audio && options.game_root.is_some() {
+                        let _ = host.stop_menu_audio();
+                        if campaign.is_none() {
+                            let _ = host.play_selected_fight_music(usize::from(settings.music_track));
+                        }
+                    }
                     host.set_damage_level(settings.damage_level);
                     host.set_player_one_key_map(startup.preferences().player_one_keys);
                 }
@@ -187,6 +193,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                                                         eprintln!("[campaign] {line}");
                                                     }
                                                 }
+                                                if !options.no_audio {
+                                                    let _ = host.stop_menu_audio();
+                                                    let _ = host.play_selected_fight_music(usize::from(match_settings.music_track));
+                                                }
                                                 match run.begin_fight(stage) {
                                                     Ok(_) => {
                                                         rounds = Some(ArcadeRoundProgress::new(match_settings));
@@ -228,6 +238,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                                                     eprintln!("[campaign] victory; next phase {phase}/8");
                                                 }
                                                 CampaignAdvance::Completed => {
+                                                    if !options.no_audio { let _ = host.stop_original_music(); }
                                                     eprintln!("[campaign] completed all eight fights!");
                                                 }
                                                 _ => {}
@@ -235,6 +246,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                                         }
                                         Some(RoundAdvance::MatchWon { winner: 1 }) => {
                                             run.record_defeat();
+                                            if !options.no_audio { let _ = host.stop_original_music(); }
                                             eprintln!("[campaign] defeat in phase {}", run.current_phase().unwrap_or(0));
                                         }
                                         _ => {}
