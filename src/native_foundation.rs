@@ -436,6 +436,58 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         self.arcade_settings
     }
 
+    /// Register a declarative custom fighter sprite strip using the same
+    /// Pascal delimiter and center-pivot conventions as built-in C01-C15 sheets.
+    pub fn register_custom_fighter_textures(
+        &mut self,
+        player: usize,
+        runtime_id: u8,
+        sheet: &RgbaImage,
+        fight: &FightSimulation,
+    ) -> Result<FighterAssetInfo, RuntimeError> {
+        if player >= 2 {
+            return Err(RuntimeError::InvalidConfig("player slot must be 0 or 1"));
+        }
+        let definition = fight.custom_character_definition(runtime_id)
+            .ok_or_else(|| RuntimeError::Host(format!("custom fighter runtime ID {runtime_id} is not registered")))?;
+        let slices = split_pascal_sprite_sheet(sheet)?;
+        if slices.is_empty() {
+            return Err(RuntimeError::Host(format!("custom fighter {} has no delimited sprite frames", definition.display_name)));
+        }
+        let offset = if player == 0 { 0 } else { 50 };
+        let centers = &definition.frame_boxes.center_x;
+        for (index, (start_x, frame_width)) in slices.iter().copied().enumerate() {
+            let frame_number = u16::try_from(index + 1)
+                .map_err(|_| RuntimeError::InvalidConfig("too many custom fighter frames"))?;
+            let mut pixels = crop_rgba(sheet, start_x, frame_width)?;
+            apply_white_color_key(&mut pixels);
+            let texture = self.host.register_texture(&pixels)?;
+            self.sprite_frames.insert(
+                (runtime_id, offset + i32::from(frame_number)),
+                SpriteFrameMapping {
+                    texture,
+                    source: Rect::new(0, 0, pixels.width, pixels.height),
+                    width: pixels.width,
+                    height: pixels.height,
+                    center_x: centers.iter().find_map(|(frame, x)| (*frame == frame_number).then_some(i32::from(*x))).unwrap_or(0),
+                    sprite_height: definition.sprite_height,
+                },
+            );
+        }
+        self.sprite_heights[player] = definition.sprite_height;
+        self.fighter_names[player] = definition.display_name.clone();
+        let fighter = &fight.state.fighters[player];
+        if fighter.character_id != runtime_id {
+            return Err(RuntimeError::Host("custom fighter must be selected before its sprites are registered".to_owned()));
+        }
+        Ok(FighterAssetInfo {
+            character_id: runtime_id,
+            sprite_height: definition.sprite_height,
+            walk_speed: definition.walk_speed,
+            frames: slices.len(),
+        })
+    }
+
     /// Feed browser gamepad, touchscreen or accessibility input into the shared sampler.
     pub fn inject_input_event(&mut self, player: usize, event: InputEvent) -> bool {
         let Some(sampler) = self.virtual_input.get_mut(player) else { return false; };
