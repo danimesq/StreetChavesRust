@@ -145,6 +145,11 @@ impl StreetChavesWebRuntime {
     pub fn list_custom_characters(&self) -> Result<Array, JsValue> {
         let output = Array::new();
         for package in &self.custom_packages {
+            // Metadata-only examples are packaged and registered, but not advertised
+            // as selectable until a valid sprite image is present in the Web manifest.
+            if self.custom_sprite_image_key(&package.manifest.id).is_none() {
+                continue;
+            }
             let item = Object::new();
             Reflect::set(&item, &JsValue::from_str("id"), &JsValue::from_str(&package.manifest.id))?;
             Reflect::set(&item, &JsValue::from_str("name"), &JsValue::from_str(&package.manifest.display_name))?;
@@ -169,13 +174,38 @@ impl StreetChavesWebRuntime {
             .and_then(serde_json::Value::as_u64)
             .and_then(|value| u8::try_from(value).ok())
             .ok_or_else(|| JsValue::from_str("custom fighter manifest has no valid runtime_id"))?;
-        self.custom_selections[player] = Some(package_id.to_owned());
-        if player == 0 { self.player_character = runtime_id; }
+        self.custom_sprite_image_key(package_id)
+            .ok_or_else(|| JsValue::from_str("custom package has no supported fighter sprite image in the Web manifest"))?;
         if self.fight.state.fighters[player].character_id != runtime_id {
             self.fight.select_custom_character(player, package_id).map_err(js_error)?;
         }
         self.register_selected_custom_sprite(player, package_id, runtime_id)?;
+        self.custom_selections[player] = Some(package_id.to_owned());
+        if player == 0 { self.player_character = runtime_id; }
         Ok(runtime_id)
+    }
+
+    fn custom_sprite_image_key(&self, package_id: &str) -> Option<String> {
+        let package = self.custom_packages.iter()
+            .find(|package| package.manifest.id == package_id)?;
+        let assets = self.assets.as_ref()?;
+        let preferred = package.manifest.assets.get("fighter_strip");
+        let candidates = preferred.into_iter().chain(package.manifest.assets.iter()
+            .filter(|(name, _)| name.as_str() != "fighter_strip")
+            .map(|(name, path)| (name, path)));
+        for (name, path) in candidates {
+            let lower = path.to_ascii_lowercase();
+            let is_image = [".png", ".bmp", ".jpg", ".jpeg", ".webp"]
+                .iter().any(|extension| lower.ends_with(extension));
+            if !is_image { continue; }
+            let key = format!(
+                "custom_package_{}_image_{}",
+                web_resource_slug(package_id),
+                web_resource_slug(name)
+            );
+            if assets.images.contains_key(&key) { return Some(key); }
+        }
+        None
     }
 
     fn register_selected_custom_sprite(
@@ -184,22 +214,12 @@ impl StreetChavesWebRuntime {
         package_id: &str,
         runtime_id: u8,
     ) -> Result<(), JsValue> {
-        let package = self.custom_packages.iter()
-            .find(|package| package.manifest.id == package_id)
-            .ok_or_else(|| JsValue::from_str("custom package disappeared"))?;
-        let asset_name = if package.manifest.assets.contains_key("fighter_strip") {
-            "fighter_strip"
-        } else {
-            package.manifest.assets.keys().next().map(String::as_str)
-                .ok_or_else(|| JsValue::from_str("custom package has no sprite asset"))?
-        };
-        let slug = web_resource_slug(asset_name);
-        let package_slug = web_resource_slug(package_id);
-        let image_key = format!("custom_package_{package_slug}_image_{slug}");
+        let image_key = self.custom_sprite_image_key(package_id)
+            .ok_or_else(|| JsValue::from_str("custom package sprite image is missing from the Web manifest"))?;
         let image = self.assets.as_ref()
             .and_then(|assets| assets.images.get(&image_key))
             .cloned()
-            .ok_or_else(|| JsValue::from_str(&format!("custom sprite image {image_key} is missing from the Web manifest")))?;
+            .ok_or_else(|| JsValue::from_str(&format!("custom sprite image {image_key} is missing")))?;
         self.host.register_custom_fighter_textures(player, runtime_id, &image, &self.fight)
             .map_err(js_error)?;
         Ok(())
