@@ -2712,6 +2712,18 @@ impl FightSimulation {
             hit_stop_active: self.state.clock_stopped,
             camera_x: self.state.camera_x,
             camera_y: self.config.effect_camera_y,
+            owner_positions: [
+                (self.state.fighters[0].x, self.state.fighters[0].y),
+                (self.state.fighters[1].x, self.state.fighters[1].y),
+            ],
+            owner_special2: [
+                self.state.fighters[0].action_id == ACTION_SPECIAL2,
+                self.state.fighters[1].action_id == ACTION_SPECIAL2,
+            ],
+            owner_special5: [
+                self.state.fighters[0].action_id == ACTION_SPECIAL_FINAL,
+                self.state.fighters[1].action_id == ACTION_SPECIAL_FINAL,
+            ],
         };
         report.effects = self.state.tick_effects(effect_context);
 
