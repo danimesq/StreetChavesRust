@@ -220,7 +220,7 @@ impl ArcadeRoundProgress {
         Self {
             round_limit_ticks: seconds.map(|value| value.saturating_mul(1000).saturating_add(27) / 28),
             elapsed_ticks: 0,
-            rounds_to_win: settings.rounds.clamp(1, 3) / 2 + 1,
+            rounds_to_win: settings.rounds.clamp(1, 3),
             rounds_won: [0; 2],
             round: 1,
             finished: false,
@@ -458,7 +458,7 @@ mod tests {
 
 
     #[test]
-    fn round_rules_apply_timer_and_best_of_series() {
+    fn round_rules_apply_timer_and_first_to_series() {
         let mut settings = ArcadeSettings::default();
         settings.round_time = 1;
         settings.rounds = 3;
