@@ -67,7 +67,7 @@ impl ArcadeSettings {
             5 => self.rounds = (i16::from(self.rounds) + direction).clamp(1, 3) as u8,
             6 => self.language = (i16::from(self.language) + direction).clamp(1, 2) as u8,
             7 => self.sound_test = (i16::from(self.sound_test) + direction).clamp(0, 71) as u8,
-            8 => self.music_track = (i16::from(self.music_track) + direction).clamp(0, 32) as u8,
+            8 => self.music_track = (i16::from(self.music_track) + direction).clamp(0, 6) as u8,
             9 => self.flash = if delta != 0 { !self.flash } else { self.flash },
             10 => {
                 self.show_level = if delta != 0 {
@@ -340,7 +340,7 @@ impl ArcadePreferences {
         settings.language = bounded_u8(settings_value, "language", 1, 2, settings.language);
         settings.sound_test = bounded_u8(settings_value, "sound_test", 0, 71, settings.sound_test);
         settings.music_track =
-            bounded_u8(settings_value, "music_track", 0, 32, settings.music_track);
+            bounded_u8(settings_value, "music_track", 0, 6, settings.music_track);
         settings.flash = settings_value
             .get("flash")
             .and_then(serde_json::Value::as_bool)
