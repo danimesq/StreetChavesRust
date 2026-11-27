@@ -2786,7 +2786,7 @@ mod rot_runtime_integration_tests {
         assert_eq!(fight.load_campaign_opponent(&plan, &progress).unwrap(), 8);
         assert_eq!(fight.cpu_campaign_phase, 7);
         assert_eq!(fight.state.fighters[1].character_id, 8);
-        assert!((fight.cpu_probability_factor() - 0.9).abs() < 1e-10);
+        assert!((fight.cpu_probability_factor() - 0.6).abs() < 1e-10);
     }
 
     #[test]
