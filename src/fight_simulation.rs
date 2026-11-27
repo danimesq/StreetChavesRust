@@ -1,6 +1,6 @@
 //! First concrete, renderer-free fight orchestrator.
-use crate::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome};
 use crate::campaign::{CampaignPlan, CampaignProgress};
+use crate::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome};
 use crate::combat_resolution::{
     resolve_melee_contact, resolve_melee_contact_after_guard_break, CombatResolution,
     CombatResolutionContext,
@@ -777,8 +777,8 @@ impl FightSimulation {
             .ok_or_else(|| format!("campaign has no opponent for phase {phase}"))?;
         let (filename, source) = embedded_character_rot_source(character_id)
             .ok_or_else(|| format!("campaign character C{character_id:02} is not in C01-C15"))?;
-        let command_rules = embedded_character_command_rules(character_id)
-            .map_err(|error| error.to_string())?;
+        let command_rules =
+            embedded_character_command_rules(character_id).map_err(|error| error.to_string())?;
         let frame_boxes =
             load_fighter_frame_boxes(character_id).map_err(|error| error.to_string())?;
         let rot_document =
@@ -936,9 +936,13 @@ impl FightSimulation {
         let fighter = &self.state.fighters[fighter_index];
         let slot_owner = (fighter_index + 1) as u8;
         let opponent_attack_active = self.state.fighters[opponent_index].attack_active;
-        let incoming_effect = self.state.effects.instances_in_slot_order().any(|(_, effect)| {
-            effect.effect_type != 0 && effect.can_hit && effect.owner != slot_owner
-        });
+        let incoming_effect = self
+            .state
+            .effects
+            .instances_in_slot_order()
+            .any(|(_, effect)| {
+                effect.effect_type != 0 && effect.can_hit && effect.owner != slot_owner
+            });
         if !opponent_attack_active && !incoming_effect {
             return Ok(());
         }
@@ -2730,13 +2734,15 @@ mod rot_runtime_integration_tests {
         )
     }
 
-
     #[test]
     fn human_holds_back_to_guard_an_incoming_attack() {
         let mut fight = simulation();
         fight.state.fighters[1].attack_active = true;
         fight.state.fighters[0].facing = crate::combat_runtime::SIDE_RIGHT;
-        let input = InputFrame { direction: Direction::Left, ..InputFrame::default() };
+        let input = InputFrame {
+            direction: Direction::Left,
+            ..InputFrame::default()
+        };
         fight.execute_human_defense(0, input).unwrap();
         assert_eq!(fight.state.fighters[0].action_id, ACTION_DEFENDING);
         assert!(fight.state.fighters[0].defending);
@@ -2747,7 +2753,10 @@ mod rot_runtime_integration_tests {
         let mut fight = simulation();
         fight.state.fighters[1].attack_active = true;
         fight.state.fighters[0].facing = crate::combat_runtime::SIDE_RIGHT;
-        let input = InputFrame { direction: Direction::DownLeft, ..InputFrame::default() };
+        let input = InputFrame {
+            direction: Direction::DownLeft,
+            ..InputFrame::default()
+        };
         fight.execute_human_defense(0, input).unwrap();
         assert_eq!(fight.state.fighters[0].action_id, ACTION_LOW_DEFENDING);
         assert!(fight.state.fighters[0].defending);
@@ -2758,7 +2767,10 @@ mod rot_runtime_integration_tests {
         let mut fight = simulation();
         fight.state.fighters[1].attack_active = true;
         fight.state.fighters[0].facing = crate::combat_runtime::SIDE_LEFT;
-        let input = InputFrame { direction: Direction::Right, ..InputFrame::default() };
+        let input = InputFrame {
+            direction: Direction::Right,
+            ..InputFrame::default()
+        };
         fight.execute_human_defense(0, input).unwrap();
         assert_eq!(fight.state.fighters[0].action_id, ACTION_DEFENDING);
     }
@@ -2766,7 +2778,10 @@ mod rot_runtime_integration_tests {
     #[test]
     fn human_guard_requires_an_incoming_attack_or_effect() {
         let mut fight = simulation();
-        let input = InputFrame { direction: Direction::Left, ..InputFrame::default() };
+        let input = InputFrame {
+            direction: Direction::Left,
+            ..InputFrame::default()
+        };
         fight.execute_human_defense(0, input).unwrap();
         assert_eq!(fight.state.fighters[0].action_id, ACTION_IDLE);
     }
