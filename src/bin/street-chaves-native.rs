@@ -157,6 +157,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     host.set_credits(startup.credits());
                     if !options.no_audio {
                         if startup.phase() == StartupPhase::Config {
+                            let _ = host.stop_menu_audio();
                             if preferences.settings.sound_test > 0 {
                                 let _ = host.play_sound_test(preferences.settings.sound_test);
                             }
