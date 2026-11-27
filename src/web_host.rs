@@ -189,10 +189,13 @@ impl StreetChavesWebRuntime {
         let package = self.custom_packages.iter()
             .find(|package| package.manifest.id == package_id)?;
         let assets = self.assets.as_ref()?;
-        let preferred = package.manifest.assets.get("fighter_strip");
-        let candidates = preferred.into_iter().chain(package.manifest.assets.iter()
-            .filter(|(name, _)| name.as_str() != "fighter_strip")
-            .map(|(name, path)| (name, path)));
+        let preferred = package.manifest.assets.get("fighter_strip")
+            .map(|path| ("fighter_strip", path));
+        let candidates = preferred.into_iter().chain(
+            package.manifest.assets.iter()
+                .filter(|(name, _)| name.as_str() != "fighter_strip")
+                .map(|(name, path)| (name.as_str(), path)),
+        );
         for (name, path) in candidates {
             let lower = path.to_ascii_lowercase();
             let is_image = [".png", ".bmp", ".jpg", ".jpeg", ".webp"]
