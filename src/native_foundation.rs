@@ -744,45 +744,53 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
                 }
             }
         }
-        self.web_effect_clips.clear();
-        self.web_effect_bank_len = 0;
-        for slot in 0_u16..=255 {
-            let key = format!("effect_slot_{slot:03}");
-            if let Some(clip) = assets.audio_clips.get(&key).copied() {
-                self.web_effect_clips.insert(slot, clip);
-                self.web_effect_bank_len = usize::from(slot) + 1;
-            }
-        }
-        self.web_menu_music = assets.audio_clips.get("menu_music").copied();
-        self.web_music_tracks.clear();
-        if let Some(track) = assets.audio_clips.get("fight_music").copied() {
-            self.web_music_tracks.insert(1, track);
-        }
-        for number in 2..=6_u8 {
-            let key = format!("fight_music_{number:03}");
-            if let Some(track) = assets.audio_clips.get(&key).copied() {
-                self.web_music_tracks.insert(number, track);
-            }
-        }
-        self.web_music = self.web_music_tracks.get(&1).copied();
-        self.web_victory_clips.clear();
-        for character in 1..=16_u8 {
-            for variant in 1..=2_u8 {
-                let suffix = if variant == 1 { "a" } else { "b" };
-                let key = format!("victory_voice_{character:02}_{suffix}");
-                if let Some(clip) = assets.audio_clips.get(&key).copied() {
-                    self.web_victory_clips.insert((character, variant), clip);
-                }
-            }
-        }
-        messages.push(format!(
-            "loaded web audio: {} fight tracks, {} victory voices, menu={}",
-            self.web_music_tracks.len(),
-            self.web_victory_clips.len(),
-            self.web_menu_music.is_some()
-        ));
+        messages.extend(self.load_web_audio_resources(assets));
 
         self.diagnostics.extend(messages.iter().cloned());
+        messages
+    }
+
+    /// Register WebAudio banks as soon as the Web export is loaded, before title/menu input.
+    #[cfg(target_arch = "wasm32")]
+    pub fn load_web_audio_resources(&mut self, assets: &LoadedWebAssets) -> Vec<String> {
+        let mut messages = Vec::new();
+                self.web_effect_clips.clear();
+                self.web_effect_bank_len = 0;
+                for slot in 0_u16..=255 {
+                    let key = format!("effect_slot_{slot:03}");
+                    if let Some(clip) = assets.audio_clips.get(&key).copied() {
+                        self.web_effect_clips.insert(slot, clip);
+                        self.web_effect_bank_len = usize::from(slot) + 1;
+                    }
+                }
+                self.web_menu_music = assets.audio_clips.get("menu_music").copied();
+                self.web_music_tracks.clear();
+                if let Some(track) = assets.audio_clips.get("fight_music").copied() {
+                    self.web_music_tracks.insert(1, track);
+                }
+                for number in 2..=6_u8 {
+                    let key = format!("fight_music_{number:03}");
+                    if let Some(track) = assets.audio_clips.get(&key).copied() {
+                        self.web_music_tracks.insert(number, track);
+                    }
+                }
+                self.web_music = self.web_music_tracks.get(&1).copied();
+                self.web_victory_clips.clear();
+                for character in 1..=16_u8 {
+                    for variant in 1..=2_u8 {
+                        let suffix = if variant == 1 { "a" } else { "b" };
+                        let key = format!("victory_voice_{character:02}_{suffix}");
+                        if let Some(clip) = assets.audio_clips.get(&key).copied() {
+                            self.web_victory_clips.insert((character, variant), clip);
+                        }
+                    }
+                }
+                messages.push(format!(
+                    "loaded web audio: {} fight tracks, {} victory voices, menu={}",
+                    self.web_music_tracks.len(),
+                    self.web_victory_clips.len(),
+                    self.web_menu_music.is_some()
+                ));
         messages
     }
 
