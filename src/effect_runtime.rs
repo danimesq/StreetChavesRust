@@ -373,7 +373,7 @@ impl EffectArena {
     /// collision consequences remain a later combat-system integration.
     pub fn advance(&mut self, context: EffectTickContext) -> EffectTickResult {
         let frozen = context.flash_active || context.hit_stop_active;
-        let catalog = self.catalog.clone();
+        let catalog = &self.catalog;
         let mut result = EffectTickResult::default();
 
         for slot in 0..MAX_EFFECT_INSTANCES {
