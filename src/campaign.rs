@@ -80,8 +80,7 @@ impl CampaignPlan {
                 }
                 let candidate = draw as u8 + 1;
                 attempts += 1;
-                if (available[usize::from(candidate)]
-                    && candidate != profile.selected_character)
+                if (available[usize::from(candidate)] && candidate != profile.selected_character)
                     || attempts > 2_000
                 {
                     break candidate;
@@ -283,7 +282,9 @@ mod tests {
 
     impl SequenceRng {
         fn new(values: impl IntoIterator<Item = i32>) -> Self {
-            Self { values: values.into_iter().collect() }
+            Self {
+                values: values.into_iter().collect(),
+            }
         }
     }
 
@@ -292,12 +293,20 @@ mod tests {
 
         fn draw_longint(&mut self, range: i32) -> Result<i32, Self::Error> {
             let value = self.values.pop_front().ok_or("no scripted RNG value")?;
-            Ok(if range <= 0 { 0 } else { value.rem_euclid(range) })
+            Ok(if range <= 0 {
+                0
+            } else {
+                value.rem_euclid(range)
+            })
         }
 
         fn draw_int64(&mut self, range: i64) -> Result<i64, Self::Error> {
             let value = self.values.pop_front().ok_or("no scripted RNG value")?;
-            Ok(if range <= 0 { 0 } else { i64::from(value).rem_euclid(range) })
+            Ok(if range <= 0 {
+                0
+            } else {
+                i64::from(value).rem_euclid(range)
+            })
         }
     }
 
