@@ -63,6 +63,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut campaign: Option<CampaignRuntime> = None;
     let mut rounds: Option<ArcadeRoundProgress> = None;
     let mut cpu_opponent_active = false;
+    let mut standalone_winner: Option<usize> = None;
     let mut player_character = options.players[0];
     let mut match_settings = startup.settings();
 
@@ -86,6 +87,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     player_character = characters[0];
                     cpu_opponent_active = cpu_opponent;
                     campaign = None;
+                    standalone_winner = None;
                     rounds = Some(ArcadeRoundProgress::new(settings));
                     eprintln!(
                         "[select] P1={} P2={} CPU={}",
@@ -241,9 +243,40 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                             }
                             CampaignRuntimeState::Completed | CampaignRuntimeState::Defeated => {}
                         }
-                    } else {
+                    } else if standalone_winner.is_none() {
                         host.tick_fight(&mut fight, inputs);
-                        let _ = rounds.as_mut().is_some_and(ArcadeRoundProgress::tick);
+                        let timeout = rounds.as_mut().is_some_and(ArcadeRoundProgress::tick);
+                        let p1 = fight.state.fighters[0].health;
+                        let p2 = fight.state.fighters[1].health;
+                        let winner = if p1 <= 0.0 && p2 <= 0.0 { Some(None) }
+                            else if p2 <= 0.0 { Some(Some(0)) }
+                            else if p1 <= 0.0 { Some(Some(1)) }
+                            else if timeout { Some(if p1 > p2 { Some(0) } else if p2 > p1 { Some(1) } else { None }) }
+                            else { None };
+                        if let Some(winner) = winner {
+                            let result = rounds.as_mut().map(|progress| progress.record_result(winner));
+                            match result {
+                                Some(RoundAdvance::Continue { round, winner }) => {
+                                    fight.reset_for_campaign_fight();
+                                    configure_fight(&mut fight, cpu_opponent_active, match_settings.difficulty, match_settings.power_mode);
+                                    eprintln!("[rounds] round {round}; player {} leads", winner + 1);
+                                }
+                                Some(RoundAdvance::Draw { next_round }) => {
+                                    fight.reset_for_campaign_fight();
+                                    configure_fight(&mut fight, cpu_opponent_active, match_settings.difficulty, match_settings.power_mode);
+                                    eprintln!("[rounds] draw; round {next_round}");
+                                }
+                                Some(RoundAdvance::MatchWon { winner }) => {
+                                    standalone_winner = Some(winner);
+                                    if !options.no_audio {
+                                        let _ = host.stop_original_music();
+                                        if winner == 0 { let _ = host.play_victory_voice(player_character, 1); }
+                                    }
+                                    eprintln!("[rounds] match complete; player {} wins", winner + 1);
+                                }
+                                _ => {}
+                            }
+                        }
                     }
                 }
                 StartupEvent::None => {}
@@ -261,6 +294,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     host.update_camera(&mut fight);
                     host.render_fight(&fight, &[])?;
                 }
+            } else if let Some(winner) = standalone_winner {
+                host.render_match_result(winner)?;
             } else {
                 host.update_camera(&mut fight);
                 host.render_fight(&fight, &[])?;
