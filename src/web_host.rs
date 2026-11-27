@@ -301,7 +301,11 @@ impl StreetChavesWebRuntime {
                                 self.diagnostics.push(format!("campaign metadata {ini_key} is missing; falling back to single fight"));
                             }
                         }
-                        if self.campaign.is_none() {
+                        if self.campaign.is_some() {
+                            if let Err(error) = self.host.stop_web_music() {
+                                self.diagnostics.push(format!("menu music stop: {error}"));
+                            }
+                        } else {
                             match self.host.play_web_music_track(settings.music_track) {
                                 Ok(true) => self.diagnostics.push(format!("fight music track {} started", settings.music_track)),
                                 Ok(false) => {}
@@ -364,7 +368,7 @@ impl StreetChavesWebRuntime {
                                                 match campaign.begin_fight(stage) {
                                                     Ok(_) => {
                                                         self.rounds = Some(ArcadeRoundProgress::new(self.settings));
-                                                        let track = self.assets.as_ref().map(|assets| stage_music_number(assets, stage.stage, self.settings.music_track)).unwrap_or(self.settings.music_track);
+                                                        let track = self.settings.music_track;
                                                         match self.host.play_web_music_track(track) {
                                                             Ok(true) => self.diagnostics.push(format!("phase {phase} fight music {track} started")),
                                                             Ok(false) => {}
