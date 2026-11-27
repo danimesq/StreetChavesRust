@@ -16,7 +16,8 @@ The source has a 2,001-attempt fallback per opponent. `CampaignPlan::generate` p
 
 - `CampaignPlan` stores seven randomized opponents followed by the boss.
 - `CampaignProgress` begins at phase 1, advances only after a victory and completes after winning phase 8. A defeat terminates the campaign.
-- `choose_campaign_stage` applies the primary stage, then the independent alternative and rare rolls in source order. A nonzero secret-stage override is applied last and clamped to the configured stage range.
+- `FightSimulation::generate_campaign_plan` uses the fight's shared FPC 3.2.2 RNG stream for the seven opponent draws. `FightSimulation::choose_campaign_stage` uses that same stream for the independent alternative/rare rolls.
+- `choose_campaign_stage` applies the primary stage, then the independent alternative and rare rolls in source order. A nonzero secret-stage override is applied last only in phases 1–7, as in Pascal; phase 8 keeps the boss's configured primary stage.
 - `AdversariesPresentation` models the original `TempoEstado` clock: the state becomes ready for preparation after tick 150, and a skip edge adds five ticks.
 - `FightSimulation::load_campaign_opponent` selects the current fighter for P2 and refreshes its command rules, source frame boxes and character ROT AI document. It also updates `cpu_campaign_phase`, so both original difficulty formulas change as the campaign advances.
 
