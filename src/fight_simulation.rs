@@ -817,6 +817,59 @@ impl FightSimulation {
         Ok(character_id)
     }
 
+    /// Reset both fighters between campaign opponents/rounds without reseeding
+    /// the shared Pascal RNG stream or rebuilding the character-specific CPU.
+    pub fn reset_for_campaign_fight(&mut self) {
+        self.state.tick_index = 0;
+        self.state.clock_stopped = false;
+        self.state.pending_sound = None;
+        self.state.screen_flash = 0;
+        self.state.screen_shake = 0;
+        self.state.effects = Default::default();
+        self.state.camera_x = 0.0;
+        for (index, fighter) in self.state.fighters.iter_mut().enumerate() {
+            fighter.action_id = ACTION_IDLE;
+            fighter.action_frame = 0;
+            fighter.action_duration = 99;
+            fighter.force_strength = 0;
+            fighter.defending = false;
+            fighter.invulnerable = false;
+            fighter.hit_count = 0;
+            fighter.hit_timer = 0;
+            fighter.attack_damage = 0;
+            fighter.angular_velocity = 0;
+            fighter.attack_active = false;
+            fighter.walking_forward = false;
+            fighter.attack_box = None;
+            fighter.is_kick = false;
+            fighter.recoil = 0;
+            fighter.hitstun = 0;
+            fighter.rotation_step = 0;
+            fighter.vertical_velocity = 0;
+            fighter.in_air = false;
+            fighter.x = if index == 0 { 136.0 } else { 264.0 };
+            fighter.y = 300.0;
+            fighter.health = 125.0;
+            fighter.power = 0;
+            fighter.charge_power = 0.0;
+            fighter.jump_direction = 0;
+            fighter.low_time = 0;
+            fighter.back_time = 0;
+            fighter.sequence_state = 0;
+            fighter.sequence_timer = 0;
+            fighter.punch_charge = 0;
+            fighter.kick_charge = 0;
+            fighter.sprite_frame = (index as i32) * 50 + 1;
+            fighter.facing = if index == 0 {
+                crate::combat_runtime::SIDE_RIGHT
+            } else {
+                crate::combat_runtime::SIDE_LEFT
+            };
+        }
+        self.command_recognizers = [CommandRecognizer::default(); 2];
+        self.last_report = FightTickReport::default();
+    }
+
     /// Exact CpuNovo formula from Estado7_Golpes.inc.
     pub fn cpu_probability_factor(&self) -> f64 {
         (8.0 - f64::from(self.cpu_difficulty_level)) * 0.6 + 1.3
