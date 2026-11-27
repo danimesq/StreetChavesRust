@@ -633,7 +633,7 @@ impl CombatState {
     }
 
     /// Allocate one real effect instance through the fixed Pascal-compatible arena.
-    fn spawn_effect<R: PascalRandomSource>(
+    pub fn spawn_effect<R: PascalRandomSource>(
         &mut self,
         effect_type: u8,
         variant: Option<char>,
