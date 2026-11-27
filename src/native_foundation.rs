@@ -889,7 +889,8 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
 
     #[cfg(target_arch = "wasm32")]
     pub fn play_web_sound_effect(&mut self, one_based_slot: u8) -> Result<bool, RuntimeError> {
-        let Some(clip) = self.web_effect_clips.get(&u16::from(one_based_slot)).copied() else {
+        let Some(slot) = one_based_slot.checked_sub(1) else { return Ok(false); };
+        let Some(clip) = self.web_effect_clips.get(&u16::from(slot)).copied() else {
             return Ok(false);
         };
         self.host.audio(&AudioRequest::PlayClip { clip, looped: false })?;
