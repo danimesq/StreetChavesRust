@@ -1,7 +1,7 @@
 //! First concrete, renderer-free fight orchestrator.
 use crate::campaign::{
-    choose_campaign_stage as choose_campaign_stage_with_rng, CampaignPlan, CampaignProgress,
-    CampaignProfile, CampaignStageChoice, CampaignStageProfile,
+    choose_campaign_stage as choose_campaign_stage_with_rng, CampaignPlan, CampaignProfile,
+    CampaignProgress, CampaignStageChoice, CampaignStageProfile,
 };
 use crate::chaves_specials::{ChavesSpecialCommand, ChavesSpecialContext, ChavesSpecialOutcome};
 use crate::combat_resolution::{
@@ -781,13 +781,7 @@ impl FightSimulation {
         stage_count: u8,
         secret_stage: Option<u8>,
     ) -> Result<CampaignStageChoice, String> {
-        choose_campaign_stage_with_rng(
-            profile,
-            phase,
-            stage_count,
-            secret_stage,
-            &mut self.rng,
-        )
+        choose_campaign_stage_with_rng(profile, phase, stage_count, secret_stage, &mut self.rng)
     }
 
     /// Load the current campaign opponent into P2 and refresh its source-driven AI.
