@@ -38,6 +38,7 @@ pub struct StreetChavesWebRuntime {
     cpu_opponent: bool,
     player_character: u8,
     settings: crate::arcade::ArcadeSettings,
+    standalone_winner: Option<usize>,
     custom_packages: Vec<CustomCharacterPackage>,
     custom_selections: [Option<String>; 2],
 }
@@ -71,6 +72,7 @@ impl StreetChavesWebRuntime {
             cpu_opponent: false,
             player_character: 1,
             settings: crate::arcade::ArcadeSettings::default(),
+            standalone_winner: None,
             custom_packages: Vec::new(),
             custom_selections: [None, None],
         })
@@ -259,6 +261,7 @@ impl StreetChavesWebRuntime {
                     self.player_character = characters[0];
                     self.cpu_opponent = cpu_opponent;
                     self.campaign = None;
+                    self.standalone_winner = None;
                     self.rounds = Some(ArcadeRoundProgress::new(settings));
                     self.fight = build_fight(characters, DEFAULT_SEED);
                     for package in self.custom_packages.clone() {
@@ -418,8 +421,34 @@ impl StreetChavesWebRuntime {
                             }
                             CampaignRuntimeState::Completed | CampaignRuntimeState::Defeated => {}
                         }
-                    } else {
+                    } else if self.standalone_winner.is_none() {
                         self.host.tick_fight(&mut self.fight, inputs);
+                        let timeout = self.rounds.as_mut().is_some_and(ArcadeRoundProgress::tick);
+                        let p1 = self.fight.state.fighters[0].health;
+                        let p2 = self.fight.state.fighters[1].health;
+                        let winner = if p1 <= 0.0 && p2 <= 0.0 { Some(None) }
+                            else if p2 <= 0.0 { Some(Some(0)) }
+                            else if p1 <= 0.0 { Some(Some(1)) }
+                            else if timeout { Some(if p1 > p2 { Some(0) } else if p2 > p1 { Some(1) } else { None }) }
+                            else { None };
+                        if let Some(winner) = winner {
+                            let result = self.rounds.as_mut().map(|progress| progress.record_result(winner));
+                            match result {
+                                Some(RoundAdvance::Continue { .. }) | Some(RoundAdvance::Draw { .. }) => {
+                                    self.fight.reset_for_campaign_fight();
+                                    configure_fight(&mut self.fight, self.cpu_opponent, self.settings.difficulty, self.settings.power_mode);
+                                }
+                                Some(RoundAdvance::MatchWon { winner }) => {
+                                    self.standalone_winner = Some(winner);
+                                    let _ = self.host.stop_web_music();
+                                    if winner == 0 {
+                                        let _ = self.host.play_web_victory_voice(self.player_character, 1);
+                                    }
+                                    self.diagnostics.push(format!("match complete: player {} wins", winner + 1));
+                                }
+                                _ => {}
+                            }
+                        }
                     }
                 }
                 StartupEvent::None => {}
@@ -437,6 +466,8 @@ impl StreetChavesWebRuntime {
                 } else {
                     self.host.render_fight(&self.fight, &[]).map_err(js_error)?;
                 }
+            } else if let Some(winner) = self.standalone_winner {
+                self.host.render_match_result(winner).map_err(js_error)?;
             } else {
                 self.host.render_fight(&self.fight, &[]).map_err(js_error)?;
             }
