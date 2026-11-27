@@ -784,9 +784,10 @@ mod catalog_tests {
         }
         assert_eq!(result.spawn_requests.len(), 3);
         assert_eq!(result.spawn_requests[0].effect_type, 28);
-        assert_eq!(result.spawn_requests[0].x, 70.0);
+        assert_eq!(result.spawn_requests[0].x, 136.0);
         assert_eq!(result.spawn_requests[0].y, 220.0);
-        assert_eq!(result.spawn_requests[1].x, 130.0);
+        assert_eq!(result.spawn_requests[1].x, 196.0);
+        assert_eq!(result.spawn_requests[2].x, 166.0);
         assert_eq!(result.spawn_requests[2].y, 160.0);
         assert_eq!(
             result
