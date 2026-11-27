@@ -20,6 +20,9 @@ on:
       - "tests/**"
       - "FoundationWebBuild.toml"
       - "web/**"
+      - "scripts/**"
+      - "research/pascal-effects/**"
+      - "docs/web-custom-character-manifest.md"
       - "docs/CHS-SCREEN-STATUS.md"
       - ".github/workflows/rust-contracts.yml"
 
