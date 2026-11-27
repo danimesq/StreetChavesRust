@@ -1,42 +1,58 @@
-# Chapolin: recoverable 2026 bonus
+# Chapolin C16: documentary custom-character example
 
 ## Decision
 
-Preserve Pascal C16 (Chapolin) as a **future optional bonus for the 2026 project**, not as a sixteenth member of the original roster and not as a required part of the first Rust implementation.
+Chapolin is a **documentary/custom-character example only**. He is not a built-in sixteenth fighter, not part of the standard roster and **will not be shipped with the compiled program**.
 
-The original/base roster remains the 15 characters represented in both SDL references. Chapolin is a separately documented Pascal-side extension. This is a scope decision to retain the possibility of recovering him later; it is not a promise that he will ship in a release.
+The canonical roster remains C01-C15. The source repository keeps the C16 example under `examples/custom-characters/chapolin/` so users can inspect the package structure, learn from the declarative move data and adapt the sample for their own custom character. The sample must not be embedded in the release binary or added to the default Web package.
 
-## Why preserve him?
+## Native folder convention
 
-- He already exists in the OpenStreetChaves Pascal reference as C16.
-- His INI/ROT pair documents a distinct character configuration and behavior.
-- His INI header identifies generated art and `CentroX`, `Corpo`, and `Ataque` data, with `source/tools/GeraChapolin` named as generator.
-- His documented CPU tuning differs from the original roster (including walk speed 9.0, stronger attacks, and more frequent special use).
-- The C/SDL3 reference does not include C16, so a port cannot treat it as shared/reference-confirmed content.
+The native custom-character location intentionally follows the original Street Chaves/Delphi data-folder vocabulary:
 
-## Recovery plan (future, not current implementation)
+```text
+<GameData>/
+├── Animacoes/
+├── Cenarios/
+├── Dados/
+│   └── Lutadores/
+│       └── Custom/
+│           └── chapolin/
+│               ├── character.json
+│               └── assets/
+│                   └── chapolin.png
+├── Efeitos/
+├── Lutadores/
+├── Rostos/
+└── Sons/
+```
 
-1. **Provenance and permission review**: inspect the generator, source inputs, art origin and licenses. Do not copy generated assets/data into this repository until the status is understood and allowed.
-2. **Availability research**: identify which original Pascal modes/screens expose C16 and whether this is a deliberate extension, debug option, or special opponent. Record evidence rather than assume.
-3. **Behavioral capture**: collect move, CPU, animation, hitbox, effect and sound observations for C16. Mark source-derived vs original-executable-confirmed findings.
-4. **Optional content boundary**: define a bonus/extension registration path that cannot alter the default 15-fighter roster, IDs, campaign logic, or compatibility assumptions.
-5. **Data recovery**: recover only the documented/legitimate data needed for a compatible implementation; prefer independently authored Rust data from verified observations where reuse is not appropriate.
-6. **Tests**: ensure base-roster tests run without bonus content; bonus tests are isolated and opt-in.
-7. **Release decision**: if recovered and cleared, present Chapolin as optional bonus content with attribution/provenance and compatibility notes. Otherwise retain this plan and inventory as research.
+This is a familiar native data-tree convention, not a promise of legacy format compatibility. The Rust custom-character loader validates the bounded `character.json` schema. It does not execute arbitrary Pascal `.ini` or `.rot` files from a user's folder. Those files remain source references.
+
+## What the example contains
+
+The repository sample represents source-derived C16 attributes, five special-move timelines, 50 centre offsets, 50 hurtboxes and 20 attack rows as declarative data. It can be used for headless runtime tests and as a template for a user's own package.
+
+The original Chapolin sprite sheet and audio are not bundled. Users must provide assets they have the right to use. The sample's presence in Git is not permission to redistribute third-party artwork or sound.
+
+## Web and other platforms
+
+Copying a folder into `<GameData>/Dados/Lutadores/Custom` is a native filesystem workflow. It does **not** work automatically in WebAssembly or other sandboxed targets. A browser cannot freely scan the user's local data directory. It needs a separate import mechanism such as a folder/file picker, preservation of package-relative paths, byte transfer into WASM and a persistence strategy. Other platforms need equivalent platform-specific adapters.
+
+The shared Rust package validator already accepts package-relative paths and bytes, so the package schema can remain common. The host-side picker, storage and management experience still needs to be designed for Web and each other restricted platform. Matching the Delphi directory structure alone does not solve that platform boundary.
 
 ## Non-goals
 
-- Do not renumber the original 15 fighters or add Chapolin to their canonical roster.
-- Do not invent a sixteenth original fighter or infer that C's array dimension means one.
-- Do not import art, audio, scripts, or generated data blindly.
-- Do not promise release inclusion, game-mode access, or legal clearance.
-- Do not let bonus content delay the base roster or Phase 2 data-model research.
+- Do not add Chapolin to the canonical C01-C15 roster.
+- Do not bundle C16 into the executable, default Web package or release assets.
+- Do not execute arbitrary Pascal ROT or user-supplied native code.
+- Do not imply that familiar folder names make legacy `.ini`/`.rot` drop-in compatible.
+- Do not redistribute art/audio without provenance and permission review.
 
-## Evidence snapshot
+## References
 
-- Pascal reference revision: `e1b025c35ecbc2b14d8635564aafd23c2107d3d1`.
-- C reference revision: `e76ad2188af6842ff6618ecdb8f425bba61c9183`.
-- Inventory and representation details: [fighter data deep dive](fighter-data-deep-dive.md).
-- File coverage: [fighter roster matrix](fighter-roster-matrix.md).
-
-Treat this document as a preservation/recovery note. The bonus remains planned and unimplemented until future work explicitly begins.
+- [C16.ini](https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C16.ini)
+- [C16.rot](https://github.com/danimesq/OpenStreetChaves/blob/main/Dados/Lutadores/C16.rot)
+- [C16 sprite sheet](https://github.com/danimesq/OpenStreetChaves/blob/main/Lutadores/C16.bmp)
+- [Custom-character package format](custom-character-package-format.md)
+- [Custom-character package runtime](custom-character-packages.md)
