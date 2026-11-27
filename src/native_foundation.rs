@@ -275,14 +275,17 @@ impl FightPresentationHost<Sdl3Host> {
             self.load_pascal_audio(game_root);
         }
         let Some(layout) = self.audio_layout.as_ref() else { return false; };
-        self.audio.play(&mut self.host, layout.music, 0)
+        self.audio.play_menu_music(&mut self.host, layout)
     }
 
     /// Select a fight music track without rebuilding the effect and victory banks.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn play_selected_fight_music(&mut self, track: usize) -> bool {
         let Some(layout) = self.audio_layout.as_ref() else { return false; };
-        if track == 0 || !self.audio.load_fight_music(&mut self.host, layout, track) {
+        if track == 0 {
+            return self.audio.stop_music(&mut self.host, layout);
+        }
+        if !self.audio.load_fight_music(&mut self.host, layout, track) {
             return false;
         }
         self.audio.play_music(&mut self.host, layout)
