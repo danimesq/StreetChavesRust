@@ -247,6 +247,55 @@ impl FightPresentationHost<Sdl3Host> {
         layout
     }
 
+    /// Load Pascal sound banks once, then start the original embedded menu loop.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn start_menu_audio(&mut self, game_root: impl AsRef<Path>) -> bool {
+        if self.audio_layout.is_none() {
+            self.load_pascal_audio(game_root);
+        }
+        let Some(layout) = self.audio_layout.as_ref() else { return false; };
+        self.audio.play(&mut self.host, layout.music, 0)
+    }
+
+    /// Select a fight music track without rebuilding the effect and victory banks.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn play_selected_fight_music(&mut self, track: usize) -> bool {
+        let Some(layout) = self.audio_layout.as_ref() else { return false; };
+        if track == 0 || !self.audio.load_fight_music(&mut self.host, layout, track) {
+            return false;
+        }
+        self.audio.play_music(&mut self.host, layout)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn stop_original_music(&mut self) -> bool {
+        let Some(layout) = self.audio_layout.as_ref() else { return false; };
+        self.audio.stop_music(&mut self.host, layout)
+    }
+
+    /// Play the F1 one-based sound preview slot (zero means disabled).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn play_sound_test(&mut self, one_based_slot: u8) -> bool {
+        if one_based_slot == 0 { return false; }
+        let Some(layout) = self.audio_layout.as_ref() else { return false; };
+        self.audio.play(&mut self.host, layout.effects, usize::from(one_based_slot - 1))
+    }
+
+    /// Pascal victory bank order is fighter-first, then A/B voice variant.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn play_victory_voice(&mut self, character_id: u8, variant: u8) -> bool {
+        if character_id == 0 || !(1..=2).contains(&variant) { return false; }
+        let Some(layout) = self.audio_layout.as_ref() else { return false; };
+        let index = usize::from(character_id - 1) * 2 + usize::from(variant - 1);
+        self.audio.play_victory_voice(&mut self.host, layout, index)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn play_pending_fight_sound(&mut self, fight: &mut FightSimulation) -> bool {
+        let Some(layout) = self.audio_layout.as_ref() else { return false; };
+        self.audio.play_pending_fight_sound(&mut self.host, layout, fight)
+    }
+
     /// Loads original local assets after character select. Missing assets stay diagnostics.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn load_original_game(
@@ -280,7 +329,11 @@ impl FightPresentationHost<Sdl3Host> {
             }
         }
         if load_audio {
-            let layout = self.load_pascal_audio(root);
+            let layout = if let Some(layout) = self.audio_layout.as_ref() {
+                layout.clone()
+            } else {
+                self.load_pascal_audio(root)
+            };
             messages.extend(layout.warnings.iter().cloned());
             // Starting the menu track here would be incorrect: this point is already the fight.
             let scenario_ini = IniDocument::read(
