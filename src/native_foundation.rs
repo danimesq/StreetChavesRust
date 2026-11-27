@@ -4,6 +4,8 @@
 //! This module owns Pascal resource interpretation and maps game snapshots to draw commands.
 
 use crate::arcade::ArcadeSettings;
+use crate::campaign::{CampaignRuntime, CampaignRuntimeState};
+use crate::effect_runtime::EffectRenderSnapshot;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::audio_foundation::{FoundationAudioOutput, PascalAudioLayout};
 use crate::combat_runtime::SIDE_LEFT;
@@ -47,6 +49,14 @@ pub struct FighterAssetInfo {
     pub frames: usize,
 }
 
+/// Registered native/Web texture for one Pascal effect sprite ID.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EffectSpriteMapping {
+    pub texture: TextureId,
+    pub width: u32,
+    pub height: u32,
+}
+
 /// Backend-neutral presentation and fixed-step host for the two-player game core.
 pub struct FightPresentationHost<H: RuntimeHost + TextureRegistrar> {
     host: H,
@@ -59,6 +69,7 @@ pub struct FightPresentationHost<H: RuntimeHost + TextureRegistrar> {
     logical_width: u32,
     logical_height: u32,
     sprite_frames: HashMap<(u8, i32), SpriteFrameMapping>,
+    effect_frames: HashMap<u8, EffectSpriteMapping>,
     sprite_heights: [i32; 2],
     fighter_names: [String; 2],
     stage_texture: Option<TextureId>,
@@ -359,6 +370,31 @@ impl FightPresentationHost<Sdl3Host> {
                 }
             }
         }
+        if self.effect_frames.is_empty() {
+            let resources = IniDocument::read(&root.join("Dados/Recursos.ini"));
+            let pattern = resources.get("Efeitos", "Arquivo").unwrap_or("Efeitos/Efeito-###.bmp");
+            let count = resources.get("Efeitos", "Quantidade")
+                .and_then(|value| value.parse::<usize>().ok()).unwrap_or(111).min(255);
+            for sprite in 1..=count {
+                let path = rooted_path(root, &numbered_path(pattern, sprite));
+                if !path.is_file() { break; }
+                match Sdl3Host::load_bmp(&path) {
+                    Ok(mut image) => {
+                        apply_white_color_key(&mut image);
+                        match self.host.register_texture(&image) {
+                            Ok(texture) => {
+                                self.effect_frames.insert(sprite as u8, EffectSpriteMapping {
+                                    texture, width: image.width, height: image.height
+                                });
+                            }
+                            Err(error) => messages.push(format!("effect sprite {sprite}: {error}")),
+                        }
+                    }
+                    Err(error) => messages.push(format!("effect sprite {sprite}: {error}")),
+                }
+            }
+            messages.push(format!("registered {} Pascal effect sprites", self.effect_frames.len()));
+        }
         self.diagnostics.extend(messages.iter().cloned());
         messages
     }
@@ -397,6 +433,56 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         self.arcade_settings
     }
 
+    /// Feed browser gamepad, touchscreen or accessibility input into the shared sampler.
+    pub fn inject_input_event(&mut self, player: usize, event: InputEvent) -> bool {
+        let Some(sampler) = self.virtual_input.get_mut(player) else { return false; };
+        sampler.apply_event(event);
+        true
+    }
+
+    /// Render the eight-fight CHS_ADVERSARIOS interstitial for native and Web.
+    pub fn render_campaign(&mut self, campaign: &CampaignRuntime, selected: u8) -> Result<(), RuntimeError> {
+        let mut commands = Vec::with_capacity(160);
+        commands.push(DrawCommand::Clear { rgba: [12, 17, 32, 255] });
+        draw_text(&mut commands, 106, 18, "CHOOSE YOUR NEXT FIGHT", [255, 224, 143, 255], 2);
+        draw_text(&mut commands, 170, 48, &format!("PHASE {}/8", campaign.current_phase().unwrap_or(8)), [231, 236, 246, 255], 2);
+        draw_text(&mut commands, 74, 82, &format!("PLAYER {}", fighter_display_name(selected)), [185, 214, 235, 255], 1);
+        for (index, opponent) in campaign.plan().opponents.iter().copied().enumerate() {
+            let x = 22 + index as i32 * 45;
+            let current = campaign.current_phase() == Some(index as u8 + 1);
+            commands.push(DrawCommand::Rect {
+                rect: Rect::new(x, 134, 38, 52),
+                rgba: if current { [67, 98, 133, 255] } else { [34, 45, 63, 255] },
+            });
+            draw_text(&mut commands, x + 13, 141, &format!("{}", index + 1), [255, 224, 143, 255], 1);
+            draw_text(&mut commands, x + 8, 161, &format!("C{:02}", opponent), [245, 241, 222, 255], 1);
+            if campaign.current_phase().is_some_and(|phase| phase > index as u8 + 1) {
+                draw_text(&mut commands, x + 12, 173, "X", [240, 112, 106, 255], 1);
+            }
+        }
+        match campaign.state() {
+            CampaignRuntimeState::Adversaries => {
+                draw_text(&mut commands, 96, 224, "NEXT OPPONENT", [255, 231, 163, 255], 2);
+                draw_text(&mut commands, 94, 252, &format!("{} ({}/151)", campaign.current_opponent().map(fighter_display_name).unwrap_or("UNKNOWN"), campaign.presentation_ticks()), [213, 222, 232, 255], 1);
+                draw_text(&mut commands, 92, 280, "PRESS ATTACK TO SKIP", [185, 214, 235, 255], 1);
+            }
+            CampaignRuntimeState::Completed => draw_text(&mut commands, 148, 245, "CAMPAIGN COMPLETE", [130, 230, 165, 255], 2),
+            CampaignRuntimeState::Defeated => draw_text(&mut commands, 170, 245, "CAMPAIGN OVER", [240, 112, 106, 255], 2),
+            CampaignRuntimeState::Fighting => draw_text(&mut commands, 176, 245, "FIGHT!", [255, 231, 163, 255], 2),
+        }
+        self.host.present(&FrameOutput { draw_commands: commands, audio: Vec::new() })
+    }
+
+    /// Display the winner after a standalone two-player match reaches its round limit.
+    pub fn render_match_result(&mut self, winner: usize) -> Result<(), RuntimeError> {
+        let mut commands = Vec::with_capacity(8);
+        commands.push(DrawCommand::Clear { rgba: [12, 17, 32, 255] });
+        draw_text(&mut commands, 112, 105, "MATCH COMPLETE", [255, 224, 143, 255], 2);
+        draw_text(&mut commands, 150, 155, if winner == 0 { "PLAYER 1 WINS" } else { "PLAYER 2 WINS" }, [130, 230, 165, 255], 2);
+        draw_text(&mut commands, 100, 210, "INSERT CREDIT TO PLAY AGAIN", [213, 222, 232, 255], 1);
+        self.host.present(&FrameOutput { draw_commands: commands, audio: Vec::new() })
+    }
+
     /// Construct the shared game host around any Foundation runtime adapter.
     pub fn with_host(host: H, config: RuntimeConfig) -> Result<Self, RuntimeError> {
         if config.width == 0 || config.height == 0 {
@@ -416,6 +502,7 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
             logical_width: config.width,
             logical_height: config.height,
             sprite_frames: HashMap::new(),
+            effect_frames: HashMap::new(),
             sprite_heights: [0; 2],
             fighter_names: ["PLAYER 1".to_owned(), "PLAYER 2".to_owned()],
             stage_texture: None,
@@ -638,6 +725,22 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
             ));
         }
 
+        self.effect_frames.clear();
+        for sprite in 1..=111_u8 {
+            let key = format!("effect_sprite_{sprite:03}");
+            if let Some(source) = assets.images.get(&key) {
+                let mut image = source.clone();
+                apply_white_color_key(&mut image);
+                match self.host.register_texture(&image) {
+                    Ok(texture) => {
+                        self.effect_frames.insert(sprite, EffectSpriteMapping {
+                            texture, width: image.width, height: image.height
+                        });
+                    }
+                    Err(error) => messages.push(format!("{key}: {error}")),
+                }
+            }
+        }
         self.web_effect_clips.clear();
         self.web_effect_bank_len = 0;
         for slot in 0_u16..=255 {
@@ -1221,13 +1324,29 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
         scene: &[DrawCommand],
     ) -> Result<(), RuntimeError> {
         let frame = fight.presentation_frame();
-        self.render(&frame, scene)
+        let (behind, foreground) = split_effect_draw_commands(
+            &fight.last_report().effects.render_snapshots,
+            &self.effect_frames,
+            frame.camera_x,
+            self.arcade_settings.blood,
+        );
+        self.render_with_layers(&frame, scene, &behind, &foreground)
     }
 
     pub fn render(
         &mut self,
         frame: &FightPresentationFrame,
         scene: &[DrawCommand],
+    ) -> Result<(), RuntimeError> {
+        self.render_with_layers(frame, scene, &[], &[])
+    }
+
+    fn render_with_layers(
+        &mut self,
+        frame: &FightPresentationFrame,
+        scene: &[DrawCommand],
+        behind_effects: &[DrawCommand],
+        foreground_effects: &[DrawCommand],
     ) -> Result<(), RuntimeError> {
         let mut commands = Vec::with_capacity(scene.len() + 800);
         commands.push(DrawCommand::Clear {
@@ -1254,9 +1373,11 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
             );
         }
         commands.extend_from_slice(scene);
+        commands.extend_from_slice(behind_effects);
         for fighter in &frame.fighters {
             append_fighter(&mut commands, fighter, frame.camera_x, &self.sprite_frames);
         }
+        commands.extend_from_slice(foreground_effects);
         append_hud(
             &mut commands,
             self.logical_width,
@@ -1277,6 +1398,35 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
             audio: Vec::new(),
         })
     }
+}
+
+fn split_effect_draw_commands(
+    snapshots: &[EffectRenderSnapshot],
+    mappings: &HashMap<u8, EffectSpriteMapping>,
+    camera_x: f64,
+    blood_enabled: bool,
+) -> (Vec<DrawCommand>, Vec<DrawCommand>) {
+    let mut behind = Vec::new();
+    let mut foreground = Vec::new();
+    for effect in snapshots {
+        // Estado7_Luta explicitly identifies Efeito10 as the blood burst.
+        if !blood_enabled && effect.effect_type == 10 { continue; }
+        let Some(sprite) = mappings.get(&effect.sprite) else { continue; };
+        let destination = Rect::new(
+            (effect.x - camera_x).round() as i32,
+            if effect.bottom_anchor { effect.y.round() as i32 - sprite.height as i32 } else { effect.y.round() as i32 },
+            sprite.width,
+            sprite.height,
+        );
+        let command = DrawCommand::Texture {
+            texture: sprite.texture,
+            source: None,
+            destination,
+            flip_horizontal: effect.facing == SIDE_LEFT,
+        };
+        if effect.stage { foreground.push(command); } else { behind.push(command); }
+    }
+    (behind, foreground)
 }
 
 fn apply_player_snapshot(sampler: &mut InputSampler, snapshot: PlayerInputSnapshot) {
