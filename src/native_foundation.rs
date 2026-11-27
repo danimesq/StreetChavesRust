@@ -910,6 +910,7 @@ impl<H: RuntimeHost + TextureRegistrar> FightPresentationHost<H> {
     pub fn poll_input_ticks(&mut self) -> Result<(TickBatch, Vec<[InputFrame; 2]>), RuntimeError> {
         let snapshot = self.host.poll_input()?;
         self.quit_requested = snapshot.quit_requested;
+        self.input[0].record_physical_key_press(snapshot.physical_key_pressed);
         for player in 0..2 {
             apply_player_snapshot(&mut self.input[player], snapshot.players[player]);
         }
