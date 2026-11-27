@@ -27,7 +27,7 @@ on:
       - ".github/workflows/rust-contracts.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
@@ -83,26 +83,8 @@ jobs:
           )
           print(f"Validated {len(assets)} source assets from {source_root}")
           PY
-      - name: Format and commit Rust sources
-        env:
-          GITHUB_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
-        run: |
-          cargo fmt --all
-          if git diff --quiet -- src; then
-            echo "Rust sources are already formatted."
-            exit 0
-          fi
-          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" && "${GITHUB_HEAD_REPO}" != "${GITHUB_REPOSITORY}" ]]; then
-            echo "Fork pull requests cannot be auto-formatted with the base repository token."
-            cargo fmt --all -- --check
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src
-          git commit -m "style: format Rust sources for PR #49"
-          branch="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
-          git push origin "HEAD:refs/heads/${branch}"
+      - name: Check Rust formatting
+        run: cargo fmt --all -- --check
       - name: Run contract tests with the Foundation native host
         run: cargo test --all-targets --features native-foundation
       - name: Check WebAssembly Canvas 2D and WebAudio build
