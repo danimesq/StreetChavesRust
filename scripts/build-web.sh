@@ -22,9 +22,9 @@ text = config_path.read_text(encoding="utf-8")
 
 # Re-root original assets at the sibling game-data checkout.
 text = re.sub(r'^assets-root\s*=\s*"[^"]+"\s*$',
-              'assets-root = "."', text, count=1, flags=re.MULTILINE)
+              'assets-root = ".."', text, count=1, flags=re.MULTILINE)
 text = re.sub(r'^(source\s*=\s*")([^"]+)(")\s*$',
-              lambda m: m.group(1) + "../OpenStreetChaves/" + m.group(2) + m.group(3),
+              lambda m: m.group(1) + "OpenStreetChaves/" + m.group(2) + m.group(3),
               text, flags=re.MULTILINE)
 
 def quote(value):
@@ -67,7 +67,7 @@ for package_dir in package_dirs:
     seen_ids.add(package_id)
     package_slug = slug(package_id)
 
-    manifest_rel = manifest_path.relative_to(root).as_posix()
+    manifest_rel = "StreetChavesRust/" + manifest_path.relative_to(root).as_posix()
     text += asset_block(
         f"custom_package_{package_slug}_manifest",
         manifest_rel,
@@ -93,7 +93,7 @@ for package_dir in package_dirs:
             raise SystemExit(f"{manifest_path}: referenced asset is missing: {relative_path}")
 
         asset_slug = slug(asset_name)
-        source_rel = source_path.relative_to(root).as_posix()
+        source_rel = "StreetChavesRust/" + source_path.relative_to(root).as_posix()
         raw_output = f"assets/custom-characters-raw/{package_slug}/{rel.as_posix()}"
         text += asset_block(
             f"custom_package_{package_slug}_bytes_{asset_slug}",
