@@ -50,13 +50,22 @@ Duplicate assignments are rejected. The map is shared through Foundation's Physi
 
 ##🌈 CPU opponent
 
-When P2 does not spend a credit and join, the second fighter is driven by the already-ported Common.rot [IA] path: target-distance selection, approach movement and the source-ordered close-range probability chain. The F1 game level selects a provisional probability-factor curve. The exact Pascal Fator formula has not yet been recovered, so the curve is explicitly a first tuning choice rather than a claim of exact parity.
+When P2 does not spend a credit and join, the second fighter is controlled by the source-driven CPU path. Each CPU tick runs `Comum.rot [IA]` first and then the matching character script `C01.rot` through `C15.rot [IA]`. Both execute through the same ROT interpreter, live `CombatState`, nested `AcaoJogador` bridge and FPC 3.2.2 RNG cursor.
 
-Character-specific [IA] scripts are not all connected to the live fight orchestrator. Projectile-threat detection and the campaign opponent sequence are also pending. The current CPU is therefore a functional first cabinet opponent, not full original-game AI parity.
+Projectile awareness is sourced from the live effect arena. The CPU derives `Ameaca`, `DistProj`, `OppY` and projectile termination in original effect-slot order. It also runs the original `defendergolpe` responses after frame advancement, including standing/low defense and projectile-aware jumping. Human fighters now run the Pascal guard branch too: hold away from the opponent to guard standing, or away + down to guard low, when an opponent attack or hit-capable enemy effect is present.
+
+The F1 difficulty no longer uses a provisional curve. It uses the exact two formulas from `Estado7_Golpes.inc`:
+
+- `CpuNovo`: `(8 - NivelJogo) * 0.6 + 1.3 - Fase * 0.1`
+- `defendergolpe`: `max(0, (8 - NivelJogo) * 0.9 + 1.2 - Fase * 0.1)`
+
+`Fase` is the original campaign opponent index (1..8). `CampaignProgress` advances it only after a victory, and `FightSimulation::load_campaign_opponent` loads the phase's opponent plus that fighter's command rules, frame boxes and ROT AI script, then updates both Pascal probability formulas. The host still owns match-end detection, player carry-over, rendering `CHS_ADVERSARIOS` and the preparation transition. Chapolin C16 is a documentation-only custom-character example, outside the canonical roster and excluded from the compiled program.
+
+The source parity notes, exact call ordering and test coverage are documented in [CPU AI source parity](cpu-ai-source-parity.md).
 
 ##🌈 Current limits
 
-The F1 menu persists all twelve options, but not every option has a gameplay subsystem to consume it yet. In particular, a full round clock/round manager, blood rendering, complete language localization, sound preview, menu music selection and complete fight HUD still need implementation. The attract/demo mode, CHS_ADVERSARIOS campaign and end-of-fight flow remain separate work.
+The F1 menu persists all twelve options, but not every option has a gameplay subsystem to consume it yet. A full round clock/round manager, blood rendering, complete language localization, sound preview, menu music selection and complete fight HUD remain pending. The campaign model now exists, but the host-level `CHS_ADVERSARIOS` screen, fight-end progression, `CHS_PREPARALUTA` transition and full effect-catalog parity are still separate integration work.
 
 ##🌈 Validation
 

@@ -13,6 +13,8 @@ This directory records the research and engineering decisions for an independent
 
 - [CHS screen and game-flow status](CHS-SCREEN-STATUS.md): exact `CHS_*` implementation status, remaining original systems and direct source/resource links.
 - [Arcade credits, F1 settings, F2 remapping and CPU](arcade-credits-settings-and-ai.md): cabinet coin accounting, persisted F1 options, the shared platform-neutral physical-key map, CPU opponent integration and the current fidelity boundary.
+- [CPU AI source parity](cpu-ai-source-parity.md): all fifteen source `[IA]` scripts, the two original F1 difficulty formulas, projectile-aware CPU defense and Pascal RNG overload preservation.
+- [Campaign and CPU progression](campaign-and-cpu-progression.md): opponent order, phase-eight boss, source stage choices, dynamic CPU loading and remaining host integration.
 - [Native and browser presentation host roadmap](presentation-host-roadmap.md)
 - [Native SDL3 audio backend (PR #36)](audio-backend-pr36.md) — renderer-neutral snapshots, native SDL and WASM/Canvas host plan, audio queue, local asset paths.
 - [Rust architecture proposal](rust-architecture.md): a proposed separation of deterministic game logic from SDL3 presentation and platform services.\n- [Iroh multiplayer networking study](iroh-multiplayer-study-pr31.md): online/LAN connectivity, QUIC, relays, mDNS, topology choices, authority, tick synchronization, security, and a staged prototype plan.
