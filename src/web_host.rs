@@ -4,7 +4,9 @@
 //! simulation, startup flow, fixed timestep, presentation composition and audio
 //! events remain in Rust; Foundation owns Canvas 2D, input and WebAudio.
 
-use crate::arcade::ArcadePreferences;
+use crate::arcade::{ArcadePreferences, ArcadeRoundProgress, RoundAdvance};
+use crate::campaign::{CampaignAdvance, CampaignProfile, CampaignRuntime, CampaignRuntimeState, CampaignStageProfile, CampaignStageSource};
+use crate::input::{Button, Direction, InputEvent};
 use crate::chaves_specials::ChavesSpecialContext;
 use crate::combat_runtime::{
     BodyBox, CombatState, FighterState, VictoryAnimationContext, ACTION_IDLE, SIDE_LEFT, SIDE_RIGHT,
@@ -30,6 +32,11 @@ pub struct StreetChavesWebRuntime {
     assets: Option<LoadedWebAssets>,
     diagnostics: Vec<String>,
     preferences_dirty: bool,
+    campaign: Option<CampaignRuntime>,
+    rounds: Option<ArcadeRoundProgress>,
+    cpu_opponent: bool,
+    player_character: u8,
+    settings: crate::arcade::ArcadeSettings,
 }
 
 #[wasm_bindgen]
@@ -56,6 +63,11 @@ impl StreetChavesWebRuntime {
                 "Opening -> Title -> Config/Remap -> Character Select -> Fight".to_owned(),
             ],
             preferences_dirty: false,
+            campaign: None,
+            rounds: None,
+            cpu_opponent: false,
+            player_character: 1,
+            settings: crate::arcade::ArcadeSettings::default(),
         })
     }
 
@@ -80,6 +92,7 @@ impl StreetChavesWebRuntime {
         if let Some(preferences) = ArcadePreferences::from_json(source) {
             self.host.set_player_one_key_map(preferences.player_one_keys);
             self.host.set_damage_level(preferences.settings.damage_level);
+            self.settings = preferences.settings;
             self.startup.set_preferences(preferences);
             self.diagnostics.push("restored arcade preferences".to_owned());
         } else {
@@ -120,23 +133,40 @@ impl StreetChavesWebRuntime {
             match self.startup.tick(inputs) {
                 StartupEvent::StartFight { characters, cpu_opponent } => {
                     let settings = self.startup.settings();
+                    self.settings = settings;
+                    self.player_character = characters[0];
+                    self.cpu_opponent = cpu_opponent;
+                    self.campaign = None;
+                    self.rounds = Some(ArcadeRoundProgress::new(settings));
                     self.fight = build_fight(characters, DEFAULT_SEED);
                     configure_fight(&mut self.fight, cpu_opponent, settings.difficulty, settings.power_mode);
                     if let Some(assets) = self.assets.as_ref() {
-                        let messages = self
-                            .host
-                            .load_web_resources(assets, 1, characters, &mut self.fight);
+                        let messages = self.host.load_web_resources(assets, 1, characters, &mut self.fight);
                         self.diagnostics.extend(messages);
-                        match self.host.play_web_music() {
-                            Ok(true) => self.diagnostics.push("fight music started".to_owned()),
-                            Ok(false) => {}
-                            Err(error) => self.diagnostics.push(format!("fight music: {error}")),
+                        if cpu_opponent {
+                            let ini_key = format!("fighter_ini_{:02}", characters[0]);
+                            if let Some(ini) = assets.data.get(&ini_key).and_then(|bytes| std::str::from_utf8(bytes).ok()) {
+                                match CampaignProfile::from_ini(characters[0], ini)
+                                    .and_then(|profile| self.fight.generate_campaign_plan(&profile, 15)) {
+                                    Ok(plan) => {
+                                        self.campaign = Some(CampaignRuntime::new(plan));
+                                        self.diagnostics.push("eight-phase campaign initialized from fighter INI".to_owned());
+                                    }
+                                    Err(error) => self.diagnostics.push(format!("campaign unavailable: {error}")),
+                                }
+                            } else {
+                                self.diagnostics.push(format!("campaign metadata {ini_key} is missing; falling back to single fight"));
+                            }
+                        }
+                        if self.campaign.is_none() {
+                            match self.host.play_web_music() {
+                                Ok(true) => self.diagnostics.push("fight music started".to_owned()),
+                                Ok(false) => {}
+                                Err(error) => self.diagnostics.push(format!("fight music: {error}")),
+                            }
                         }
                     } else {
-                        self.diagnostics.push(
-                            "no asset manifest loaded; using vector training stage and fighters"
-                                .to_owned(),
-                        );
+                        self.diagnostics.push("no asset manifest loaded; using vector training stage and fighters".to_owned());
                     }
                     self.host.set_damage_level(settings.damage_level);
                     self.host.set_player_one_key_map(self.startup.preferences().player_one_keys);
@@ -148,12 +178,97 @@ impl StreetChavesWebRuntime {
                 StartupEvent::PreferencesChanged => {
                     let preferences = self.startup.preferences();
                     self.host.set_player_one_key_map(preferences.player_one_keys);
+                    self.settings = preferences.settings;
                     self.host.set_damage_level(preferences.settings.damage_level);
                     self.preferences_dirty = true;
                     self.diagnostics.push("arcade preferences updated".to_owned());
                 }
                 StartupEvent::None if self.startup.phase() == StartupPhase::Fighting => {
-                    self.host.tick_fight(&mut self.fight, inputs);
+                    if let Some(campaign) = self.campaign.as_mut() {
+                        match campaign.state() {
+                            CampaignRuntimeState::Adversaries => {
+                                if campaign.tick_adversaries(inputs[0].was_pressed(Button(0))) {
+                                    let phase = campaign.current_phase().unwrap_or(1);
+                                    let opponent = campaign.current_opponent().unwrap_or(1);
+                                    let ini_key = format!("fighter_ini_{opponent:02}");
+                                    let prepared = self.assets.as_ref()
+                                        .and_then(|assets| assets.data.get(&ini_key))
+                                        .and_then(|bytes| std::str::from_utf8(bytes).ok())
+                                        .ok_or_else(|| format!("campaign metadata {ini_key} is missing"))
+                                        .and_then(CampaignStageProfile::from_ini)
+                                        .and_then(|profile| self.fight.choose_campaign_stage(profile, phase, 13, None));
+                                    match prepared {
+                                        Ok(stage) => {
+                                            if let Err(error) = self.fight.load_campaign_opponent(campaign.plan(), &campaign.progress()) {
+                                                self.diagnostics.push(format!("campaign opponent: {error}"));
+                                            } else {
+                                                self.fight.reset_for_campaign_fight();
+                                                configure_fight(&mut self.fight, true, self.settings.difficulty, self.settings.power_mode);
+                                                if let Some(assets) = self.assets.as_ref() {
+                                                    let messages = self.host.load_web_resources(assets, stage.stage, [self.player_character, opponent], &mut self.fight);
+                                                    self.diagnostics.extend(messages);
+                                                }
+                                                match campaign.begin_fight(stage) {
+                                                    Ok(_) => {
+                                                        self.rounds = Some(ArcadeRoundProgress::new(self.settings));
+                                                        match self.host.play_web_music() {
+                                                            Ok(true) => self.diagnostics.push(format!("phase {phase} fight music started")),
+                                                            Ok(false) => {}
+                                                            Err(error) => self.diagnostics.push(format!("campaign music: {error}")),
+                                                        }
+                                                    }
+                                                    Err(error) => self.diagnostics.push(format!("campaign transition: {error}")),
+                                                }
+                                            }
+                                        }
+                                        Err(error) => self.diagnostics.push(format!("campaign stage selection: {error}")),
+                                    }
+                                }
+                            }
+                            CampaignRuntimeState::Fighting => {
+                                self.host.tick_fight(&mut self.fight, inputs);
+                                let timeout = self.rounds.as_mut().is_some_and(ArcadeRoundProgress::tick);
+                                let p1 = self.fight.state.fighters[0].health;
+                                let p2 = self.fight.state.fighters[1].health;
+                                let winner = if p1 <= 0.0 && p2 <= 0.0 { Some(None) }
+                                    else if p2 <= 0.0 { Some(Some(0)) }
+                                    else if p1 <= 0.0 { Some(Some(1)) }
+                                    else if timeout { Some(if p1 > p2 { Some(0) } else if p2 > p1 { Some(1) } else { None }) }
+                                    else { None };
+                                if let Some(winner) = winner {
+                                    let advance = self.rounds.as_mut().map(|rounds| rounds.record_result(winner));
+                                    match advance {
+                                        Some(RoundAdvance::Continue { .. }) | Some(RoundAdvance::Draw { .. }) => {
+                                            self.fight.reset_for_campaign_fight();
+                                            configure_fight(&mut self.fight, self.cpu_opponent, self.settings.difficulty, self.settings.power_mode);
+                                        }
+                                        Some(RoundAdvance::MatchWon { winner: 0 }) => {
+                                            let advance = self.campaign.as_mut().map(CampaignRuntime::record_victory);
+                                            if let Some(CampaignAdvance::NextPhase(phase)) = advance {
+                                                self.host.stop_web_music();
+                                                self.rounds = Some(ArcadeRoundProgress::new(self.settings));
+                                                self.diagnostics.push(format!("campaign victory; preparing phase {phase}"));
+                                            } else if advance == Some(CampaignAdvance::Completed) {
+                                                self.diagnostics.push("campaign completed: eight opponents defeated".to_owned());
+                                                self.host.stop_web_music();
+                                            }
+                                        }
+                                        Some(RoundAdvance::MatchWon { winner: 1 }) => {
+                                            if let Some(campaign) = self.campaign.as_mut() {
+                                                campaign.record_defeat();
+                                                self.host.stop_web_music();
+                                                self.diagnostics.push("campaign defeated".to_owned());
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            CampaignRuntimeState::Completed | CampaignRuntimeState::Defeated => {}
+                        }
+                    } else {
+                        self.host.tick_fight(&mut self.fight, inputs);
+                    }
                 }
                 StartupEvent::None => {}
                 StartupEvent::JoinPlayer { player } => {
@@ -164,15 +279,41 @@ impl StreetChavesWebRuntime {
 
         if self.startup.phase() == StartupPhase::Fighting {
             self.host.update_camera(&mut self.fight);
-            self.host
-                .render_fight(&self.fight, &[])
-                .map_err(js_error)?;
+            if let Some(campaign) = self.campaign.as_ref() {
+                if campaign.state() != CampaignRuntimeState::Fighting {
+                    self.host.render_campaign(campaign, self.player_character).map_err(js_error)?;
+                } else {
+                    self.host.render_fight(&self.fight, &[]).map_err(js_error)?;
+                }
+            } else {
+                self.host.render_fight(&self.fight, &[]).map_err(js_error)?;
+            }
         } else {
             self.host
                 .render_startup(&self.startup.screen())
                 .map_err(js_error)?;
         }
         Ok(())
+    }
+
+
+    /// Browser gamepad/touch adapter: directions use the shared 0..=8 keypad order.
+    pub fn set_virtual_direction(&mut self, player: usize, direction: u8) -> bool {
+        let direction = match direction {
+            0 => Direction::Neutral, 1 => Direction::Up, 2 => Direction::UpRight,
+            3 => Direction::Right, 4 => Direction::DownRight, 5 => Direction::Down,
+            6 => Direction::DownLeft, 7 => Direction::Left, 8 => Direction::UpLeft,
+            _ => return false,
+        };
+        self.host.inject_input_event(player, InputEvent::DirectionChanged(direction))
+    }
+
+    /// Browser gamepad/touch adapter: logical action slots 0..=31.
+    pub fn set_virtual_button(&mut self, player: usize, button: u8, pressed: bool) -> bool {
+        if button >= 32 { return false; }
+        self.host.inject_input_event(player, InputEvent::ButtonChanged {
+            button: Button(button), down: pressed
+        })
     }
 
     /// Resize the browser canvas backing store for a CSS viewport and device-pixel ratio.
