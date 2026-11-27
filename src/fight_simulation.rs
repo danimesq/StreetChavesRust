@@ -2830,6 +2830,34 @@ mod rot_runtime_integration_tests {
     }
 
     #[test]
+    fn human_guard_responds_to_a_live_enemy_projectile() {
+        let mut fight = simulation();
+        fight.state.fighters[0].facing = crate::combat_runtime::SIDE_RIGHT;
+        fight
+            .state
+            .effects
+            .spawn(
+                7,
+                Some('A'),
+                2,
+                crate::effect_runtime::EFFECT_SIDE_LEFT,
+                250.0,
+                110.0,
+                &mut fight.rng,
+            )
+            .unwrap();
+        let input = InputFrame {
+            direction: Direction::Left,
+            ..InputFrame::default()
+        };
+
+        fight.execute_human_defense(0, input).unwrap();
+
+        assert_eq!(fight.state.fighters[0].action_id, ACTION_DEFENDING);
+        assert!(fight.state.fighters[0].defending);
+    }
+
+    #[test]
     fn loading_a_campaign_opponent_updates_the_cpu_phase_and_character_ai() {
         let mut fight = simulation();
         fight.configure_cpu_opponent(true, 8);
